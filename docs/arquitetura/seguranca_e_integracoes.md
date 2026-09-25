@@ -32,5 +32,21 @@ FIREBASE_PRIVATE_KEY
 
 Firebase Storage não será usado.
 
+## Mercado Pago
+
+Mercado Pago faz parte do MVP **somente para cobrança da assinatura da barbearia**.
+
+Credenciais previstas:
+- NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY
+- MERCADO_PAGO_ACCESS_TOKEN
+- MERCADO_PAGO_CLIENT_ID
+- MERCADO_PAGO_CLIENT_SECRET
+
+Regras:
+- credenciais privadas somente no backend;
+- cobranças de cortes, serviços e produtos de clientes **não** passam pelo Barzzo no MVP;
+- integração de pagamento de serviços ao cliente fica para uma fase futura, se o produto decidir adotá-la;
+- manter domínio de assinatura separado de qualquer pagamento de atendimento.
+
 ## Auditoria
 Ações administrativas e sensíveis devem ser registradas em logs_auditoria.
