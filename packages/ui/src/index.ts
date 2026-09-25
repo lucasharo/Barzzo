@@ -6,3 +6,5 @@ export * from "./alert";
 export * from "./avatar";
 export * from "./loading-spinner";
 export * from "./theme-toggle";
+export * from "./drawer";
+export * from "./bottom-nav";

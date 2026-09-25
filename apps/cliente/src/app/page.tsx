@@ -95,7 +95,7 @@ export default function PaginaInicialCliente() {
               placeholder="Cidade ou Bairro"
               value={cidadeBusca}
               onChange={(e) => setCidadeBusca(e.target.value)}
-              className="w-36 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
+              className="w-full sm:w-36 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
             />
           </div>
 

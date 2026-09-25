@@ -179,7 +179,7 @@ function ConteudoListagemBarbearias() {
             placeholder="Cidade..."
             value={cidade}
             onChange={(e) => setCidade(e.target.value)}
-            className="w-32 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
+            className="w-full sm:w-32 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
           />
         </div>
       </div>

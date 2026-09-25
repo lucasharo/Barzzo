@@ -1,0 +1,250 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Menu,
+  LayoutDashboard,
+  Calendar,
+  Clock,
+  Users,
+  Star,
+  Scissors,
+  ShoppingBag,
+  Image as ImageIcon,
+  Megaphone,
+  Share2,
+  BarChart3,
+  CreditCard,
+  UserCheck,
+  Mail,
+  Settings,
+  LogOut,
+  SlidersHorizontal,
+} from "lucide-react";
+import {
+  Button,
+  ThemeToggle,
+  Drawer,
+  BottomNav,
+  BottomNavItem,
+} from "@barzzo/ui";
+import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+
+export function NavegacaoParceiro() {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [drawerAberto, setDrawerAberto] = React.useState(false);
+
+  // Fechar drawer ao mudar de rota
+  React.useEffect(() => {
+    setDrawerAberto(false);
+  }, [pathname]);
+
+  const lidarComLogout = async () => {
+    const supabase = criarClienteSupabaseBrowser();
+    await supabase.auth.signOut();
+    setDrawerAberto(false);
+    router.push("/");
+  };
+
+  const secoesMenu = [
+    {
+      titulo: "Operação",
+      itens: [
+        { href: "/painel", rotulo: "Painel Geral", icone: LayoutDashboard },
+        { href: "/agenda", rotulo: "Agenda de Horários", icone: Calendar },
+        { href: "/agenda/bloqueios", rotulo: "Bloqueios de Horário", icone: Clock },
+      ],
+    },
+    {
+      titulo: "Atendimento & Catálogo",
+      itens: [
+        { href: "/clientes", rotulo: "Clientes", icone: Users },
+        { href: "/servicos", rotulo: "Serviços", icone: Scissors },
+        { href: "/produtos", rotulo: "Produtos", icone: ShoppingBag },
+        { href: "/galeria", rotulo: "Galeria de Fotos", icone: ImageIcon },
+        { href: "/avaliacoes", rotulo: "Avaliações", icone: Star },
+      ],
+    },
+    {
+      titulo: "Crescimento & Métricas",
+      itens: [
+        { href: "/relatorios", rotulo: "Relatórios & Faturamento", icone: BarChart3 },
+        { href: "/campanhas", rotulo: "Campanhas & Cupons", icone: Megaphone },
+        { href: "/influenciadores", rotulo: "Influenciadores & Afiliados", icone: Share2 },
+      ],
+    },
+    {
+      titulo: "Configurações da Barbearia",
+      itens: [
+        { href: "/assinatura", rotulo: "Assinatura & Plano", icone: CreditCard },
+        { href: "/horarios", rotulo: "Horários de Funcionamento", icone: Clock },
+        { href: "/equipe", rotulo: "Profissionais & Equipe", icone: UserCheck },
+        { href: "/convites", rotulo: "Convites de Membros", icone: Mail },
+        { href: "/configuracoes/perfil", rotulo: "Dados da Barbearia", icone: Settings },
+      ],
+    },
+  ];
+
+  // Itens mais usados exibidos diretamente na barra superior em desktop
+  const itensDesktopTopo = [
+    { href: "/painel", rotulo: "Painel" },
+    { href: "/agenda", rotulo: "Agenda" },
+    { href: "/clientes", rotulo: "Clientes" },
+    { href: "/servicos", rotulo: "Serviços" },
+    { href: "/relatorios", rotulo: "Relatórios" },
+    { href: "/assinatura", rotulo: "Assinatura" },
+  ];
+
+  return (
+    <>
+      {/* Header Parceiro */}
+      <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <Link href="/painel" className="flex items-center gap-2">
+              <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
+                BARZZO
+              </span>
+              <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B]/15 text-[#B45A2B] font-semibold px-2 py-0.5 rounded">
+                Parceiro
+              </span>
+            </Link>
+
+            {/* Menu Horizontal Desktop (telas >= lg) */}
+            <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
+              {itensDesktopTopo.map((item) => {
+                const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-1.5 rounded-md transition-colors ${
+                      ativo
+                        ? "bg-[#B45A2B]/10 text-[#B45A2B] font-semibold"
+                        : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                    }`}
+                  >
+                    {item.rotulo}
+                  </Link>
+                );
+              })}
+
+              {/* Botão para abrir gaveta completa de opções no desktop */}
+              <button
+                type="button"
+                onClick={() => setDrawerAberto(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                title="Ver todas as ferramentas e cadastros"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Mais
+              </button>
+            </nav>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+
+            {/* Botão Hambúrguer Mobile/Tablet (telas < lg) */}
+            <button
+              type="button"
+              onClick={() => setDrawerAberto(true)}
+              className="flex lg:hidden h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+              aria-label="Abrir menu de navegação da barbearia"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Drawer Completo (Mobile e Tablet, também acessível no desktop via 'Mais') */}
+      <Drawer
+        aberto={drawerAberto}
+        aoFechar={() => setDrawerAberto(false)}
+        titulo="Menu do Parceiro"
+        descricao="Painel de controle e configurações da barbearia"
+        posicao="direita"
+        largura="w-84 max-w-[88vw]"
+        rodape={
+          <Button
+            variante="cancelar-simples"
+            tamanho="md"
+            onClick={lidarComLogout}
+            className="w-full flex items-center justify-center gap-2 text-sm"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair do Painel
+          </Button>
+        }
+      >
+        <div className="flex flex-col gap-6 py-1">
+          {secoesMenu.map((secao) => (
+            <div key={secao.titulo} className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 px-3 py-1">
+                {secao.titulo}
+              </span>
+              {secao.itens.map((item) => {
+                const Icone = item.icone;
+                const ativo =
+                  pathname === item.href ||
+                  (item.href !== "/painel" && pathname.startsWith(`${item.href}/`));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      ativo
+                        ? "bg-[#B45A2B]/15 text-[#B45A2B] font-semibold"
+                        : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                    }`}
+                  >
+                    <Icone className="h-4 w-4 opacity-75 shrink-0" />
+                    <span>{item.rotulo}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </Drawer>
+
+      {/* Bottom Navigation Bar Mobile (< md) */}
+      <BottomNav>
+        <BottomNavItem
+          icone={LayoutDashboard}
+          rotulo="Painel"
+          ativo={pathname === "/painel"}
+          onClick={() => router.push("/painel")}
+        />
+        <BottomNavItem
+          icone={Calendar}
+          rotulo="Agenda"
+          ativo={pathname === "/agenda" || pathname.startsWith("/agenda/")}
+          onClick={() => router.push("/agenda")}
+        />
+        <BottomNavItem
+          icone={Users}
+          rotulo="Clientes"
+          ativo={pathname === "/clientes" || pathname.startsWith("/clientes/")}
+          onClick={() => router.push("/clientes")}
+        />
+        <BottomNavItem
+          icone={BarChart3}
+          rotulo="Relatórios"
+          ativo={pathname === "/relatorios"}
+          onClick={() => router.push("/relatorios")}
+        />
+        <BottomNavItem
+          icone={Menu}
+          rotulo="Menu"
+          ativo={drawerAberto}
+          onClick={() => setDrawerAberto(true)}
+        />
+      </BottomNav>
+    </>
+  );
+}
