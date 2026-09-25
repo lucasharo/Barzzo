@@ -62,7 +62,12 @@ function ConteudoListagemBarbearias() {
       }
 
       if (cidade.trim()) {
-        query = query.ilike("cidade", `%${cidade.trim()}%`);
+        const partes = cidade.split(/[,-]/).map((p) => p.trim()).filter(Boolean);
+        const termoCidade = partes[0] || cidade.trim();
+        query = query.ilike("cidade", `%${termoCidade}%`);
+        if (partes.length > 1 && partes[1].length <= 2) {
+          query = query.ilike("estado", `%${partes[1]}%`);
+        }
       }
 
       const { data, error } = await query.order("nome", { ascending: true });
