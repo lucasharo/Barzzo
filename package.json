@@ -1,0 +1,22 @@
+{
+  "name": "barzzo-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:cliente": "npm run dev --workspace=apps/cliente",
+    "dev:parceiro": "npm run dev --workspace=apps/parceiro",
+    "dev:admin": "npm run dev --workspace=apps/admin",
+    "build": "npm run build --workspaces --if-present",
+    "test": "vitest run",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}

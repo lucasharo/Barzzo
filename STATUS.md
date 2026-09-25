@@ -1,14 +1,14 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: TASK-01
+- Task ativa: TASK-02
 - Estado: PENDENTE
 - Próximo agente: PO
 - Bloqueios: nenhum
 
 | Task | Issue | Nome | Estado |
 |---|---:|---|---|
-| 01 | #1 | Fundação, autenticação e usuários | PENDENTE |
+| 01 | #1 | Fundação, autenticação e usuários | CONCLUIDA |
 | 02 | #2 | Barbearias, onboarding e equipe | PENDENTE |
 | 03 | #3 | Serviços, jornadas e disponibilidade | PENDENTE |
 | 04 | #4 | Agenda e agendamentos | PENDENTE |
