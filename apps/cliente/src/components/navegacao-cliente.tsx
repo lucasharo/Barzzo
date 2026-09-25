@@ -57,13 +57,21 @@ export function NavegacaoCliente() {
     router.push("/");
   };
 
-  const itensNav = [
+  const itensPublicos = [
     { href: "/barbearias", rotulo: "Barbearias", icone: Scissors },
+  ];
+
+  const itensAutenticados = [
     { href: "/agendamentos", rotulo: "Agendamentos", icone: Calendar },
     { href: "/favoritos", rotulo: "Favoritos", icone: Heart },
     { href: "/notificacoes", rotulo: "Notificações", icone: Bell },
     { href: "/perfil", rotulo: "Perfil", icone: User },
   ];
+
+  // Somente exibe itens privados se o cliente estiver autenticado
+  const itensNav = usuario
+    ? [...itensPublicos, ...itensAutenticados]
+    : itensPublicos;
 
   return (
     <>
@@ -214,24 +222,35 @@ export function NavegacaoCliente() {
           ativo={pathname === "/barbearias" || pathname.startsWith("/barbearias/")}
           onClick={() => router.push("/barbearias")}
         />
-        <BottomNavItem
-          icone={Calendar}
-          rotulo="Agenda"
-          ativo={pathname === "/agendamentos" || pathname.startsWith("/agendamentos/")}
-          onClick={() => router.push("/agendamentos")}
-        />
-        <BottomNavItem
-          icone={Heart}
-          rotulo="Favoritos"
-          ativo={pathname === "/favoritos"}
-          onClick={() => router.push("/favoritos")}
-        />
-        <BottomNavItem
-          icone={User}
-          rotulo="Perfil"
-          ativo={pathname === "/perfil" || pathname === "/entrar"}
-          onClick={() => router.push(usuario ? "/perfil" : "/entrar")}
-        />
+        {usuario ? (
+          <>
+            <BottomNavItem
+              icone={Calendar}
+              rotulo="Agenda"
+              ativo={pathname === "/agendamentos" || pathname.startsWith("/agendamentos/")}
+              onClick={() => router.push("/agendamentos")}
+            />
+            <BottomNavItem
+              icone={Heart}
+              rotulo="Favoritos"
+              ativo={pathname === "/favoritos"}
+              onClick={() => router.push("/favoritos")}
+            />
+            <BottomNavItem
+              icone={User}
+              rotulo="Perfil"
+              ativo={pathname === "/perfil"}
+              onClick={() => router.push("/perfil")}
+            />
+          </>
+        ) : (
+          <BottomNavItem
+            icone={LogIn}
+            rotulo="Entrar"
+            ativo={pathname === "/entrar"}
+            onClick={() => router.push("/entrar")}
+          />
+        )}
       </BottomNav>
     </>
   );
