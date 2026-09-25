@@ -5,3 +5,4 @@ export * from "./equipe";
 export * from "./servicos";
 export * from "./agenda";
 export * from "./marketplace";
+export * from "./crm";

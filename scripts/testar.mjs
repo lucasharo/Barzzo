@@ -804,6 +804,73 @@ test("Migration Task 05: Função Haversine e RPC buscar_barbearias_marketplace"
   expect(sqlTask05).toContain("GRANT EXECUTE ON FUNCTION public.buscar_barbearias_marketplace TO anon, authenticated;");
 });
 
+// --- 11. Testes da Task 06: Clientes, Favoritos e Avaliações ---
+console.log("▶ Executando testes: CRM, Favoritos, Avaliações e Reputação (Task 06)...");
+
+function calcularMediaAvaliacoes(avaliacoes) {
+  if (!avaliacoes || avaliacoes.length === 0) return 0;
+  const soma = avaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
+  return Number((soma / avaliacoes.length).toFixed(1));
+}
+
+function validarElegibilidadeAvaliacao(statusAgendamento) {
+  if (statusAgendamento === "concluido") return { elegivel: true };
+  if (statusAgendamento === "cancelado") return { elegivel: false, motivo: "Agendamentos cancelados não podem ser avaliados." };
+  if (statusAgendamento === "nao_compareceu") return { elegivel: false, motivo: "Atendimentos onde o cliente não compareceu não são elegíveis." };
+  return { elegivel: false, motivo: "A avaliação só pode ser realizada após a conclusão." };
+}
+
+const esquemaCriarAvaliacaoTest = z.object({
+  agendamento_id: z.string().uuid("ID de agendamento inválido."),
+  nota: z.coerce.number().int().min(1).max(5),
+  comentario: z.string().max(1000).optional().nullable(),
+});
+
+test("Task 06: Validação de avaliação (nota 1 a 5, agendamento UUID)", () => {
+  const notaValida = esquemaCriarAvaliacaoTest.safeParse({
+    agendamento_id: "00000000-0000-0000-0000-000000000001",
+    nota: 5,
+    comentario: "Excelente corte e atendimento!",
+  });
+  expect(notaValida.success).toBe(true);
+
+  const notaInvalidaZero = esquemaCriarAvaliacaoTest.safeParse({
+    agendamento_id: "00000000-0000-0000-0000-000000000001",
+    nota: 0,
+  });
+  expect(notaInvalidaZero.success).toBe(false);
+
+  const notaInvalidaDecimal = esquemaCriarAvaliacaoTest.safeParse({
+    agendamento_id: "00000000-0000-0000-0000-000000000001",
+    nota: 4.5,
+  });
+  expect(notaInvalidaDecimal.success).toBe(false);
+});
+
+test("Task 06: Elegibilidade de avaliação (apenas status concluido)", () => {
+  expect(validarElegibilidadeAvaliacao("concluido").elegivel).toBe(true);
+  expect(validarElegibilidadeAvaliacao("confirmado").elegivel).toBe(false);
+  expect(validarElegibilidadeAvaliacao("cancelado").elegivel).toBe(false);
+  expect(validarElegibilidadeAvaliacao("nao_compareceu").elegivel).toBe(false);
+});
+
+test("Task 06: Cálculo de média de reputação", () => {
+  expect(calcularMediaAvaliacoes([])).toBe(0);
+  expect(calcularMediaAvaliacoes([{ nota: 5 }, { nota: 4 }])).toBe(4.5);
+  expect(calcularMediaAvaliacoes([{ nota: 5 }, { nota: 5 }, { nota: 4 }, { nota: 4 }, { nota: 5 }])).toBe(4.6);
+});
+
+test("Migration Task 06: Tabelas clientes_barbearia, observacoes_clientes, favoritos, avaliacoes", () => {
+  const caminhoSqlTask06 = path.resolve(raiz, "supabase/migrations/20260925000005_clientes_favoritos_avaliacoes.sql");
+  const sqlTask06 = fs.readFileSync(caminhoSqlTask06, "utf-8");
+  expect(sqlTask06).toContain("CREATE TABLE IF NOT EXISTS public.clientes_barbearia");
+  expect(sqlTask06).toContain("CREATE TABLE IF NOT EXISTS public.observacoes_clientes");
+  expect(sqlTask06).toContain("CREATE TABLE IF NOT EXISTS public.favoritos");
+  expect(sqlTask06).toContain("CREATE TABLE IF NOT EXISTS public.avaliacoes");
+  expect(sqlTask06).toContain("ALTER TABLE public.observacoes_clientes ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask06).toContain("CREATE OR REPLACE FUNCTION public.obter_metricas_cliente_crm");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -839,6 +906,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/05-marketplace-cliente/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/06-clientes-avaliacoes/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

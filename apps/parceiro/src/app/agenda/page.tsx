@@ -493,7 +493,7 @@ export default function PaginaAgendaParceiro() {
                           <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
                         </Button>
                         <Button
-                          variante="destrutivo"
+                          variante="cancelar-destrutivo"
                           tamanho="sm"
                           disabled={acaoId === ag.id}
                           onClick={() => atualizarStatus(ag.id, "cancelado")}

@@ -59,6 +59,12 @@ export default function RootLayout({
                 Agendamentos
               </Link>
               <Link
+                href="/favoritos"
+                className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
+              >
+                Favoritos
+              </Link>
+              <Link
                 href="/perfil"
                 className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
               >

@@ -50,6 +50,18 @@ export default function LayoutParceiro({
                   Agenda
                 </Link>
                 <Link
+                  href="/clientes"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Clientes
+                </Link>
+                <Link
+                  href="/avaliacoes"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Avaliações
+                </Link>
+                <Link
                   href="/servicos"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >

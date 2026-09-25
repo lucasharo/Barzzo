@@ -1,7 +1,7 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: TASK-05
+- Task ativa: TASK-06
 - Estado: CONCLUIDA
 - Próximo agente: PO
 - Bloqueios: nenhum
@@ -13,7 +13,7 @@
 | 03 | #3 | Serviços, jornadas e disponibilidade | CONCLUIDA |
 | 04 | #4 | Agenda e agendamentos | CONCLUIDA |
 | 05 | #5 | Marketplace e jornada do cliente | CONCLUIDA |
-| 06 | #6 | Clientes, favoritos e avaliações | PENDENTE |
+| 06 | #6 | Clientes, favoritos e avaliações | CONCLUIDA |
 | 07 | #7 | Produtos, galeria e imagens | PENDENTE |
 | 08 | #8 | Campanhas, cupons e influenciadores | PENDENTE |
 | 09 | #9 | Notificações, dashboard e relatórios | PENDENTE |

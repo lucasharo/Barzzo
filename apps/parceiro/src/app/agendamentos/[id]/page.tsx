@@ -465,7 +465,7 @@ export default function PaginaDetalhesAgendamento() {
               {agendamento.status === "confirmado" && (
                 <>
                   <Button
-                    variante="destrutivo"
+                    variante="cancelar-destrutivo"
                     tamanho="sm"
                     disabled={atualizandoStatus}
                     onClick={() => handleMudarStatus("nao_compareceu")}
@@ -473,7 +473,7 @@ export default function PaginaDetalhesAgendamento() {
                     Não Compareceu
                   </Button>
                   <Button
-                    variante="destrutivo"
+                    variante="cancelar-destrutivo"
                     tamanho="sm"
                     disabled={atualizandoStatus}
                     onClick={() => handleMudarStatus("cancelado")}
@@ -494,7 +494,7 @@ export default function PaginaDetalhesAgendamento() {
               {agendamento.status === "em_atendimento" && (
                 <>
                   <Button
-                    variante="destrutivo"
+                    variante="cancelar-destrutivo"
                     tamanho="sm"
                     disabled={atualizandoStatus}
                     onClick={() => handleMudarStatus("cancelado")}

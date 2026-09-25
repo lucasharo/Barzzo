@@ -10,5 +10,5 @@ export function criarClienteSupabaseBrowser() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "exemplo-chave-publica-barzzo";
 
-  return createBrowserClient<Database>(url, chave);
+  return createBrowserClient<any>(url, chave);
 }

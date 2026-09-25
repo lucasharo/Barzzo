@@ -20,7 +20,10 @@ import {
   type Profissional,
   type HorarioBarbearia,
   type DiaSemana,
+  type Avaliacao,
+  type ResumoReputacaoBarbearia,
 } from "@barzzo/tipos";
+import { formatarResumoReputacao } from "@barzzo/dominio";
 import {
   MapPin,
   Phone,
@@ -34,6 +37,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
+  Heart,
+  MessageSquare,
 } from "lucide-react";
 
 export default function PaginaPerfilPublicoBarbearia() {
@@ -47,6 +52,17 @@ export default function PaginaPerfilPublicoBarbearia() {
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
   const [horarios, setHorarios] = React.useState<HorarioBarbearia[]>([]);
 
+  // Estados de Avaliações e Favoritos
+  const [avaliacoes, setAvaliacoes] = React.useState<Avaliacao[]>([]);
+  const [resumoReputacao, setResumoReputacao] = React.useState<ResumoReputacaoBarbearia>({
+    media_nota: 0,
+    total_avaliacoes: 0,
+    distribuicao_estrelas: { estrela_5: 0, estrela_4: 0, estrela_3: 0, estrela_2: 0, estrela_1: 0 },
+  });
+  const [favoritado, setFavoritado] = React.useState(false);
+  const [favoritoId, setFavoritoId] = React.useState<string | null>(null);
+  const [alternandoFavorito, setAlternandoFavorito] = React.useState(false);
+
   React.useEffect(() => {
     carregarPerfil();
   }, [slug]);
@@ -57,8 +73,7 @@ export default function PaginaPerfilPublicoBarbearia() {
       const supabase = criarClienteSupabaseBrowser();
 
       // 1. Barbearia por slug
-      const { data: bDb, error: erroB } = await supabase
-        .from("barbearias")
+      const { data: bDb, error: erroB } = await (supabase.from("barbearias") as any)
         .select("*")
         .eq("slug", slug)
         .eq("ativa", true)
@@ -73,8 +88,7 @@ export default function PaginaPerfilPublicoBarbearia() {
       setBarbearia(barb);
 
       // 2. Serviços ativos da barbearia
-      const { data: sDb } = await supabase
-        .from("servicos")
+      const { data: sDb } = await (supabase.from("servicos") as any)
         .select("*")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
@@ -83,8 +97,7 @@ export default function PaginaPerfilPublicoBarbearia() {
       setServicos((sDb || []) as Servico[]);
 
       // 3. Profissionais da barbearia
-      const { data: pDb } = await supabase
-        .from("profissionais")
+      const { data: pDb } = await (supabase.from("profissionais") as any)
         .select("*")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
@@ -93,17 +106,93 @@ export default function PaginaPerfilPublicoBarbearia() {
       setProfissionais((pDb || []) as Profissional[]);
 
       // 4. Horários de funcionamento
-      const { data: hDb } = await supabase
-        .from("horarios_barbearia")
+      const { data: hDb } = await (supabase.from("horarios_barbearia") as any)
         .select("*")
         .eq("barbearia_id", barb.id)
         .order("dia_semana", { ascending: true });
 
       setHorarios((hDb || []) as HorarioBarbearia[]);
+
+      // 5. Avaliações públicas da barbearia
+      const { data: avDb } = await (supabase.from("avaliacoes") as any)
+        .select(`
+          *,
+          profissionais (
+            nome
+          )
+        `)
+        .eq("barbearia_id", barb.id)
+        .order("created_at", { ascending: false });
+
+      const listaAv = (avDb || []) as Avaliacao[];
+      setAvaliacoes(listaAv);
+      setResumoReputacao(formatarResumoReputacao(listaAv));
+
+      // 6. Verificar se o cliente logado favoritou esta barbearia
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const { data: favDb } = await (supabase.from("favoritos") as any)
+          .select("id")
+          .eq("barbearia_id", barb.id)
+          .eq("cliente_id", session.user.id)
+          .maybeSingle();
+
+        if (favDb) {
+          setFavoritado(true);
+          setFavoritoId(favDb.id);
+        } else {
+          setFavoritado(false);
+          setFavoritoId(null);
+        }
+      }
     } catch {
       // Silencioso
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function alternarFavorito() {
+    if (!barbearia) return;
+    try {
+      setAlternandoFavorito(true);
+      const supabase = criarClienteSupabaseBrowser();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        router.push(`/entrar?retorno=/barbearias/${slug}`);
+        return;
+      }
+
+      if (favoritado && favoritoId) {
+        // Remover dos favoritos
+        await (supabase.from("favoritos") as any).delete().eq("id", favoritoId);
+        setFavoritado(false);
+        setFavoritoId(null);
+      } else {
+        // Adicionar aos favoritos
+        const { data: novoFav } = await (supabase.from("favoritos") as any)
+          .insert({
+            cliente_id: session.user.id,
+            barbearia_id: barbearia.id,
+          })
+          .select("id")
+          .single();
+
+        if (novoFav) {
+          setFavoritado(true);
+          setFavoritoId(novoFav.id);
+        }
+      }
+    } catch {
+      // Silencioso
+    } finally {
+      setAlternandoFavorito(false);
     }
   }
 
@@ -154,12 +243,45 @@ export default function PaginaPerfilPublicoBarbearia() {
             )}
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl md:text-3xl font-extrabold">{barbearia.nome}</h1>
-              <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20">
-                Ativa no Barzzo
-              </span>
+          <div className="flex flex-col gap-1.5 flex-1">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-extrabold">{barbearia.nome}</h1>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20">
+                  Ativa no Barzzo
+                </span>
+                {resumoReputacao.total_avaliacoes > 0 ? (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 flex items-center gap-1">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    {resumoReputacao.media_nota} ({resumoReputacao.total_avaliacoes})
+                  </span>
+                ) : (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-500 font-medium">
+                    Novo no Barzzo
+                  </span>
+                )}
+              </div>
+
+              {/* Botão de Favoritar */}
+              <button
+                onClick={alternarFavorito}
+                disabled={alternandoFavorito}
+                aria-label={favoritado ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                className={`p-2.5 rounded-xl border transition-all min-h-[44px] min-w-[44px] flex items-center justify-center gap-1.5 text-xs font-semibold ${
+                  favoritado
+                    ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/20"
+                    : "border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-red-500 hover:border-red-300 dark:hover:border-red-900"
+                }`}
+              >
+                <Heart
+                  className={`w-4 h-4 transition-transform ${
+                    favoritado ? "fill-red-500 text-red-500 scale-110" : ""
+                  }`}
+                />
+                <span className="hidden sm:inline">
+                  {favoritado ? "Favoritada" : "Favoritar"}
+                </span>
+              </button>
             </div>
 
             <p className="text-sm opacity-75 flex items-center gap-1.5">
@@ -281,6 +403,97 @@ export default function PaginaPerfilPublicoBarbearia() {
                       <span className="text-sm font-bold truncate">{p.nome}</span>
                       <span className="text-[11px] opacity-60">Barbeiro Oficial</span>
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Seção de Avaliações e Reputação */}
+          <div className="flex flex-col gap-4 pt-4 border-t border-neutral-200/60 dark:border-neutral-800/60">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <Star className="w-5 h-5 fill-amber-400 text-amber-400" />
+                  Avaliações dos Clientes
+                </h2>
+                <p className="text-sm opacity-70">
+                  Opiniões verificadas de clientes que realizaram atendimento.
+                </p>
+              </div>
+              {resumoReputacao.total_avaliacoes > 0 && (
+                <div className="text-right">
+                  <span className="text-2xl font-black text-amber-500">
+                    {resumoReputacao.media_nota}
+                  </span>
+                  <span className="text-xs opacity-60 block">de 5.0 estrelas</span>
+                </div>
+              )}
+            </div>
+
+            {avaliacoes.length === 0 ? (
+              <div className="p-6 rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 text-center">
+                <Star className="w-8 h-8 text-neutral-300 dark:text-neutral-700 mx-auto mb-2" />
+                <p className="text-sm font-semibold">Ainda não há avaliações registradas</p>
+                <p className="text-xs opacity-60 mt-1">
+                  Agende seu horário e compartilhe sua experiência com a comunidade!
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {avaliacoes.map((av) => (
+                  <div
+                    key={av.id}
+                    className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-[#FBFBFC] dark:bg-[#111113] space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-copper-100 dark:bg-copper-950/60 text-copper-700 dark:text-copper-300 flex items-center justify-center font-bold text-xs">
+                          {av.cliente_nome[0]}
+                        </div>
+                        <div>
+                          <span className="text-sm font-bold block">{av.cliente_nome}</span>
+                          <span className="text-[11px] opacity-50">
+                            {new Date(av.created_at).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3.5 h-3.5 ${
+                              s <= av.nota
+                                ? "text-amber-400 fill-amber-400"
+                                : "text-neutral-300 dark:text-neutral-700"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {av.comentario && (
+                      <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                        {av.comentario}
+                      </p>
+                    )}
+
+                    {av.resposta_barbearia && (
+                      <div className="p-3 rounded-lg bg-copper-500/10 border border-copper-500/20 space-y-1">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-copper-700 dark:text-copper-300">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Resposta da Barbearia:</span>
+                        </div>
+                        <p className="text-xs text-neutral-700 dark:text-neutral-300 pl-5">
+                          {av.resposta_barbearia}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

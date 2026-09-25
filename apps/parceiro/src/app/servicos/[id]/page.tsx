@@ -302,7 +302,7 @@ export default function PaginaEdicaoServico() {
 
         {!ehNovo && (
           <Button
-            variante="destrutivo"
+            variante="cancelar-destrutivo"
             tamanho="sm"
             onClick={handleExcluir}
             disabled={excluindo}

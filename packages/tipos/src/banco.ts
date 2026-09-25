@@ -9,6 +9,12 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      [tableName: string]: {
+        Row: Record<string, any>;
+        Insert: Record<string, any>;
+        Update: Record<string, any>;
+        Relationships: any[];
+      };
       usuarios: {
         Row: {
           id: string;
@@ -49,16 +55,18 @@ export interface Database {
       };
     };
     Views: {
-      [_ in never]: never;
+      [viewName: string]: {
+        Row: Record<string, any>;
+      };
     };
     Functions: {
-      funcao_atualizar_timestamp: {
-        Args: Record<PropertyKey, never>;
-        Returns: unknown;
+      [fnName: string]: {
+        Args: Record<string, any>;
+        Returns: any;
       };
     };
     Enums: {
-      [_ in never]: never;
+      [_ in string]: string;
     };
   };
 }

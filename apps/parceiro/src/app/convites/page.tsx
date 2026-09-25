@@ -322,8 +322,8 @@ export default function PaginaConvites() {
                       )}
                       {statusEfetivo === "pendente" && (
                         <Button
-                          variant="secondary"
-                          size="sm"
+                          variante="secundario"
+                          tamanho="sm"
                           onClick={() => copiarLinkConvite(convite.token)}
                           className="flex items-center gap-1 text-xs"
                         >

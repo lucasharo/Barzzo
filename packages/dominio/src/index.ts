@@ -3,3 +3,4 @@ export * from "@barzzo/validacoes";
 export * from "./disponibilidade";
 export * from "./agenda";
 export * from "./marketplace";
+export * from "./crm";

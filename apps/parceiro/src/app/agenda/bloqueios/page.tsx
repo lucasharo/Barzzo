@@ -516,7 +516,7 @@ export default function PaginaBloqueiosAgenda() {
 
                   <div className="flex items-center justify-end">
                     <Button
-                      variante="destrutivo"
+                      variante="cancelar-destrutivo"
                       tamanho="sm"
                       onClick={() => handleRemoverBloqueio(bloq.id)}
                       disabled={excluindoId === bloq.id}

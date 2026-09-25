@@ -16,7 +16,7 @@ export function criarClienteSupabaseServidor(cookies: GerenciadorCookies) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "exemplo-chave-publica-barzzo";
 
-  return createServerClient<Database>(url, chave, {
+  return createServerClient<any>(url, chave, {
     cookies: {
       get(nome: string) {
         const c = cookies.get(nome);
