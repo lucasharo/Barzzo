@@ -46,6 +46,7 @@ import {
   CheckCircle,
   Tag,
   ShieldCheck,
+  ChevronRight,
 } from "lucide-react";
 
 function ConteudoWizardReservaCliente() {
@@ -680,10 +681,10 @@ function ConteudoWizardReservaCliente() {
                 setProfissionalSelecionado(null);
                 setPassoAtual(3);
               }}
-              className={`p-4 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+              className={`p-4 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between group ${
                 modoProfissional === "qualquer"
                   ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
-                  : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
+                  : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900/40"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -697,9 +698,7 @@ function ConteudoWizardReservaCliente() {
                   </span>
                 </div>
               </div>
-              <Button variante="principal" tamanho="sm">
-                Avançar
-              </Button>
+              <ChevronRight className="h-5 w-5 text-neutral-400 group-hover:text-[#B45A2B] group-hover:translate-x-0.5 transition-all shrink-0" aria-hidden="true" />
             </div>
 
             <div className="relative my-2 text-center text-xs opacity-50">
@@ -719,21 +718,19 @@ function ConteudoWizardReservaCliente() {
                       setProfissionalSelecionado(p);
                       setPassoAtual(3);
                     }}
-                    className={`p-3 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+                    className={`p-3 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between group ${
                       selecionado
                         ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
-                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300"
+                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900/40"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 pr-2">
                       <div className="h-10 w-10 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center font-bold text-xs shrink-0">
                         {p.nome.slice(0, 2).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-sm">{p.nome}</span>
+                      <span className="font-semibold text-sm truncate">{p.nome}</span>
                     </div>
-                    <Button variante="secundario" tamanho="sm">
-                      Selecionar
-                    </Button>
+                    <ChevronRight className="h-5 w-5 text-neutral-400 group-hover:text-[#B45A2B] group-hover:translate-x-0.5 transition-all shrink-0" aria-hidden="true" />
                   </div>
                 );
               })}
