@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
-import Link from "next/link";
-import { ThemeToggle } from "@barzzo/ui";
 import { NavegacaoParceiro } from "../components/navegacao-parceiro";
 import "./globals.css";
 

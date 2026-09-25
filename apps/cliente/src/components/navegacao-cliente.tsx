@@ -86,52 +86,53 @@ export function NavegacaoCliente() {
             BARZZO
           </Link>
 
-          {/* Links Desktop (telas >= md) */}
-          <nav className="hidden md:flex items-center gap-1 lg:gap-3 text-sm font-medium">
-            {itensNav.map((item) => {
-              const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-1.5 rounded-lg transition-colors ${
-                    ativo
-                      ? "text-[#B45A2B] font-semibold bg-[#B45A2B]/10"
-                      : "hover:text-[#B45A2B] hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                  }`}
+          {/* Área Direita: Navegação Desktop + Alternador de Tema + Menu Mobile */}
+          <div className="flex items-center gap-1.5 md:gap-3">
+            {/* Links Desktop (telas >= md) */}
+            <nav className="hidden md:flex items-center gap-1 lg:gap-3 text-sm font-medium">
+              {itensNav.map((item) => {
+                const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`px-3 py-1.5 rounded-lg transition-colors ${
+                      ativo
+                        ? "text-[#B45A2B] font-semibold bg-[#B45A2B]/10"
+                        : "hover:text-[#B45A2B] hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                    }`}
+                  >
+                    {item.rotulo}
+                  </Link>
+                );
+              })}
+
+              {usuario ? (
+                <Button
+                  variante="fantasma"
+                  tamanho="sm"
+                  onClick={lidarComLogout}
+                  className="text-xs"
                 >
-                  {item.rotulo}
-                </Link>
-              );
-            })}
-
-            {usuario ? (
-              <Button
-                variante="fantasma"
-                tamanho="sm"
-                onClick={lidarComLogout}
-                className="text-xs"
-              >
-                Sair
-              </Button>
-            ) : (
-              <Link href="/entrar">
-                <Button variante="principal" tamanho="sm">
-                  Entrar
+                  Sair
                 </Button>
-              </Link>
-            )}
+              ) : (
+                <Link href="/entrar">
+                  <Button variante="principal" tamanho="sm">
+                    Entrar
+                  </Button>
+                </Link>
+              )}
+            </nav>
 
+            {/* Alternador de Tema Único (Desktop e Mobile) */}
             <ThemeToggle />
-          </nav>
 
-          {/* Ações Mobile (telas < md) */}
-          <div className="flex md:hidden items-center gap-1.5">
-            <ThemeToggle />
+            {/* Botão Hambúrguer Mobile (telas < md) */}
             <button
               type="button"
               onClick={() => setDrawerAberto(true)}
-              className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+              className="flex md:hidden h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
               aria-label="Abrir menu de navegação"
             >
               <Menu className="h-6 w-6" />
