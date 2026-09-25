@@ -15,6 +15,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  SeletorData,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
@@ -760,15 +761,13 @@ function ConteudoWizardReservaCliente() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="data">Escolha o Dia do Atendimento</Label>
-              <Input
+            <div className="max-w-md">
+              <SeletorData
                 id="data"
-                type="date"
+                rotulo="Escolha o Dia do Atendimento"
                 min={new Date().toISOString().split("T")[0]}
-                value={dataSelecionada}
-                onChange={(e) => setDataSelecionada(e.target.value)}
-                className="max-w-xs font-semibold"
+                valor={dataSelecionada}
+                aoMudar={(novaData) => setDataSelecionada(novaData)}
               />
             </div>
 

@@ -15,6 +15,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  SeletorData,
 } from "@barzzo/ui";
 import { formatarTelefone } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
@@ -590,16 +591,15 @@ export default function PaginaNovoAgendamentoManual() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="data">Data do Atendimento *</Label>
-                  <Input
+                <div>
+                  <SeletorData
                     id="data"
-                    type="date"
-                    value={dataAgendamento}
-                    onChange={(e) => setDataAgendamento(e.target.value)}
-                    required
+                    rotulo="Data do Atendimento *"
+                    valor={dataAgendamento}
+                    aoMudar={(novaData) => setDataAgendamento(novaData)}
+                    min={new Date().toISOString().split("T")[0]}
                   />
-                  <span className="text-xs opacity-60">
+                  <span className="text-xs opacity-60 mt-1 block">
                     O sistema verifica jornada, pausas e bloqueios para a data.
                   </span>
                 </div>

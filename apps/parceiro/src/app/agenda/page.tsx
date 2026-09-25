@@ -12,6 +12,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  SeletorData,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro } from "@barzzo/utilitarios";
@@ -309,12 +310,12 @@ export default function PaginaAgendaParceiro() {
             </button>
           </div>
 
-          <input
-            type="date"
-            value={dataSelecionada}
-            onChange={(e) => setDataSelecionada(e.target.value)}
-            className="px-2.5 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-[#B45A2B]"
-          />
+          <div className="w-64 sm:w-72">
+            <SeletorData
+              valor={dataSelecionada}
+              aoMudar={(d) => setDataSelecionada(d)}
+            />
+          </div>
 
           <Link href="/agendamentos/novo">
             <Button variante="principal" tamanho="sm">
