@@ -12,6 +12,7 @@ import {
   CardDescription,
   Input,
   LoadingSpinner,
+  Alert,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { calcularDistanciaKm } from "@barzzo/dominio";
@@ -24,6 +25,8 @@ import {
   Compass,
   ArrowRight,
   Filter,
+  Check,
+  X,
 } from "lucide-react";
 
 interface BarbeariaComDistancia extends Barbearia {
@@ -42,6 +45,8 @@ function ConteudoListagemBarbearias() {
   const [barbearias, setBarbearias] = React.useState<BarbeariaComDistancia[]>([]);
   const [localizacaoUsuario, setLocalizacaoUsuario] = React.useState<{ lat: number; lng: number } | null>(null);
   const [obtendoLocalizacao, setObtendoLocalizacao] = React.useState(false);
+  const [erroLocalizacao, setErroLocalizacao] = React.useState<string | null>(null);
+  const [mensagemLocalizacao, setMensagemLocalizacao] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     carregarBarbearias();
@@ -109,13 +114,30 @@ function ConteudoListagemBarbearias() {
     }
   }
 
-  function obterLocalizacaoAtual() {
-    if (!navigator.geolocation) {
-      alert("Geolocalização não é suportada pelo seu navegador.");
+  function alternarLocalizacao() {
+    // Se já estiver ativa, o clique desativa e volta à ordenação padrão
+    if (localizacaoUsuario) {
+      setLocalizacaoUsuario(null);
+      setMensagemLocalizacao(null);
+      setErroLocalizacao(null);
+      return;
+    }
+
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setErroLocalizacao("Geolocalização não é suportada pelo seu navegador ou dispositivo.");
       return;
     }
 
     setObtendoLocalizacao(true);
+    setErroLocalizacao(null);
+    setMensagemLocalizacao(null);
+
+    const opcoesGeo: PositionOptions = {
+      enableHighAccuracy: false,
+      timeout: 10000,
+      maximumAge: 60000,
+    };
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocalizacaoUsuario({
@@ -123,16 +145,38 @@ function ConteudoListagemBarbearias() {
           lng: pos.coords.longitude,
         });
         setObtendoLocalizacao(false);
+        setMensagemLocalizacao(
+          "Localização detectada com sucesso! Barbearias ordenadas pelas mais próximas de você."
+        );
+        // Se havia filtro manual de cidade, limpar para exibir todas as mais próximas
+        if (cidade.trim()) {
+          setCidade("");
+        }
       },
       (err) => {
         setObtendoLocalizacao(false);
-        // Fallback silencioso sem travar o usuário
-      }
+        if (err.code === 1) {
+          setErroLocalizacao(
+            "Permissão de localização negada pelo navegador. Permita o acesso à localização para ordenar as barbearias por proximidade."
+          );
+        } else if (err.code === 2) {
+          setErroLocalizacao(
+            "Não foi possível determinar sua localização atual. Você pode buscar digitando sua cidade ou bairro no campo de pesquisa."
+          );
+        } else if (err.code === 3) {
+          setErroLocalizacao(
+            "O tempo limite para obter sua localização expirou. Tente novamente ou use a busca por cidade."
+          );
+        } else {
+          setErroLocalizacao("Ocorreu um erro ao obter sua localização. Tente novamente.");
+        }
+      },
+      opcoesGeo
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 py-4">
+    <div className="flex flex-col gap-6 py-4">
       {/* Header com Filtros */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -144,18 +188,65 @@ function ConteudoListagemBarbearias() {
 
         <button
           type="button"
-          onClick={obterLocalizacaoAtual}
+          onClick={alternarLocalizacao}
           disabled={obtendoLocalizacao}
-          className="text-xs font-semibold px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] flex items-center gap-1.5 transition-colors self-start md:self-auto"
+          className={`text-xs font-semibold px-3.5 py-2 rounded-lg border flex items-center gap-2 transition-all self-start md:self-auto min-h-[44px] ${
+            localizacaoUsuario
+              ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm hover:bg-[#C46632]"
+              : "border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+          }`}
+          title={
+            localizacaoUsuario
+              ? "Localização ativada. Clique para desativar e voltar à ordenação padrão."
+              : "Usar minha localização para ordenar barbearias por proximidade"
+          }
         >
-          <Compass className={`h-4 w-4 text-[#B45A2B] ${obtendoLocalizacao ? "animate-spin" : ""}`} />
-          {localizacaoUsuario
-            ? "Localização ativada"
-            : obtendoLocalizacao
-            ? "Detectando..."
-            : "Usar minha localização"}
+          {obtendoLocalizacao ? (
+            <>
+              <Compass className="h-4 w-4 animate-spin text-[#B45A2B]" />
+              <span>Detectando localização...</span>
+            </>
+          ) : localizacaoUsuario ? (
+            <>
+              <Check className="h-4 w-4 text-white" />
+              <span>Localização ativa</span>
+              <X className="h-3.5 w-3.5 ml-1 opacity-75 hover:opacity-100" />
+            </>
+          ) : (
+            <>
+              <Compass className="h-4 w-4 text-[#B45A2B]" />
+              <span>Usar minha localização</span>
+            </>
+          )}
         </button>
       </div>
+
+      {/* Avisos Informativos de Localização */}
+      {erroLocalizacao && (
+        <Alert variante="alerta" className="flex items-center justify-between">
+          <span>{erroLocalizacao}</span>
+          <button
+            type="button"
+            onClick={() => setErroLocalizacao(null)}
+            className="text-xs font-bold underline ml-4 hover:opacity-80 shrink-0"
+          >
+            Fechar
+          </button>
+        </Alert>
+      )}
+
+      {mensagemLocalizacao && (
+        <Alert variante="sucesso" className="flex items-center justify-between">
+          <span>{mensagemLocalizacao}</span>
+          <button
+            type="button"
+            onClick={() => setMensagemLocalizacao(null)}
+            className="text-xs font-bold underline ml-4 hover:opacity-80 shrink-0"
+          >
+            Fechar
+          </button>
+        </Alert>
+      )}
 
       {/* Barra de Filtros */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
