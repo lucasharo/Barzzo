@@ -122,6 +122,12 @@ export default function LayoutParceiro({
                   Relatórios
                 </Link>
                 <Link
+                  href="/assinatura"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors font-bold"
+                >
+                  Assinatura
+                </Link>
+                <Link
                   href="/configuracoes/perfil"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >

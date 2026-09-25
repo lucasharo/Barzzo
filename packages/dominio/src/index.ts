@@ -8,3 +8,5 @@ export * from "./produtos-galeria";
 export * from "./campanhas";
 export * from "./notificacoes";
 export * from "./relatorios";
+export * from "./assinaturas";
+export * from "./admin";

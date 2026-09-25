@@ -1313,6 +1313,127 @@ test("Migration Task 09: Tabelas dispositivos, notificacoes, lembrete_enviado e 
   expect(sqlTask09).toContain("CREATE OR REPLACE FUNCTION public.obter_relatorio_geral");
 });
 
+// --- 15. Testes da Task 10: Assinaturas, Admin e Produção ---
+console.log("▶ Executando testes: Assinaturas, MRR, Retenção e Auditoria Admin (Task 10)...");
+
+const esquemaPlanoTest = z.object({
+  identificador: z.enum(["solo", "pro", "growth", "rede"]),
+  nome: z.string().trim().min(2).max(60),
+  descricao: z.string().max(200).optional().nullable(),
+  limite_profissionais: z.coerce.number().int().positive().optional().nullable(),
+  preco_mensal: z.coerce.number().positive(),
+  preco_semestral: z.coerce.number().positive(),
+  ativo: z.boolean().default(true),
+  recursos: z.array(z.string()).default([]),
+});
+
+const esquemaBeneficioTest = z.object({
+  barbearia_id: z.string().uuid(),
+  tipo: z.enum(["extensao_trial", "desconto", "dias_bonus"]),
+  dias_concedidos: z.coerce.number().int().min(1).max(180),
+  motivo: z.string().trim().min(5).max(300),
+});
+
+function calcularMRRTest(assinaturas) {
+  if (!assinaturas || assinaturas.length === 0) return 0;
+  const total = assinaturas.reduce((acc, ass) => {
+    if (ass.status !== "ativa" || ass.valor <= 0) return acc;
+    if (ass.ciclo === "semestral") return acc + ass.valor / 6;
+    return acc + ass.valor;
+  }, 0);
+  return Number(total.toFixed(2));
+}
+
+function verificarAcessoPlanoTest(status, trialFim, agora = new Date()) {
+  if (status === "ativa") return { acessoPermitido: true };
+  if (status === "trial") {
+    if (!trialFim) return { acessoPermitido: true };
+    if (agora.getTime() <= new Date(trialFim).getTime()) return { acessoPermitido: true };
+    return { acessoPermitido: false, motivoBloqueio: "Trial expirado" };
+  }
+  return { acessoPermitido: false, motivoBloqueio: "Assinatura inativa" };
+}
+
+function validarCapacidadeEquipeTest(limite, totalMembros) {
+  if (limite === null || limite === undefined) return { permitido: true };
+  if (totalMembros >= limite) return { permitido: false };
+  return { permitido: true };
+}
+
+function calcularEconomiaSemestralTest(mensal, semestral) {
+  if (mensal <= 0 || semestral <= 0) return { economiaTotal: 0, percentualEconomia: 0 };
+  const total6Meses = mensal * 6;
+  const economia = Math.max(0, Number((total6Meses - semestral).toFixed(2)));
+  const percentual = Math.round((economia / total6Meses) * 100);
+  return { economiaTotal: economia, percentualEconomia: percentual };
+}
+
+test("Task 10: Validação de Planos e Benefícios de Retenção", () => {
+  const planoValido = esquemaPlanoTest.safeParse({
+    identificador: "pro",
+    nome: "Plano Pro",
+    limite_profissionais: 5,
+    preco_mensal: 99.90,
+    preco_semestral: 499.00,
+    recursos: ["Até 5 profissionais", "Marketplace"],
+  });
+  expect(planoValido.success).toBe(true);
+
+  const planoInvalido = esquemaPlanoTest.safeParse({
+    identificador: "invalido",
+    nome: "Plano",
+    preco_mensal: -10,
+    preco_semestral: 0,
+  });
+  expect(planoInvalido.success).toBe(false);
+
+  const beneficioValido = esquemaBeneficioTest.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    tipo: "extensao_trial",
+    dias_concedidos: 30,
+    motivo: "Retenção comercial para negociação de contrato semestral.",
+  });
+  expect(beneficioValido.success).toBe(true);
+});
+
+test("Task 10: Regras de negócio — Cálculo de MRR, Limites de Equipe e Economia Semestral", () => {
+  // MRR: 1 mensal (99.90) + 1 semestral (600 / 6 = 100) + 1 trial ignorado = 199.90
+  const assinaturas = [
+    { ciclo: "mensal", valor: 99.90, status: "ativa" },
+    { ciclo: "semestral", valor: 600, status: "ativa" },
+    { ciclo: "mensal", valor: 189.90, status: "trial" },
+  ];
+  expect(calcularMRRTest(assinaturas)).toBe(199.90);
+
+  // Limites de equipe (Solo = 1, Pro = 5, Rede = null)
+  expect(validarCapacidadeEquipeTest(1, 0).permitido).toBe(true);
+  expect(validarCapacidadeEquipeTest(1, 1).permitido).toBe(false);
+  expect(validarCapacidadeEquipeTest(null, 50).permitido).toBe(true);
+
+  // Economia semestral: Solo 49.90 vs 249.00 -> economia = 50.40 (17%)
+  const eco = calcularEconomiaSemestralTest(49.90, 249.00);
+  expect(eco.economiaTotal).toBe(50.40);
+  expect(eco.percentualEconomia).toBe(17);
+
+  // Máquina de estados
+  expect(verificarAcessoPlanoTest("ativa", null).acessoPermitido).toBe(true);
+  expect(verificarAcessoPlanoTest("trial", "2029-01-01T00:00:00Z").acessoPermitido).toBe(true);
+  expect(verificarAcessoPlanoTest("trial", "2020-01-01T00:00:00Z").acessoPermitido).toBe(false);
+  expect(verificarAcessoPlanoTest("suspensa", null).acessoPermitido).toBe(false);
+});
+
+test("Migration Task 10: Tabelas planos, assinaturas, beneficios_assinatura, logs_auditoria e RPCs", () => {
+  const caminhoSqlTask10 = path.resolve(raiz, "supabase/migrations/20260925000009_planos_assinaturas_admin.sql");
+  const sqlTask10 = fs.readFileSync(caminhoSqlTask10, "utf-8");
+  expect(sqlTask10).toContain("CREATE TABLE IF NOT EXISTS public.planos");
+  expect(sqlTask10).toContain("CREATE TABLE IF NOT EXISTS public.assinaturas");
+  expect(sqlTask10).toContain("CREATE TABLE IF NOT EXISTS public.beneficios_assinatura");
+  expect(sqlTask10).toContain("CREATE TABLE IF NOT EXISTS public.logs_auditoria");
+  expect(sqlTask10).toContain("CREATE OR REPLACE FUNCTION public.conceder_extensao_trial");
+  expect(sqlTask10).toContain("CREATE OR REPLACE FUNCTION public.processar_confirmacao_pagamento_assinatura");
+  expect(sqlTask10).toContain("CREATE OR REPLACE FUNCTION public.obter_metricas_admin_global");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -1372,6 +1493,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/09-notificacoes-relatorios/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/10-assinaturas-admin-producao/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

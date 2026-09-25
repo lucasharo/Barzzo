@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import Link from "next/link";
 import { ThemeToggle } from "@barzzo/ui";
 import "./globals.css";
 
@@ -11,8 +12,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Barzzo Admin — Operação Interna",
-  description: "Painel de administração global da plataforma Barzzo.",
+  title: "Barzzo Admin — Operação e Governança",
+  description: "Painel de administração e governança global da plataforma Barzzo.",
 };
 
 export default function LayoutAdmin({
@@ -23,16 +24,77 @@ export default function LayoutAdmin({
   return (
     <html lang="pt-BR" className={roboto.variable} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-[#FFFFFF] text-black dark:bg-[#0A0A0B] dark:text-white transition-colors duration-150">
-        <header className="border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-            <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
-              BARZZO <span className="text-xs uppercase bg-[#B45A2B] text-white font-semibold px-2 py-0.5 rounded">Admin</span>
-            </span>
-            <ThemeToggle />
+        <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
+          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link href="/painel" className="flex items-center gap-2">
+                <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
+                  BARZZO
+                </span>
+                <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B] text-white font-bold px-2 py-0.5 rounded shadow-sm">
+                  Admin
+                </span>
+              </Link>
+
+              <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
+                <Link
+                  href="/painel"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Painel
+                </Link>
+                <Link
+                  href="/barbearias"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Barbearias
+                </Link>
+                <Link
+                  href="/usuarios"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Usuários
+                </Link>
+                <Link
+                  href="/assinaturas"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Assinaturas
+                </Link>
+                <Link
+                  href="/agendamentos"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Agendamentos
+                </Link>
+                <Link
+                  href="/influenciadores"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Influenciadores
+                </Link>
+                <Link
+                  href="/avaliacoes"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Avaliações
+                </Link>
+                <Link
+                  href="/logs"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Auditoria
+                </Link>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8">
           {children}
         </main>
       </body>

@@ -13,7 +13,7 @@ export interface Barbearia {
   latitude: number | null;
   longitude: number | null;
   logo_url: string | null;
-  status_assinatura: "trial" | "ativo" | "inadimplente" | "cancelado";
+  status_assinatura: "trial" | "ativa" | "ativo" | "vencida" | "inadimplente" | "suspensa" | "cancelada" | "cancelado";
   trial_inicio: string;
   trial_fim: string;
   onboarding_concluido: boolean;
