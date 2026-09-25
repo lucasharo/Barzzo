@@ -65,6 +65,12 @@ export default function RootLayout({
                 Favoritos
               </Link>
               <Link
+                href="/notificacoes"
+                className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
+              >
+                Notificações
+              </Link>
+              <Link
                 href="/perfil"
                 className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
               >

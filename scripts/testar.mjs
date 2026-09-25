@@ -1218,6 +1218,101 @@ test("Migration Task 08: Tabelas de campanhas, cupons, influenciadores, comissõ
   expect(sqlTask08).toContain("ON CONFLICT (agendamento_id) DO NOTHING");
 });
 
+// --- 10. Testes de Notificações, Dashboard e Relatórios (Task 09) ---
+console.log("▶ Executando testes: Notificações, Dashboard e Relatórios (Task 09)...");
+
+const esquemaDispositivoTest = z.object({
+  fcm_token: z.string().trim().min(1),
+  plataforma: z.enum(["web", "android", "ios"]),
+  modelo: z.string().optional().nullable(),
+});
+
+function podeEnviarNotificacaoTest(tipo, preferencias) {
+  if (!preferencias) return true;
+  if (tipo === "promocao") return preferencias.notificacoes_promocionais === true;
+  if (tipo === "lembrete") return preferencias.notificacoes_lembretes === true;
+  if (tipo === "confirmacao" || tipo === "cancelamento" || tipo === "reagendamento") {
+    return preferencias.notificacoes_transacionais === true;
+  }
+  return true;
+}
+
+function calcularTicketMedioTest(faturamentoTotal, totalAtendimentos) {
+  if (totalAtendimentos <= 0 || faturamentoTotal <= 0) return 0;
+  return Number((faturamentoTotal / totalAtendimentos).toFixed(2));
+}
+
+function calcularTaxaOcupacaoTest(minutosAtendidos, minutosJornada) {
+  if (minutosJornada <= 0 || minutosAtendidos <= 0) return 0;
+  const perc = (minutosAtendidos / minutosJornada) * 100;
+  return Number(Math.min(100, Math.max(0, perc)).toFixed(1));
+}
+
+function calcularDiferencaPrevistoRealTest(previstoMin, inicioReal, fimReal) {
+  if (!inicioReal || !fimReal || previstoMin <= 0) {
+    return { duracaoRealMinutos: previstoMin, diferencaMinutos: 0, statusPontualidade: "pontual" };
+  }
+  const realMin = Math.round((new Date(fimReal).getTime() - new Date(inicioReal).getTime()) / 60000);
+  const diff = realMin - previstoMin;
+  let status = "pontual";
+  if (diff > 5) status = "atrasado";
+  else if (diff < -5) status = "adiantado";
+  return { duracaoRealMinutos: realMin, diferencaMinutos: diff, statusPontualidade: status };
+}
+
+test("Task 09: Validação de Dispositivo e Multiplataforma", () => {
+  const devWeb = esquemaDispositivoTest.safeParse({ fcm_token: "tok_123", plataforma: "web" });
+  expect(devWeb.success).toBe(true);
+
+  const devIos = esquemaDispositivoTest.safeParse({ fcm_token: "tok_ios", plataforma: "ios", modelo: "iPhone 15" });
+  expect(devIos.success).toBe(true);
+
+  const devRuim = esquemaDispositivoTest.safeParse({ fcm_token: "", plataforma: "web" });
+  expect(devRuim.success).toBe(false);
+});
+
+test("Task 09: Preferências de Notificação (silenciamento de promoções e lembretes)", () => {
+  const prefs = {
+    notificacoes_transacionais: true,
+    notificacoes_promocionais: false,
+    notificacoes_lembretes: true,
+  };
+
+  // Promocional bloqueada
+  expect(podeEnviarNotificacaoTest("promocao", prefs)).toBe(false);
+  // Transacional permitida
+  expect(podeEnviarNotificacaoTest("confirmacao", prefs)).toBe(true);
+  // Lembrete permitido
+  expect(podeEnviarNotificacaoTest("lembrete", prefs)).toBe(true);
+  // Sistema sempre entregue
+  expect(podeEnviarNotificacaoTest("sistema", prefs)).toBe(true);
+});
+
+test("Task 09: Métricas analíticas — Ticket médio, ocupação e eficiência de tempo", () => {
+  // Ticket Médio
+  expect(calcularTicketMedioTest(600, 12)).toBe(50);
+  expect(calcularTicketMedioTest(0, 5)).toBe(0);
+
+  // Ocupação: 300 min em 600 min de jornada = 50%
+  expect(calcularTaxaOcupacaoTest(300, 600)).toBe(50);
+
+  // Duração prevista 30 min vs real 42 min (+12 min atraso)
+  const analise = calcularDiferencaPrevistoRealTest(30, "2026-09-25T14:00:00Z", "2026-09-25T14:42:00Z");
+  expect(analise.duracaoRealMinutos).toBe(42);
+  expect(analise.statusPontualidade).toBe("atrasado");
+});
+
+test("Migration Task 09: Tabelas dispositivos, notificacoes, lembrete_enviado e RPCs de métricas", () => {
+  const caminhoSqlTask09 = path.resolve(raiz, "supabase/migrations/20260925000008_notificacoes_dashboard_relatorios.sql");
+  const sqlTask09 = fs.readFileSync(caminhoSqlTask09, "utf-8");
+  expect(sqlTask09).toContain("CREATE TABLE IF NOT EXISTS public.dispositivos");
+  expect(sqlTask09).toContain("CREATE TABLE IF NOT EXISTS public.preferencias_notificacao");
+  expect(sqlTask09).toContain("CREATE TABLE IF NOT EXISTS public.notificacoes");
+  expect(sqlTask09).toContain("lembrete_enviado BOOLEAN NOT NULL DEFAULT false");
+  expect(sqlTask09).toContain("CREATE OR REPLACE FUNCTION public.obter_metricas_dashboard_hoje");
+  expect(sqlTask09).toContain("CREATE OR REPLACE FUNCTION public.obter_relatorio_geral");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -1275,10 +1370,17 @@ fs.writeFileSync(
   "utf-8"
 );
 
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/09-notificacoes-relatorios/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
 if (falhados > 0) {
   process.exit(1);
 } else {
   console.log("✔ TODOS OS TESTES PASSARAM COM SUCESSO!\n");
   process.exit(0);
 }
+
 

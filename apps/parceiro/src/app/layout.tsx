@@ -116,6 +116,12 @@ export default function LayoutParceiro({
                   Convites
                 </Link>
                 <Link
+                  href="/relatorios"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors font-bold text-[#B45A2B]"
+                >
+                  Relatórios
+                </Link>
+                <Link
                   href="/configuracoes/perfil"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >
@@ -125,6 +131,27 @@ export default function LayoutParceiro({
             </div>
 
             <div className="flex items-center gap-3">
+              <Link
+                href="/notificacoes"
+                title="Central de Notificações"
+                className="p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 transition-colors relative"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-bell"
+                >
+                  <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                  <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                </svg>
+              </Link>
               <ThemeToggle />
             </div>
           </div>
