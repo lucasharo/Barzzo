@@ -243,23 +243,11 @@ export default function PaginaPerfil() {
 
   return (
     <div className="flex-1 max-w-2xl mx-auto w-full py-8 px-4 flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
-          <p className="text-sm opacity-70">
-            Gerencie suas informações de conta e foto de perfil.
-          </p>
-        </div>
-
-        <Button
-          variante="cancelar-simples"
-          tamanho="sm"
-          onClick={lidarComLogout}
-          className="flex items-center gap-1.5"
-        >
-          <LogOut className="h-4 w-4" />
-          Sair
-        </Button>
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
+        <p className="text-sm opacity-70">
+          Gerencie suas informações de conta e foto de perfil.
+        </p>
       </div>
 
       {erro && (
@@ -385,6 +373,23 @@ export default function PaginaPerfil() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Ações da Conta / Sair no final da tela */}
+      <div className="pt-4 pb-8 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <span className="text-xs opacity-60">
+          Deseja encerrar sua sessão neste dispositivo?
+        </span>
+        <Button
+          type="button"
+          variante="cancelar-simples"
+          tamanho="md"
+          onClick={lidarComLogout}
+          className="flex items-center justify-center gap-2 w-full sm:w-auto min-h-[44px]"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair da Conta
+        </Button>
+      </div>
     </div>
   );
 }
