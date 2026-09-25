@@ -75,7 +75,7 @@ CREATE POLICY "Membros da equipe visualizam clientes da sua barbearia"
 ON public.clientes_barbearia FOR SELECT
 USING (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = clientes_barbearia.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -86,7 +86,7 @@ CREATE POLICY "Membros da equipe gerenciam clientes da sua barbearia"
 ON public.clientes_barbearia FOR ALL
 USING (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = clientes_barbearia.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -94,7 +94,7 @@ USING (
 )
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = clientes_barbearia.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -108,7 +108,7 @@ CREATE POLICY "Membros da equipe visualizam observacoes internas de clientes"
 ON public.observacoes_clientes FOR SELECT
 USING (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = observacoes_clientes.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -119,7 +119,7 @@ CREATE POLICY "Membros da equipe inserem observacoes internas de clientes"
 ON public.observacoes_clientes FOR INSERT
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = observacoes_clientes.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true

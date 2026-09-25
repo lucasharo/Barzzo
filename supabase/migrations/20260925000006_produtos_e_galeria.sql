@@ -44,7 +44,7 @@ ON public.produtos FOR SELECT
 USING (
     ativo = true
     OR EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = produtos.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -55,7 +55,7 @@ CREATE POLICY "Membros da equipe gerenciam produtos da barbearia"
 ON public.produtos FOR ALL
 USING (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = produtos.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -63,7 +63,7 @@ USING (
 )
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = produtos.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -81,7 +81,7 @@ CREATE POLICY "Membros da equipe gerenciam fotos da barbearia"
 ON public.galeria_fotos FOR ALL
 USING (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = galeria_fotos.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true
@@ -89,7 +89,7 @@ USING (
 )
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.membros_equipe m
+        SELECT 1 FROM public.membros_barbearia m
         WHERE m.barbearia_id = galeria_fotos.barbearia_id
           AND m.usuario_id = auth.uid()
           AND m.ativo = true

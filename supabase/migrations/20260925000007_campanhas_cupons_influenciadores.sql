@@ -114,6 +114,19 @@ CREATE INDEX IF NOT EXISTS idx_comissoes_status ON public.comissoes_influenciado
 -- ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 
+-- Função auxiliar para compatibilidade com RLS
+CREATE OR REPLACE FUNCTION public.usuario_eh_membro_equipe(p_barbearia_id UUID, p_usuario_id UUID DEFAULT auth.uid())
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM public.membros_barbearia
+        WHERE barbearia_id = p_barbearia_id
+          AND usuario_id = COALESCE(p_usuario_id, auth.uid())
+          AND ativo = true
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
 ALTER TABLE public.campanhas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cupons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.influenciadores ENABLE ROW LEVEL SECURITY;
