@@ -31,7 +31,20 @@ trial, ativa, vencida, suspensa, cancelada.
 Ações sensíveis auditadas.
 
 ## Cobrança
-Integração encapsulada. Se credencial Mercado Pago ainda não estiver disponível, não inventar chave; domínio/testes podem ser preparados e bloquear apenas a integração externa indispensável.
+
+Mercado Pago faz parte desta task e do MVP para cobrar **exclusivamente a assinatura da barbearia**.
+
+Implementar:
+- integração de pagamento da assinatura;
+- fluxo mensal e semestral conforme planos ativos;
+- atualização segura do status da assinatura;
+- processamento idempotente de confirmações/webhooks;
+- separação entre estado interno da assinatura e retorno externo do provedor;
+- logs/auditoria dos eventos relevantes.
+
+Não usar Mercado Pago para cobrar cortes, serviços ou produtos de clientes no MVP.
+
+Se as credenciais reais ainda não estiverem configuradas durante o desenvolvimento, usar ambiente de teste/sandbox conforme suporte oficial e manter a implementação pronta para produção. Nunca inventar credenciais.
 
 ## Revisão final
 RLS, índices, migrations, Storage, segredos, performance, responsividade, PWA, ui-ux-pro-max, acessibilidade, erros, estados e regressão completa.
