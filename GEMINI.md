@@ -21,7 +21,7 @@ Se houver reprovação, corrija e repita o ciclo. Só avance quando a task anter
 Nunca invente regra de negócio. Se uma decisão necessária não estiver documentada, marque BLOQUEADA_POR_DECISAO em STATUS.md.
 
 ## UX
-Toda task com interface exige uso da skill ui-ux-pro-max antes da implementação e novamente na revisão de QA. Registre decisões relevantes de UX.
+Toda task com interface exige uso da skill `ui-ux-pro-max` antes da implementação e novamente na revisão de QA. Se ela não estiver instalada no ambiente, deve ser baixada/instalada antes de iniciar trabalho de UI. Não substituir por outra skill sem decisão explícita. Registre decisões relevantes de UX.
 
 A implementação visual deve obedecer integralmente `docs/design/design_system.md`. Não criar cores, tipografias ou variantes visuais fora dos tokens documentados sem decisão explícita de produto/design.
 
