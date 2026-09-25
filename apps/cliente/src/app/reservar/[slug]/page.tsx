@@ -48,7 +48,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-export default function PaginaWizardReservaCliente() {
+function ConteudoWizardReservaCliente() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1001,5 +1001,20 @@ export default function PaginaWizardReservaCliente() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function PaginaWizardReservaCliente() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="py-24 flex flex-col items-center justify-center gap-3">
+          <LoadingSpinner tamanho="lg" />
+          <p className="text-sm opacity-70">Carregando fluxo de agendamento...</p>
+        </div>
+      }
+    >
+      <ConteudoWizardReservaCliente />
+    </React.Suspense>
   );
 }

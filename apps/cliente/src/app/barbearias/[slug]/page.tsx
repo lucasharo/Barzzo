@@ -47,7 +47,7 @@ import {
   X,
 } from "lucide-react";
 
-export default function PaginaPerfilPublicoBarbearia() {
+function ConteudoPerfilPublicoBarbearia() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -761,5 +761,20 @@ export default function PaginaPerfilPublicoBarbearia() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaginaPerfilPublicoBarbearia() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="py-24 flex flex-col items-center justify-center gap-3">
+          <LoadingSpinner tamanho="lg" />
+          <p className="text-sm opacity-70">Carregando perfil da barbearia...</p>
+        </div>
+      }
+    >
+      <ConteudoPerfilPublicoBarbearia />
+    </React.Suspense>
   );
 }

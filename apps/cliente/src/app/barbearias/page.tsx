@@ -31,7 +31,7 @@ interface BarbeariaComDistancia extends Barbearia {
   total_servicos?: number;
 }
 
-export default function PaginaListagemBarbearias() {
+function ConteudoListagemBarbearias() {
   const searchParams = useSearchParams();
   const termoInicial = searchParams.get("q") || "";
   const cidadeInicial = searchParams.get("cidade") || "";
@@ -265,5 +265,20 @@ export default function PaginaListagemBarbearias() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaginaListagemBarbearias() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="py-20 flex flex-col items-center justify-center gap-3">
+          <LoadingSpinner tamanho="lg" />
+          <p className="text-sm opacity-70">Carregando barbearias...</p>
+        </div>
+      }
+    >
+      <ConteudoListagemBarbearias />
+    </React.Suspense>
   );
 }
