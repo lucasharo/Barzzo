@@ -192,7 +192,7 @@ export default function PaginaNotificacoesCliente() {
             Conecte-se para visualizar confirmações de agendamento, lembretes de corte e novidades da sua barbearia.
           </p>
         </div>
-        <Link href="/auth/login">
+        <Link href="/entrar">
           <Button variante="principal" tamanho="lg">
             Entrar na Minha Conta
           </Button>

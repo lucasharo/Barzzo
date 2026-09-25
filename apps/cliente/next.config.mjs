@@ -57,6 +57,25 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/auth/login",
+        destination: "/entrar",
+        permanent: true,
+      },
+      {
+        source: "/login",
+        destination: "/entrar",
+        permanent: true,
+      },
+      {
+        source: "/auth/cadastro",
+        destination: "/cadastro",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
