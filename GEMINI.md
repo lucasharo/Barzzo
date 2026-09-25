@@ -10,7 +10,8 @@ Este repositório é a fonte de verdade do Barzzo.
 5. docs/produto/produto.md
 6. docs/arquitetura/*
 7. docs/design/design_system.md
-8. TASK.md da task atual
+8. docs/arquitetura/separacao_aplicacoes.md
+9. TASK.md da task atual
 
 ## Execução
 Execute as 10 tasks em ordem. Cada task passa por:
@@ -19,6 +20,14 @@ PO -> Líder Técnico -> Dev -> Revisão Técnica -> QA -> PO.
 Se houver reprovação, corrija e repita o ciclo. Só avance quando a task anterior estiver CONCLUIDA.
 
 Nunca invente regra de negócio. Se uma decisão necessária não estiver documentada, marque BLOQUEADA_POR_DECISAO em STATUS.md.
+
+## Arquitetura das aplicações
+
+É obrigatório respeitar `docs/arquitetura/separacao_aplicacoes.md`.
+
+Não consolidar Cliente, Parceiro e Admin em um único app com apenas separação por rotas. A estrutura deve permitir execução, deploy e empacotamento independentes.
+
+A experiência pública de Cliente não pode ser protegida por autenticação global. Pesquisa e consulta de agenda permanecem públicas até o resumo; autenticação acontece antes da confirmação definitiva.
 
 ## UX
 Toda task com interface exige uso da skill `ui-ux-pro-max` antes da implementação e novamente na revisão de QA. Se ela não estiver instalada no ambiente, deve ser baixada/instalada antes de iniciar trabalho de UI. Não substituir por outra skill sem decisão explícita. Registre decisões relevantes de UX.
