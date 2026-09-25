@@ -13,6 +13,7 @@ import {
   Input,
   LoadingSpinner,
   Alert,
+  AlertaTemporizado,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { calcularDistanciaKm, calcularMediaAvaliacoes } from "@barzzo/dominio";
@@ -408,29 +409,23 @@ function ConteudoListagemBarbearias() {
 
       {/* Avisos Informativos de Localização */}
       {erroLocalizacao && (
-        <Alert variante="alerta" className="flex items-center justify-between">
+        <AlertaTemporizado
+          variante="alerta"
+          duracaoMs={8000}
+          aoExpirar={() => setErroLocalizacao(null)}
+        >
           <span>{erroLocalizacao}</span>
-          <button
-            type="button"
-            onClick={() => setErroLocalizacao(null)}
-            className="text-xs font-bold underline ml-4 hover:opacity-80 shrink-0"
-          >
-            Fechar
-          </button>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {mensagemLocalizacao && (
-        <Alert variante="sucesso" className="flex items-center justify-between">
+        <AlertaTemporizado
+          variante="sucesso"
+          duracaoMs={5000}
+          aoExpirar={() => setMensagemLocalizacao(null)}
+        >
           <span>{mensagemLocalizacao}</span>
-          <button
-            type="button"
-            onClick={() => setMensagemLocalizacao(null)}
-            className="text-xs font-bold underline ml-4 hover:opacity-80 shrink-0"
-          >
-            Fechar
-          </button>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {/* Barra de Filtros e Busca */}

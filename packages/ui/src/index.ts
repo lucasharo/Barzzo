@@ -9,3 +9,4 @@ export * from "./theme-toggle";
 export * from "./drawer";
 export * from "./bottom-nav";
 export * from "./seletor-data";
+export * from "./alerta-temporizado";
