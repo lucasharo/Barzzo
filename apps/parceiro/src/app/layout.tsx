@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
+import Link from "next/link";
 import { ThemeToggle } from "@barzzo/ui";
 import "./globals.css";
 
@@ -23,12 +24,55 @@ export default function LayoutParceiro({
   return (
     <html lang="pt-BR" className={roboto.variable} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-[#FFFFFF] text-black dark:bg-[#0A0A0B] dark:text-white transition-colors duration-150">
-        <header className="border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
+        <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-            <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
-              BARZZO <span className="text-xs uppercase text-black dark:text-white font-normal px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800">Parceiro</span>
-            </span>
-            <ThemeToggle />
+            <div className="flex items-center gap-6">
+              <Link href="/painel" className="flex items-center gap-2">
+                <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
+                  BARZZO
+                </span>
+                <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B]/15 text-[#B45A2B] font-semibold px-2 py-0.5 rounded">
+                  Parceiro
+                </span>
+              </Link>
+
+              <nav className="hidden md:flex items-center gap-1 text-sm font-medium">
+                <Link
+                  href="/painel"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Painel
+                </Link>
+                <Link
+                  href="/equipe"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Equipe
+                </Link>
+                <Link
+                  href="/convites"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Convites
+                </Link>
+                <Link
+                  href="/onboarding"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Onboarding
+                </Link>
+                <Link
+                  href="/configuracoes/perfil"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Configurações
+                </Link>
+              </nav>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 

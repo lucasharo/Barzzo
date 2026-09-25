@@ -1,7 +1,7 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: TASK-02
+- Task ativa: TASK-03
 - Estado: PENDENTE
 - Próximo agente: PO
 - Bloqueios: nenhum
@@ -9,7 +9,7 @@
 | Task | Issue | Nome | Estado |
 |---|---:|---|---|
 | 01 | #1 | Fundação, autenticação e usuários | CONCLUIDA |
-| 02 | #2 | Barbearias, onboarding e equipe | PENDENTE |
+| 02 | #2 | Barbearias, onboarding e equipe | CONCLUIDA |
 | 03 | #3 | Serviços, jornadas e disponibilidade | PENDENTE |
 | 04 | #4 | Agenda e agendamentos | PENDENTE |
 | 05 | #5 | Marketplace e jornada do cliente | PENDENTE |

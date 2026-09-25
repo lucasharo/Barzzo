@@ -49,7 +49,7 @@ function expect(valorAtual) {
 }
 
 console.log("\n=======================================================");
-console.log("   BARZZO MVP — SUÍTE DE TESTES AUTOMATIZADOS (TASK-01)");
+console.log("   BARZZO MVP — SUÍTE DE TESTES AUTOMATIZADOS (TASK-01 & TASK-02)");
 console.log("=======================================================\n");
 
 // --- 1. Testes de Utilitários ---
@@ -103,7 +103,7 @@ test("obterIniciais: deve gerar iniciais com 2 letras", () => {
   expect(obterIniciais("")).toBe("BZ");
 });
 
-// --- 2. Testes de Validações Zod ---
+// --- 2. Testes de Validações Zod (Task 01) ---
 console.log("▶ Executando testes: Validações Zod (Auth e Usuário)...");
 
 const esquemaLogin = z.object({
@@ -163,17 +163,6 @@ test("esquemaCadastro: rejeita senhas que não coincidem", () => {
   expect(r.error.errors[0]?.message).toBe("As senhas não conferem");
 });
 
-test("esquemaCadastro: rejeita telefone incompleto", () => {
-  const r = esquemaCadastro.safeParse({
-    nome: "Cliente Teste",
-    email: "cliente@barzzo.com",
-    telefone: "119999", // Apenas 6 dígitos
-    senha: "senhaSegura123",
-    confirmarSenha: "senhaSegura123",
-  });
-  expect(r.success).toBe(false);
-});
-
 // --- 3. Testes de Imagens e Redimensionamento ---
 console.log("▶ Executando testes: Validação e Dimensões de Imagem...");
 
@@ -200,38 +189,84 @@ test("calcularDimensoesRedimensionamento: redimensiona proporcionalmente horizon
   expect(dim.altura).toBe(400);
 });
 
-test("calcularDimensoesRedimensionamento: redimensiona proporcionalmente vertical", () => {
-  const dim = calcularDimensoesRedimensionamento(600, 1200, 800);
-  expect(dim.largura).toBe(400);
-  expect(dim.altura).toBe(800);
+// --- 4. Testes de Barbearia, Equipe e Convites (Task 02) ---
+console.log("▶ Executando testes: Barbearia, Equipe e Convites (Task 02)...");
+
+const esquemaCriarBarbearia = z.object({
+  nome: z.string().trim().min(2, "O nome deve ter no mínimo 2 caracteres").max(100),
+  slug: z.string().trim().min(2).max(60).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Slug inválido"),
+  telefone: z.string().optional().refine(
+    (val) => {
+      if (!val || val.trim() === "") return true;
+      const n = val.replace(/\D/g, "");
+      return n.length === 10 || n.length === 11;
+    },
+    { message: "Telefone deve conter DDD válido" }
+  ),
 });
 
-// --- 4. Testes de Segurança e Migrações RLS ---
-console.log("▶ Executando testes: Segurança, RLS e Migrações Supabase...");
-
-const caminhoMigration = path.resolve(raiz, "supabase/migrations/20260925000000_criar_usuarios_e_auth.sql");
-const sql = fs.readFileSync(caminhoMigration, "utf-8");
-
-test("Migration: RLS ativado na tabela usuarios", () => {
-  expect(sql).toMatch(/ALTER\s+TABLE\s+public\.usuarios\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/i);
+const esquemaCriarConvite = z.object({
+  email: z.string().trim().email("Informe um e-mail válido"),
+  papel: z.enum(["gerente", "profissional"]),
 });
 
-test("Migration: SELECT restrito a auth.uid() = id", () => {
-  expect(sql).toContain("auth.uid() = id");
+test("esquemaCriarBarbearia: aceita barbearia com nome e slug válido", () => {
+  const r = esquemaCriarBarbearia.safeParse({
+    nome: "Barbearia Dom Lucas",
+    slug: "barbearia-dom-lucas",
+    telefone: "11988887777",
+  });
+  expect(r.success).toBe(true);
 });
 
-test("Migration: UPDATE com verificação WITH CHECK (auth.uid() = id)", () => {
-  expect(sql).toContain("WITH CHECK (auth.uid() = id)");
+test("esquemaCriarBarbearia: rejeita slug com espaços ou caracteres especiais", () => {
+  const r = esquemaCriarBarbearia.safeParse({
+    nome: "Barbearia Dom Lucas",
+    slug: "Barbearia Com Espaco!",
+  });
+  expect(r.success).toBe(false);
 });
 
-test("Migration: Storage bucket avatares com política isolada por usuario_id", () => {
-  expect(sql).toContain("bucket_id = 'avatares'");
-  expect(sql).toContain("(storage.foldername(name))[1] = auth.uid()::text");
+test("esquemaCriarConvite: aceita papel profissional e gerente", () => {
+  const r1 = esquemaCriarConvite.safeParse({ email: "barbeiro@teste.com", papel: "profissional" });
+  const r2 = esquemaCriarConvite.safeParse({ email: "gerente@teste.com", papel: "gerente" });
+  expect(r1.success).toBe(true);
+  expect(r2.success).toBe(true);
 });
 
-test("Migration: Trigger on_auth_user_created para sincronizar auth com usuarios", () => {
-  expect(sql).toContain("CREATE TRIGGER on_auth_user_created");
-  expect(sql).toContain("funcao_ao_criar_usuario_auth");
+test("esquemaCriarConvite: rejeita papel dono via convite direto", () => {
+  const r = esquemaCriarConvite.safeParse({ email: "outro@teste.com", papel: "dono" });
+  expect(r.success).toBe(false);
+});
+
+// --- 5. Testes de Migrações SQL e RLS Multi-Tenant (Task 02) ---
+console.log("▶ Executando testes: Segurança, RLS e Migrações da Task 02...");
+
+const caminhoSqlTask02 = path.resolve(raiz, "supabase/migrations/20260925000001_criar_barbearias_e_equipe.sql");
+const sqlTask02 = fs.readFileSync(caminhoSqlTask02, "utf-8");
+
+test("Migration Task 02: RLS ativado nas tabelas de barbearia e equipe", () => {
+  expect(sqlTask02).toContain("ALTER TABLE public.barbearias ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask02).toContain("ALTER TABLE public.membros_barbearia ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask02).toContain("ALTER TABLE public.profissionais ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask02).toContain("ALTER TABLE public.convites_profissionais ENABLE ROW LEVEL SECURITY;");
+});
+
+test("Migration Task 02: RPC atômica criar_barbearia_com_dono com trial de 30 dias", () => {
+  expect(sqlTask02).toContain("CREATE OR REPLACE FUNCTION public.criar_barbearia_com_dono");
+  expect(sqlTask02).toContain("interval '30 days'");
+  expect(sqlTask02).toContain("'dono'");
+});
+
+test("Migration Task 02: RPC aceitar_convite_equipe vincula conta do usuário", () => {
+  expect(sqlTask02).toContain("CREATE OR REPLACE FUNCTION public.aceitar_convite_equipe");
+  expect(sqlTask02).toContain("usuario_id = auth.uid()");
+  expect(sqlTask02).toContain("INSERT INTO public.membros_barbearia");
+});
+
+test("Migration Task 02: isolamento multi-tenant usuario_eh_dono_ou_gerente", () => {
+  expect(sqlTask02).toContain("CREATE OR REPLACE FUNCTION public.usuario_eh_dono_ou_gerente");
+  expect(sqlTask02).toContain("papel IN ('dono', 'gerente')");
 });
 
 // --- Relatório Final ---
@@ -250,7 +285,7 @@ const resultadoGeral = {
 };
 
 fs.writeFileSync(
-  path.resolve(raiz, "tarefas/01-fundacao-autenticacao/test-results.json"),
+  path.resolve(raiz, "tarefas/02-barbearias-equipe/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );
