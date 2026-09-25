@@ -127,7 +127,8 @@ export default function PaginaBarbeariasAdmin() {
   const barbeariasFiltradas = barbearias.filter((b) =>
     (b.nome || "").toLowerCase().includes(busca.toLowerCase()) ||
     (b.slug || "").toLowerCase().includes(busca.toLowerCase()) ||
-    (b.cidade || "").toLowerCase().includes(busca.toLowerCase())
+    (b.cidade || "").toLowerCase().includes(busca.toLowerCase()) ||
+    (b.bairro || "").toLowerCase().includes(busca.toLowerCase())
   );
 
   return (
@@ -205,7 +206,9 @@ export default function PaginaBarbeariasAdmin() {
                           <span className="text-xs opacity-50 font-mono">slug: {b.slug}</span>
                         </td>
                         <td className="p-4 opacity-75">
-                          {b.cidade ? `${b.cidade} - ${b.estado || "BR"}` : "Não informado"}
+                          {[b.bairro, b.cidade].filter(Boolean).join(", ")
+                            ? `${[b.bairro, b.cidade].filter(Boolean).join(", ")}${b.estado ? ` - ${b.estado}` : ""}`
+                            : "Não informado"}
                         </td>
                         <td className="p-4">
                           <span

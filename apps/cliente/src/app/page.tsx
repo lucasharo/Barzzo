@@ -21,7 +21,7 @@ import {
 export default function PaginaInicialCliente() {
   const router = useRouter();
   const [termoBusca, setTermoBusca] = React.useState("");
-  const [cidadeBusca, setCidadeBusca] = React.useState("São Paulo, SP");
+  const [localidadeBusca, setLocalidadeBusca] = React.useState("São Paulo, SP");
   const [barbearias, setBarbearias] = React.useState<Barbearia[]>([]);
   const [carregando, setCarregando] = React.useState(true);
 
@@ -52,7 +52,10 @@ export default function PaginaInicialCliente() {
     e.preventDefault();
     const params = new URLSearchParams();
     if (termoBusca.trim()) params.set("q", termoBusca.trim());
-    if (cidadeBusca.trim()) params.set("cidade", cidadeBusca.trim());
+    if (localidadeBusca.trim()) {
+      params.set("localidade", localidadeBusca.trim());
+      params.set("cidade", localidadeBusca.trim());
+    }
     router.push(`/barbearias?${params.toString()}`);
   }
 
@@ -89,13 +92,13 @@ export default function PaginaInicialCliente() {
           <div className="h-8 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
           <div className="flex items-center px-3 gap-2 min-h-[44px]">
-            <MapPin className="h-5 w-5 opacity-60 shrink-0" />
+            <MapPin className="h-5 w-5 opacity-60 shrink-0 text-[#B45A2B]" />
             <input
               type="text"
               placeholder="Cidade ou Bairro"
-              value={cidadeBusca}
-              onChange={(e) => setCidadeBusca(e.target.value)}
-              className="w-full sm:w-36 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
+              value={localidadeBusca}
+              onChange={(e) => setLocalidadeBusca(e.target.value)}
+              className="w-full sm:w-40 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
             />
           </div>
 
@@ -176,10 +179,25 @@ export default function PaginaInicialCliente() {
 
                 <CardContent className="p-5 flex flex-col gap-3">
                   <div>
-                    <h3 className="text-lg font-bold">{b.nome}</h3>
-                    <p className="text-xs opacity-70 flex items-center gap-1 mt-1">
-                      <MapPin className="h-3.5 w-3.5 text-[#B45A2B]" />
-                      {b.bairro ? `${b.bairro}, ` : ""}{b.cidade || "Localização central"}
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-lg font-bold">{b.nome}</h3>
+                      {b.bairro && (
+                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 shrink-0">
+                          {b.bairro}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs opacity-70 flex items-center gap-1 mt-1.5">
+                      <MapPin className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
+                      <span className="truncate">
+                        {[
+                          b.endereco,
+                          b.bairro,
+                          b.cidade ? `${b.cidade}${b.estado ? ` - ${b.estado}` : ""}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") || "Localização central"}
+                      </span>
                     </p>
                   </div>
 

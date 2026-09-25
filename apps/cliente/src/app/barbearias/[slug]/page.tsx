@@ -45,6 +45,7 @@ import {
   Package,
   ZoomIn,
   X,
+  ExternalLink,
 } from "lucide-react";
 
 function ConteudoPerfilPublicoBarbearia() {
@@ -344,12 +345,20 @@ function ConteudoPerfilPublicoBarbearia() {
               </button>
             </div>
 
-            <p className="text-sm opacity-75 flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
-              {barbearia.endereco ? `${barbearia.endereco}, ` : ""}
-              {barbearia.bairro ? `${barbearia.bairro} — ` : ""}
-              {barbearia.cidade}/{barbearia.estado}
-            </p>
+            <div className="flex flex-wrap items-center gap-2 text-sm opacity-75">
+              <span className="flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                {barbearia.endereco ? `${barbearia.endereco}, ` : ""}
+              </span>
+              {barbearia.bairro && (
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20">
+                  {barbearia.bairro}
+                </span>
+              )}
+              <span>
+                {barbearia.cidade}/{barbearia.estado}
+              </span>
+            </div>
 
             {barbearia.telefone && (
               <p className="text-xs opacity-70 flex items-center gap-1.5">
@@ -709,6 +718,58 @@ function ConteudoPerfilPublicoBarbearia() {
                   </div>
                 );
               })}
+            </CardContent>
+          </Card>
+
+          {/* Card de Localização e Endereço com Destaque para Bairro */}
+          <Card camada="primaria">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-[#B45A2B]" /> Localização e Endereço
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2.5 text-xs">
+              {barbearia.bairro && (
+                <div className="flex items-center justify-between py-1 border-b border-neutral-200/60 dark:border-neutral-800/60">
+                  <span className="opacity-70">Bairro</span>
+                  <span className="font-semibold text-black dark:text-white px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20">
+                    {barbearia.bairro}
+                  </span>
+                </div>
+              )}
+              {barbearia.cidade && (
+                <div className="flex items-center justify-between py-1 border-b border-neutral-200/60 dark:border-neutral-800/60">
+                  <span className="opacity-70">Cidade / UF</span>
+                  <span className="font-medium">
+                    {barbearia.cidade} {barbearia.estado ? `- ${barbearia.estado}` : ""}
+                  </span>
+                </div>
+              )}
+              {barbearia.endereco && (
+                <div className="flex flex-col gap-0.5 py-1">
+                  <span className="opacity-70">Logradouro</span>
+                  <span className="font-medium">{barbearia.endereco}</span>
+                </div>
+              )}
+              {barbearia.cep && (
+                <div className="flex items-center justify-between py-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                  <span className="opacity-70">CEP</span>
+                  <span className="font-mono">{barbearia.cep}</span>
+                </div>
+              )}
+
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  [barbearia.nome, barbearia.endereco, barbearia.bairro, barbearia.cidade].filter(Boolean).join(", ")
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2"
+              >
+                <Button variante="secundario" tamanho="sm" className="w-full text-xs min-h-[44px]">
+                  <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir no Google Maps
+                </Button>
+              </a>
             </CardContent>
           </Card>
 

@@ -34,13 +34,26 @@ interface BarbeariaComDistancia extends Barbearia {
   total_servicos?: number;
 }
 
+function normalizarTexto(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function ConteudoListagemBarbearias() {
   const searchParams = useSearchParams();
   const termoInicial = searchParams.get("q") || "";
-  const cidadeInicial = searchParams.get("cidade") || "";
+  const localidadeInicial =
+    searchParams.get("localidade") ||
+    searchParams.get("cidade") ||
+    searchParams.get("bairro") ||
+    "";
 
   const [busca, setBusca] = React.useState(termoInicial);
-  const [cidade, setCidade] = React.useState(cidadeInicial);
+  const [localidade, setLocalidade] = React.useState(localidadeInicial);
+  const [bairroFiltro, setBairroFiltro] = React.useState("");
+  const [bairrosDisponiveis, setBairrosDisponiveis] = React.useState<string[]>([]);
   const [carregando, setCarregando] = React.useState(true);
   const [barbearias, setBarbearias] = React.useState<BarbeariaComDistancia[]>([]);
   const [localizacaoUsuario, setLocalizacaoUsuario] = React.useState<{ lat: number; lng: number } | null>(null);
@@ -48,9 +61,36 @@ function ConteudoListagemBarbearias() {
   const [erroLocalizacao, setErroLocalizacao] = React.useState<string | null>(null);
   const [mensagemLocalizacao, setMensagemLocalizacao] = React.useState<string | null>(null);
 
+  // Carregar lista de bairros disponíveis para filtros rápidos
+  React.useEffect(() => {
+    async function carregarBairros() {
+      try {
+        const supabase = criarClienteSupabaseBrowser();
+        const { data } = await supabase
+          .from("barbearias")
+          .select("bairro")
+          .eq("ativa", true)
+          .not("bairro", "is", null);
+
+        if (data) {
+          const conjunto = new Set<string>();
+          data.forEach((b: any) => {
+            if (b.bairro && b.bairro.trim()) {
+              conjunto.add(b.bairro.trim());
+            }
+          });
+          setBairrosDisponiveis(Array.from(conjunto).sort());
+        }
+      } catch {
+        // Fallback silencioso
+      }
+    }
+    carregarBairros();
+  }, []);
+
   React.useEffect(() => {
     carregarBarbearias();
-  }, [busca, cidade, localizacaoUsuario]);
+  }, [busca, localidade, bairroFiltro, localizacaoUsuario]);
 
   async function carregarBarbearias() {
     try {
@@ -59,26 +99,35 @@ function ConteudoListagemBarbearias() {
 
       let query = supabase
         .from("barbearias")
-        .select("*, servicos (id, ativo)")
+        .select("*, servicos (id, ativo, nome)")
         .eq("ativa", true);
 
       if (busca.trim()) {
         query = query.ilike("nome", `%${busca.trim()}%`);
       }
 
-      if (cidade.trim()) {
-        const partes = cidade.split(/[,-]/).map((p) => p.trim()).filter(Boolean);
-        const termoCidade = partes[0] || cidade.trim();
-        query = query.ilike("cidade", `%${termoCidade}%`);
-        if (partes.length > 1 && partes[1].length <= 2) {
-          query = query.ilike("estado", `%${partes[1]}%`);
+      const termoLoc = (bairroFiltro || localidade).trim();
+      if (termoLoc) {
+        const partes = termoLoc.split(/[,-]/).map((p) => p.trim()).filter(Boolean);
+        if (partes.length >= 2) {
+          if (partes[1].length === 2) {
+            query = query
+              .or(`cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[0]}%`)
+              .ilike("estado", `%${partes[1]}%`);
+          } else {
+            query = query.or(
+              `and(bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[1]}%),and(cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[1]}%),bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[0]}%`
+            );
+          }
+        } else {
+          query = query.or(`cidade.ilike.%${termoLoc}%,bairro.ilike.%${termoLoc}%`);
         }
       }
 
       const { data, error } = await query.order("nome", { ascending: true });
 
       if (data) {
-        const lista: BarbeariaComDistancia[] = (data as any[]).map((b) => {
+        let lista: BarbeariaComDistancia[] = (data as any[]).map((b) => {
           let dist: number | null = null;
           if (localizacaoUsuario && b.latitude && b.longitude) {
             dist = calcularDistanciaKm(
@@ -95,6 +144,23 @@ function ConteudoListagemBarbearias() {
             total_servicos: servicosAtivos,
           };
         });
+
+        // Refinamento em memória para tolerar variações de acentuação no bairro/cidade
+        if (termoLoc) {
+          const termoNorm = normalizarTexto(termoLoc);
+          lista = lista.filter((b) => {
+            const bairroNorm = normalizarTexto(b.bairro || "");
+            const cidadeNorm = normalizarTexto(b.cidade || "");
+            const estadoNorm = normalizarTexto(b.estado || "");
+            return (
+              bairroNorm.includes(termoNorm) ||
+              cidadeNorm.includes(termoNorm) ||
+              estadoNorm.includes(termoNorm) ||
+              `${bairroNorm} ${cidadeNorm}`.includes(termoNorm) ||
+              `${cidadeNorm} ${bairroNorm}`.includes(termoNorm)
+            );
+          });
+        }
 
         // Se o usuário permitiu localização, ordenar por proximidade
         if (localizacaoUsuario) {
@@ -133,24 +199,54 @@ function ConteudoListagemBarbearias() {
     setMensagemLocalizacao(null);
 
     const opcoesGeo: PositionOptions = {
-      enableHighAccuracy: false,
+      enableHighAccuracy: true,
       timeout: 10000,
       maximumAge: 60000,
     };
 
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocalizacaoUsuario({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-        });
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setLocalizacaoUsuario({ lat, lng });
         setObtendoLocalizacao(false);
-        setMensagemLocalizacao(
-          "Localização detectada com sucesso! Barbearias ordenadas pelas mais próximas de você."
-        );
-        // Se havia filtro manual de cidade, limpar para exibir todas as mais próximas
-        if (cidade.trim()) {
-          setCidade("");
+
+        // Tentar obter bairro e cidade por geocodificação reversa rápida
+        let bairroDetectado = "";
+        let cidadeDetectada = "";
+
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3500);
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`,
+            { signal: controller.signal }
+          );
+          clearTimeout(timeoutId);
+          if (res.ok) {
+            const dataGeo = await res.json();
+            bairroDetectado = dataGeo.locality || dataGeo.district || "";
+            cidadeDetectada = dataGeo.city || "";
+          }
+        } catch {
+          // Fallback silencioso para geocodificação
+        }
+
+        const localFormatado = [bairroDetectado, cidadeDetectada].filter(Boolean).join(", ");
+        if (localFormatado) {
+          setMensagemLocalizacao(
+            `Localização detectada: ${localFormatado}! Barbearias ordenadas pelas mais próximas de você.`
+          );
+        } else {
+          setMensagemLocalizacao(
+            "Localização detectada com sucesso! Barbearias ordenadas pelas mais próximas de você."
+          );
+        }
+
+        // Limpar filtros manuais para exibir todas as barbearias ordenadas por distância
+        if (localidade.trim() || bairroFiltro) {
+          setLocalidade("");
+          setBairroFiltro("");
         }
       },
       (err) => {
@@ -165,7 +261,7 @@ function ConteudoListagemBarbearias() {
           );
         } else if (err.code === 3) {
           setErroLocalizacao(
-            "O tempo limite para obter sua localização expirou. Tente novamente ou use a busca por cidade."
+            "O tempo limite para obter sua localização expirou. Tente novamente ou use a busca por cidade/bairro."
           );
         } else {
           setErroLocalizacao("Ocorreu um erro ao obter sua localização. Tente novamente.");
@@ -248,31 +344,99 @@ function ConteudoListagemBarbearias() {
         </Alert>
       )}
 
-      {/* Barra de Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
-        <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
-          <Search className="h-4 w-4 text-[#B45A2B] shrink-0" />
-          <input
-            type="text"
-            placeholder="Filtrar por nome ou serviço..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50"
-          />
+      {/* Barra de Filtros (Pesquisa por Nome/Serviço e Cidade/Bairro) */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
+          <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
+            <Search className="h-4 w-4 text-[#B45A2B] shrink-0" />
+            <input
+              type="text"
+              placeholder="Filtrar por nome ou serviço..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+            />
+          </div>
+
+          <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
+
+          <div className="flex items-center px-3 gap-2 min-h-[44px]">
+            <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
+            <input
+              type="text"
+              placeholder="Cidade ou Bairro..."
+              value={localidade}
+              onChange={(e) => {
+                setLocalidade(e.target.value);
+                setBairroFiltro("");
+              }}
+              className="w-full sm:w-44 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+            />
+            {(localidade || bairroFiltro) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocalidade("");
+                  setBairroFiltro("");
+                }}
+                className="text-xs opacity-50 hover:opacity-100 p-1"
+                title="Limpar localização"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
-
-        <div className="flex items-center px-3 gap-2 min-h-[44px]">
-          <MapPin className="h-4 w-4 opacity-50 shrink-0" />
-          <input
-            type="text"
-            placeholder="Cidade..."
-            value={cidade}
-            onChange={(e) => setCidade(e.target.value)}
-            className="w-full sm:w-32 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
-          />
-        </div>
+        {/* Chips de Bairros Disponíveis para Acesso Rápido */}
+        {bairrosDisponiveis.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+            <span className="text-neutral-500 dark:text-neutral-400 font-medium shrink-0 flex items-center gap-1 mr-1">
+              <MapPin className="h-3 w-3 text-[#B45A2B]" /> Bairros:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setBairroFiltro("");
+                setLocalidade("");
+              }}
+              className={`px-3 py-1 rounded-full border transition-colors shrink-0 ${
+                !bairroFiltro && !localidade
+                  ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
+                  : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
+              }`}
+            >
+              Todos
+            </button>
+            {bairrosDisponiveis.map((bNome) => {
+              const ativo =
+                bairroFiltro === bNome ||
+                normalizarTexto(localidade) === normalizarTexto(bNome);
+              return (
+                <button
+                  key={bNome}
+                  type="button"
+                  onClick={() => {
+                    if (ativo) {
+                      setBairroFiltro("");
+                      setLocalidade("");
+                    } else {
+                      setBairroFiltro(bNome);
+                      setLocalidade(bNome);
+                    }
+                  }}
+                  className={`px-3 py-1 rounded-full border transition-colors shrink-0 ${
+                    ativo
+                      ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
+                      : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
+                  }`}
+                >
+                  {bNome}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Lista de Resultados */}
@@ -290,16 +454,17 @@ function ConteudoListagemBarbearias() {
             <div className="flex flex-col gap-1">
               <h3 className="font-semibold text-lg">Nenhuma barbearia encontrada</h3>
               <p className="text-sm opacity-70 max-w-sm">
-                Tente ajustar os filtros de busca ou remover o nome da cidade.
+                Tente ajustar os filtros de busca ou remover o filtro de cidade/bairro.
               </p>
             </div>
-            {(busca || cidade) && (
+            {(busca || localidade || bairroFiltro) && (
               <Button
                 variante="secundario"
                 tamanho="sm"
                 onClick={() => {
                   setBusca("");
-                  setCidade("");
+                  setLocalidade("");
+                  setBairroFiltro("");
                 }}
               >
                 Limpar filtros
@@ -335,12 +500,25 @@ function ConteudoListagemBarbearias() {
 
               <CardContent className="p-5 flex flex-col gap-4">
                 <div>
-                  <h3 className="text-lg font-bold">{b.nome}</h3>
-                  <p className="text-xs opacity-70 flex items-center gap-1 mt-1">
-                    <MapPin className="h-3.5 w-3.5 text-[#B45A2B]" />
-                    {b.endereco ? `${b.endereco}, ` : ""}
-                    {b.bairro ? `${b.bairro} — ` : ""}
-                    {b.cidade || "Localização"}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-bold">{b.nome}</h3>
+                    {b.bairro && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 shrink-0">
+                        {b.bairro}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs opacity-70 flex items-center gap-1 mt-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
+                    <span className="truncate">
+                      {[
+                        b.endereco,
+                        b.bairro,
+                        b.cidade ? `${b.cidade}${b.estado ? ` - ${b.estado}` : ""}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(", ") || "Localização não informada"}
+                    </span>
                   </p>
                 </div>
 

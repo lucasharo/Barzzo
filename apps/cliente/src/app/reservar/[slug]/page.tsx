@@ -847,6 +847,12 @@ function ConteudoWizardReservaCliente() {
                 <span className="font-bold text-sm">{barbearia.nome}</span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Localização</span>
+                <span className="font-semibold text-sm">
+                  {[barbearia.bairro, barbearia.cidade].filter(Boolean).join(", ") || barbearia.endereco || "Localização informada"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-xs uppercase font-bold tracking-wider opacity-60">Serviço</span>
                 <span className="font-bold text-sm">{servicoSelecionado?.nome}</span>
               </div>
