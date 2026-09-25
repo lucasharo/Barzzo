@@ -219,8 +219,9 @@ export default function PaginaMeusAgendamentos() {
           </p>
           <div className="flex flex-col gap-3">
             <Button
+              variante="principal"
               onClick={() => router.push("/entrar?retorno=/agendamentos")}
-              className="w-full bg-copper-600 hover:bg-copper-700 text-white min-h-[44px]"
+              className="w-full min-h-[44px]"
             >
               Fazer login no Barzzo
             </Button>
@@ -248,7 +249,7 @@ export default function PaginaMeusAgendamentos() {
           </p>
         </div>
         <Link href="/barbearias">
-          <Button className="bg-copper-600 hover:bg-copper-700 text-white gap-2 min-h-[44px] shadow-sm">
+          <Button variante="principal" className="gap-2 min-h-[44px] shadow-sm">
             <Plus className="w-4 h-4" />
             Novo Agendamento
           </Button>
@@ -315,7 +316,7 @@ export default function PaginaMeusAgendamentos() {
           </p>
           {abaAtiva === "proximos" && (
             <Link href="/barbearias">
-              <Button className="bg-copper-600 hover:bg-copper-700 text-white min-h-[44px]">
+              <Button variante="principal" className="min-h-[44px]">
                 Encontrar Barbearias
               </Button>
             </Link>

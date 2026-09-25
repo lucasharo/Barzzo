@@ -379,9 +379,10 @@ export default function PaginaAvaliacaoAtendimento() {
 
             <Button
               type="submit"
+              variante="principal"
               disabled={salvando}
               carregando={salvando}
-              className="w-full bg-copper-600 hover:bg-copper-700 text-white min-h-[44px] font-semibold"
+              className="w-full min-h-[44px] font-semibold"
             >
               Publicar Avaliação
             </Button>

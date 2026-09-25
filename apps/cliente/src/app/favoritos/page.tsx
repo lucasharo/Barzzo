@@ -136,8 +136,9 @@ export default function PaginaFavoritosCliente() {
           </p>
           <div className="flex flex-col gap-3">
             <Button
+              variante="principal"
               onClick={() => router.push("/entrar?retorno=/favoritos")}
-              className="w-full bg-copper-600 hover:bg-copper-700 text-white min-h-[44px]"
+              className="w-full min-h-[44px]"
             >
               Fazer login no Barzzo
             </Button>
@@ -193,7 +194,7 @@ export default function PaginaFavoritosCliente() {
             Ao visitar o perfil de uma barbearia que você gosta, clique no ícone de coração para salvá-la aqui.
           </p>
           <Link href="/barbearias">
-            <Button className="bg-copper-600 hover:bg-copper-700 text-white min-h-[44px]">
+            <Button variante="principal" className="min-h-[44px]">
               Encontrar Barbearias
             </Button>
           </Link>
@@ -255,8 +256,9 @@ export default function PaginaFavoritosCliente() {
 
                   <Link href={`/reservar/${b.slug}`}>
                     <Button
+                      variante="principal"
                       tamanho="sm"
-                      className="bg-copper-600 hover:bg-copper-700 text-white text-xs gap-1.5 min-h-[36px]"
+                      className="text-xs gap-1.5 min-h-[36px]"
                     >
                       <Calendar className="w-3.5 h-3.5" />
                       Agendar Horário
