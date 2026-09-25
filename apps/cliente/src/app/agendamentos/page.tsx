@@ -15,6 +15,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import type { StatusAgendamento } from "@barzzo/tipos";
 import {
   Calendar,
@@ -33,22 +34,24 @@ import {
 interface AgendamentoCliente {
   id: string;
   barbearia_id: string;
-  cliente_id: string;
+  cliente_id: string | null;
   profissional_id: string;
   inicio_previsto: string;
   fim_previsto: string;
   status: StatusAgendamento;
   origem: string;
   observacoes: string | null;
-  created_at: string;
+  preco_total?: number;
+  duracao_total_minutos?: number;
+  criado_em?: string;
   barbearias: {
     nome: string;
     slug: string;
     telefone: string | null;
-    endereco_logradouro: string;
-    endereco_numero: string;
-    endereco_bairro: string;
-    endereco_cidade: string;
+    endereco: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    estado: string | null;
   } | null;
   profissionais: {
     nome: string;
@@ -57,7 +60,7 @@ interface AgendamentoCliente {
   agendamentos_servicos: Array<{
     id: string;
     nome_servico: string;
-    preco_centavos: number;
+    preco: number;
     duracao_minutos: number;
   }>;
 }
@@ -99,10 +102,10 @@ export default function PaginaMeusAgendamentos() {
             nome,
             slug,
             telefone,
-            endereco_logradouro,
-            endereco_numero,
-            endereco_bairro,
-            endereco_cidade
+            endereco,
+            bairro,
+            cidade,
+            estado
           ),
           profissionais (
             nome,
@@ -111,7 +114,7 @@ export default function PaginaMeusAgendamentos() {
           agendamentos_servicos (
             id,
             nome_servico,
-            preco_centavos,
+            preco,
             duracao_minutos
           )
         `)
@@ -119,7 +122,7 @@ export default function PaginaMeusAgendamentos() {
         .order("inicio_previsto", { ascending: false });
 
       if (error) {
-        setErro("Não foi possível carregar seus agendamentos no momento.");
+        setErro(traduzirErro(error, "Não foi possível carregar seus agendamentos no momento."));
         return;
       }
 
@@ -338,10 +341,13 @@ export default function PaginaMeusAgendamentos() {
               minute: "2-digit",
             });
 
-            const totalCentavos = item.agendamentos_servicos.reduce(
-              (acc, s) => acc + s.preco_centavos,
-              0
-            );
+            const totalPreco =
+              item.preco_total != null
+                ? Number(item.preco_total)
+                : (item.agendamentos_servicos || []).reduce(
+                    (acc, s) => acc + (Number(s.preco) || 0),
+                    0
+                  );
 
             return (
               <Card
@@ -362,8 +368,9 @@ export default function PaginaMeusAgendamentos() {
                         <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
                           <span>
-                            {item.barbearias.endereco_bairro},{" "}
-                            {item.barbearias.endereco_cidade}
+                            {[item.barbearias.bairro, item.barbearias.cidade]
+                              .filter(Boolean)
+                              .join(", ") || item.barbearias.endereco || "Local não informado"}
                           </span>
                         </p>
                       )}
@@ -407,7 +414,7 @@ export default function PaginaMeusAgendamentos() {
                             "Atendimento padrão"}
                         </span>
                         <span className="text-xs font-semibold text-copper-600 dark:text-copper-400">
-                          {(totalCentavos / 100).toLocaleString("pt-BR", {
+                          {totalPreco.toLocaleString("pt-BR", {
                             style: "currency",
                             currency: "BRL",
                           })}

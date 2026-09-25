@@ -33,8 +33,8 @@ export interface FavoritoBarbearia {
     nome: string;
     slug: string;
     logo_url: string | null;
-    endereco_bairro: string;
-    endereco_cidade: string;
+    bairro: string | null;
+    cidade: string | null;
     telefone: string | null;
   };
 }

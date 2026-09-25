@@ -12,6 +12,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import type { FavoritoBarbearia } from "@barzzo/tipos";
 import {
   Heart,
@@ -63,8 +64,8 @@ export default function PaginaFavoritosCliente() {
             nome,
             slug,
             logo_url,
-            endereco_bairro,
-            endereco_cidade,
+            bairro,
+            cidade,
             telefone
           )
         `)
@@ -72,7 +73,7 @@ export default function PaginaFavoritosCliente() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        setErro("Não foi possível carregar seus estabelecimentos favoritos.");
+        setErro(traduzirErro(error, "Não foi possível carregar seus estabelecimentos favoritos."));
         return;
       }
 
@@ -224,7 +225,7 @@ export default function PaginaFavoritosCliente() {
                         <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
                           <span>
-                            {b.endereco_bairro}, {b.endereco_cidade}
+                            {[b.bairro, b.cidade].filter(Boolean).join(", ") || "Localização não informada"}
                           </span>
                         </p>
                       </div>

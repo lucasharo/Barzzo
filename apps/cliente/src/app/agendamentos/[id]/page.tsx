@@ -15,6 +15,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import type { StatusAgendamento } from "@barzzo/tipos";
 import {
   Calendar,
@@ -35,7 +36,7 @@ import {
 interface AgendamentoCompleto {
   id: string;
   barbearia_id: string;
-  cliente_id: string;
+  cliente_id: string | null;
   cliente_nome: string;
   cliente_telefone: string | null;
   profissional_id: string;
@@ -44,18 +45,18 @@ interface AgendamentoCompleto {
   status: StatusAgendamento;
   origem: string;
   observacoes: string | null;
-  created_at: string;
+  preco_total?: number;
+  duracao_total_minutos?: number;
+  criado_em?: string;
   barbearias: {
     nome: string;
     slug: string;
     telefone: string | null;
-    endereco_logradouro: string;
-    endereco_numero: string;
-    endereco_complemento: string | null;
-    endereco_bairro: string;
-    endereco_cidade: string;
-    endereco_estado: string;
-    endereco_cep: string;
+    endereco: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    estado: string | null;
+    cep: string | null;
   } | null;
   profissionais: {
     nome: string;
@@ -64,7 +65,7 @@ interface AgendamentoCompleto {
   agendamentos_servicos: Array<{
     id: string;
     nome_servico: string;
-    preco_centavos: number;
+    preco: number;
     duracao_minutos: number;
   }>;
 }
@@ -108,13 +109,11 @@ export default function PaginaDetalhesAgendamentoCliente() {
             nome,
             slug,
             telefone,
-            endereco_logradouro,
-            endereco_numero,
-            endereco_complemento,
-            endereco_bairro,
-            endereco_cidade,
-            endereco_estado,
-            endereco_cep
+            endereco,
+            bairro,
+            cidade,
+            estado,
+            cep
           ),
           profissionais (
             nome,
@@ -123,7 +122,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
           agendamentos_servicos (
             id,
             nome_servico,
-            preco_centavos,
+            preco,
             duracao_minutos
           )
         `)
@@ -132,7 +131,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
         .single();
 
       if (error || !data) {
-        setErro("Agendamento não encontrado ou sem permissão de acesso.");
+        setErro(traduzirErro(error, "Agendamento não encontrado ou sem permissão de acesso."));
         return;
       }
 
@@ -273,15 +272,21 @@ export default function PaginaDetalhesAgendamentoCliente() {
     minute: "2-digit",
   });
 
-  const totalCentavos = agendamento.agendamentos_servicos.reduce(
-    (acc, s) => acc + s.preco_centavos,
-    0
-  );
+  const totalPreco =
+    agendamento.preco_total != null
+      ? Number(agendamento.preco_total)
+      : (agendamento.agendamentos_servicos || []).reduce(
+          (acc, s) => acc + (Number(s.preco) || 0),
+          0
+        );
 
-  const duracaoTotal = agendamento.agendamentos_servicos.reduce(
-    (acc, s) => acc + s.duracao_minutos,
-    0
-  );
+  const duracaoTotal =
+    agendamento.duracao_total_minutos != null
+      ? Number(agendamento.duracao_total_minutos)
+      : (agendamento.agendamentos_servicos || []).reduce(
+          (acc, s) => acc + (Number(s.duracao_minutos) || 0),
+          0
+        );
 
   const agoraIso = new Date().toISOString();
   const podeCancelar =
@@ -289,9 +294,16 @@ export default function PaginaDetalhesAgendamentoCliente() {
     agendamento.inicio_previsto > agoraIso;
 
   const enderecoCompleto = agendamento.barbearias
-    ? `${agendamento.barbearias.endereco_logradouro}, ${agendamento.barbearias.endereco_numero}${
-        agendamento.barbearias.endereco_complemento ? ` (${agendamento.barbearias.endereco_complemento})` : ""
-      }, ${agendamento.barbearias.endereco_bairro}, ${agendamento.barbearias.endereco_cidade} - ${agendamento.barbearias.endereco_estado}`
+    ? [
+        agendamento.barbearias.endereco,
+        agendamento.barbearias.bairro,
+        agendamento.barbearias.cidade && agendamento.barbearias.estado
+          ? `${agendamento.barbearias.cidade} - ${agendamento.barbearias.estado}`
+          : agendamento.barbearias.cidade,
+        agendamento.barbearias.cep ? `CEP: ${agendamento.barbearias.cep}` : null,
+      ]
+        .filter(Boolean)
+        .join(", ")
     : "";
 
   const linkGoogleMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`;
@@ -443,7 +455,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
                     <span className="text-xs text-neutral-400">{servico.duracao_minutos} min</span>
                   </div>
                   <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                    {(servico.preco_centavos / 100).toLocaleString("pt-BR", {
+                    {Number(servico.preco).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     })}
@@ -461,7 +473,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
                   </span>
                 </div>
                 <span className="text-lg font-bold text-copper-600 dark:text-copper-400">
-                  {(totalCentavos / 100).toLocaleString("pt-BR", {
+                  {totalPreco.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
                   })}
