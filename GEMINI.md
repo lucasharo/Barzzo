@@ -1,0 +1,32 @@
+# Instruções para o Gemini
+
+Este repositório é a fonte de verdade do Barzzo.
+
+## Leitura obrigatória
+1. REGRAS_GERAIS.md
+2. AGENTES.md
+3. WORKFLOW.md
+4. STATUS.md
+5. docs/produto/produto.md
+6. docs/arquitetura/*
+7. TASK.md da task atual
+
+## Execução
+Execute as 10 tasks em ordem. Cada task passa por:
+PO -> Líder Técnico -> Dev -> Revisão Técnica -> QA -> PO.
+
+Se houver reprovação, corrija e repita o ciclo. Só avance quando a task anterior estiver CONCLUIDA.
+
+Nunca invente regra de negócio. Se uma decisão necessária não estiver documentada, marque BLOQUEADA_POR_DECISAO em STATUS.md.
+
+## UX
+Toda task com interface exige uso da skill ux-pro-max antes da implementação e novamente na revisão de QA. Registre decisões relevantes de UX.
+
+## Idioma
+Código de domínio, banco, variáveis, rotas, telas e documentação em português. Identificadores técnicos sem acentos.
+
+## Segurança
+Nunca grave segredos. Nunca exponha chave secreta no frontend. Nunca desative RLS para contornar erro.
+
+## Resultado
+Ao fim da Task 10, o MVP deve estar funcional, testado, responsivo, seguro e pronto para homologação.
