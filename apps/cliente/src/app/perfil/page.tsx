@@ -58,8 +58,7 @@ export default function PaginaPerfil() {
         }
 
         // Buscar dados na tabela public.usuarios
-        const { data: usuarioDb, error } = await supabase
-          .from("usuarios")
+        const { data: usuarioDb, error } = await (supabase.from("usuarios") as any)
           .select("*")
           .eq("id", session.user.id)
           .single();
@@ -144,8 +143,7 @@ export default function PaginaPerfil() {
       } = supabase.storage.from("avatares").getPublicUrl(uploadData.path);
 
       // Atualizar no banco public.usuarios
-      const { error: updateError } = await supabase
-        .from("usuarios")
+      const { error: updateError } = await (supabase.from("usuarios") as any)
         .update({ foto_url: publicUrl })
         .eq("id", session.user.id);
 
@@ -184,8 +182,7 @@ export default function PaginaPerfil() {
 
       if (!session) return;
 
-      const { error: updateError } = await supabase
-        .from("usuarios")
+      const { error: updateError } = await (supabase.from("usuarios") as any)
         .update({ foto_url: null })
         .eq("id", session.user.id);
 
@@ -235,8 +232,7 @@ export default function PaginaPerfil() {
         return;
       }
 
-      const { error: dbError } = await supabase
-        .from("usuarios")
+      const { error: dbError } = await (supabase.from("usuarios") as any)
         .update({
           nome,
           telefone: telefoneLimpo || null,

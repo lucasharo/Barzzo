@@ -2,7 +2,7 @@
 
 - Branch: feature/init
 - Task ativa: TASK-05
-- Estado: EM_REFINAMENTO
+- Estado: CONCLUIDA
 - Próximo agente: PO
 - Bloqueios: nenhum
 
@@ -12,7 +12,7 @@
 | 02 | #2 | Barbearias, onboarding e equipe | CONCLUIDA |
 | 03 | #3 | Serviços, jornadas e disponibilidade | CONCLUIDA |
 | 04 | #4 | Agenda e agendamentos | CONCLUIDA |
-| 05 | #5 | Marketplace e jornada do cliente | EM_REFINAMENTO |
+| 05 | #5 | Marketplace e jornada do cliente | CONCLUIDA |
 | 06 | #6 | Clientes, favoritos e avaliações | PENDENTE |
 | 07 | #7 | Produtos, galeria e imagens | PENDENTE |
 | 08 | #8 | Campanhas, cupons e influenciadores | PENDENTE |

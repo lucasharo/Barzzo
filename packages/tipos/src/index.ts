@@ -4,3 +4,4 @@ export * from "./barbearia";
 export * from "./equipe";
 export * from "./servicos";
 export * from "./agenda";
+export * from "./marketplace";

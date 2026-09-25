@@ -45,12 +45,24 @@ export default function RootLayout({
               BARZZO
             </Link>
 
-            <nav className="flex items-center gap-3">
+            <nav className="flex items-center gap-2 sm:gap-4">
+              <Link
+                href="/barbearias"
+                className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
+              >
+                Barbearias
+              </Link>
+              <Link
+                href="/agendamentos"
+                className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
+              >
+                Agendamentos
+              </Link>
               <Link
                 href="/perfil"
                 className="text-sm font-medium hover:text-[#B45A2B] transition-colors px-2 py-1"
               >
-                Meu Perfil
+                Perfil
               </Link>
               <Link
                 href="/entrar"

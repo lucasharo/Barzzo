@@ -43,7 +43,7 @@ export default function PaginaEntrar() {
       const supabase = criarClienteSupabaseBrowser();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        senha,
+        password: senha,
       });
 
       if (error) {

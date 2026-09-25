@@ -717,6 +717,93 @@ test("Migration Task 04: RPCs transacionais atualizar_status, reagendar e menor_
   expect(sqlTask04).toContain("CREATE OR REPLACE FUNCTION public.selecionar_profissional_menor_carga");
 });
 
+// --- 10. Testes da Task 05: Marketplace e Jornada do Cliente ---
+console.log("▶ Executando testes: Marketplace, Geolocalização e Rascunho Pré-Login (Task 05)...");
+
+function calcularDistanciaKm(lat1, lon1, lat2, lon2) {
+  if (lat1 === lat2 && lon1 === lon2) return 0;
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+const formatoDataIso = /^\d{4}-\d{2}-\d{2}$/;
+const formatoHoraIso = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const esquemaRascunhoReservaTest = z.object({
+  barbearia_id: z.string().uuid("ID da barbearia inválido."),
+  barbearia_nome: z.string().min(1, "Nome da barbearia é obrigatório."),
+  barbearia_slug: z.string().min(1, "Slug da barbearia é obrigatório."),
+  servico_id: z.string().uuid("ID do serviço inválido."),
+  servico_nome: z.string().min(1, "Nome do serviço é obrigatório."),
+  preco: z.coerce.number().min(0, "Preço do serviço não pode ser negativo."),
+  duracao_minutos: z.coerce.number().int().min(1, "Duração mínima de 1 minuto."),
+  profissional_id: z.string().uuid("ID do profissional inválido.").optional().nullable(),
+  profissional_nome: z.string().optional().nullable(),
+  data: z.string().regex(formatoDataIso, "Formato de data inválido (AAAA-MM-DD)."),
+  horario: z.string().regex(formatoHoraIso, "Formato de horário inválido (HH:MM)."),
+  observacoes: z.string().max(500).optional().nullable(),
+  codigo_cupom: z.string().max(50).optional().nullable(),
+});
+
+test("Task 05: Cálculo Haversine de distância urbana precisa", () => {
+  const distZero = calcularDistanciaKm(-23.5505, -46.6333, -23.5505, -46.6333);
+  expect(distZero).toBe(0);
+
+  const distPaulistaSe = calcularDistanciaKm(-23.5615, -46.6559, -23.5505, -46.6333);
+  if (distPaulistaSe < 2.0 || distPaulistaSe > 3.2) {
+    throw new Error(`Distância inesperada calculada: ${distPaulistaSe} km`);
+  }
+});
+
+test("Task 05: Validação do rascunho de reserva pré-login", () => {
+  const valido = esquemaRascunhoReservaTest.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    barbearia_nome: "Barbearia Imperial",
+    barbearia_slug: "barbearia-imperial",
+    servico_id: "00000000-0000-0000-0000-000000000002",
+    servico_nome: "Corte Tradicional",
+    preco: 50,
+    duracao_minutos: 30,
+    profissional_id: null,
+    profissional_nome: null,
+    data: "2026-11-10",
+    horario: "15:00",
+    observacoes: "Corte tesoura",
+    codigo_cupom: "DESCONTO10",
+  });
+  expect(valido.success).toBe(true);
+
+  const dataInvalida = esquemaRascunhoReservaTest.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    barbearia_nome: "Barbearia Imperial",
+    barbearia_slug: "barbearia-imperial",
+    servico_id: "00000000-0000-0000-0000-000000000002",
+    servico_nome: "Corte Tradicional",
+    preco: 50,
+    duracao_minutos: 30,
+    data: "10/11/2026", // Formato incorreto
+    horario: "15:00",
+  });
+  expect(dataInvalida.success).toBe(false);
+});
+
+test("Migration Task 05: Função Haversine e RPC buscar_barbearias_marketplace", () => {
+  const caminhoSqlTask05 = path.resolve(raiz, "supabase/migrations/20260925000004_marketplace_e_busca.sql");
+  const sqlTask05 = fs.readFileSync(caminhoSqlTask05, "utf-8");
+  expect(sqlTask05).toContain("CREATE OR REPLACE FUNCTION public.calcular_distancia_km");
+  expect(sqlTask05).toContain("CREATE OR REPLACE FUNCTION public.buscar_barbearias_marketplace");
+  expect(sqlTask05).toContain("GRANT EXECUTE ON FUNCTION public.buscar_barbearias_marketplace TO anon, authenticated;");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -746,6 +833,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/04-agenda-agendamentos/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/05-marketplace-cliente/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

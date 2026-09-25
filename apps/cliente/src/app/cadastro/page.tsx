@@ -62,7 +62,7 @@ export default function PaginaCadastro() {
 
       const { data, error } = await supabase.auth.signUp({
         email,
-        senha,
+        password: senha,
         options: {
           data: {
             nome,
