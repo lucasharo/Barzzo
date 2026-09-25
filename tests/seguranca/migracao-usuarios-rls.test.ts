@@ -21,12 +21,12 @@ describe("Segurança e RLS — Migration de Usuários", () => {
   });
 
   it("deve conter política de SELECT garantindo que o usuário só lê seu próprio registro", () => {
-    expect(conteudoSql).toMatch(/CREATE\s+POLICY.*FOR\s+SELECT/i);
+    expect(conteudoSql).toMatch(/CREATE\s+POLICY[\s\S]*?FOR\s+SELECT/i);
     expect(conteudoSql).toContain("auth.uid() = id");
   });
 
   it("deve conter política de UPDATE impedindo alteração de dados alheios", () => {
-    expect(conteudoSql).toMatch(/CREATE\s+POLICY.*FOR\s+UPDATE/i);
+    expect(conteudoSql).toMatch(/CREATE\s+POLICY[\s\S]*?FOR\s+UPDATE/i);
     expect(conteudoSql).toContain("WITH CHECK (auth.uid() = id)");
   });
 

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Button,
   Card,
@@ -50,7 +50,9 @@ import {
 export default function PaginaPerfilPublicoBarbearia() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params.slug as string;
+  const refParam = searchParams.get("ref") || searchParams.get("cupom");
 
   const [carregando, setCarregando] = React.useState(true);
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
@@ -97,6 +99,19 @@ export default function PaginaPerfilPublicoBarbearia() {
 
       const barb = bDb as Barbearia;
       setBarbearia(barb);
+
+      // Rastrear clique do influenciador e persistir atribuição
+      if (refParam && typeof window !== "undefined") {
+        try {
+          localStorage.setItem("@barzzo:atribuicao_influenciador", refParam.toUpperCase());
+          await (supabase.rpc as any)("registrar_clique_influenciador", {
+            p_barbearia_id: barb.id,
+            p_codigo_ref: refParam.toUpperCase(),
+          });
+        } catch {
+          // Silencioso
+        }
+      }
 
       // 2. Serviços ativos da barbearia
       const { data: sDb } = await (supabase.from("servicos") as any)

@@ -15,6 +15,8 @@ export interface RascunhoReserva {
   horario: string; // "HH:MM"
   observacoes?: string | null;
   codigo_cupom?: string | null;
+  valor_desconto?: number | null;
+  preco_final?: number | null;
 }
 
 export interface BarbeariaMarketplace {

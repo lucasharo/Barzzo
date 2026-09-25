@@ -232,6 +232,8 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         return;
       }
 
+      const precoFinal = draft.preco_final ?? draft.preco;
+
       // Inserir agendamento definitivo
       const { data: novoAgendamento, error: erroAg } = await (supabase.from("agendamentos") as any)
         .insert({
@@ -245,7 +247,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           status: "confirmado",
           origem: "marketplace",
           observacoes: draft.observacoes,
-          preco_total: draft.preco,
+          preco_total: precoFinal,
           duracao_total_minutos: draft.duracao_minutos,
         })
         .select("id")
@@ -270,8 +272,50 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         duracao_minutos: draft.duracao_minutos,
       });
 
-      // Limpar rascunho persistido
+      // Se houver cupom utilizado, incrementar uso
+      const codigoCupomLimpo = draft.codigo_cupom?.trim().toUpperCase();
+      let cupomId: string | null = null;
+
+      if (codigoCupomLimpo) {
+        const { data: cupDb } = await (supabase.from("cupons") as any)
+          .select("id, usos_atuais")
+          .eq("barbearia_id", draft.barbearia_id)
+          .ilike("codigo", codigoCupomLimpo)
+          .maybeSingle();
+
+        if (cupDb) {
+          cupomId = cupDb.id;
+          await (supabase.from("cupons") as any)
+            .update({ usos_atuais: cupDb.usos_atuais + 1 })
+            .eq("id", cupDb.id);
+        }
+
+        // Se o código for de influenciador, registrar indicação
+        const { data: infDb } = await (supabase.from("influenciadores") as any)
+          .select("id")
+          .eq("barbearia_id", draft.barbearia_id)
+          .ilike("codigo_ref", codigoCupomLimpo)
+          .eq("ativo", true)
+          .maybeSingle();
+
+        if (infDb) {
+          await (supabase.from("indicacoes") as any).insert({
+            barbearia_id: draft.barbearia_id,
+            influenciador_id: infDb.id,
+            cupom_id: cupomId,
+            agendamento_id: novoAgendamento.id,
+            cliente_id: authUserId,
+            codigo_ref_usado: codigoCupomLimpo,
+            status: "pendente",
+          });
+        }
+      }
+
+      // Limpar rascunho persistido e atribuição
       limparRascunhoReserva();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("@barzzo:atribuicao_influenciador");
+      }
       setAgendamentoIdCriado(novoAgendamento.id);
       setConcluido(true);
     } catch {

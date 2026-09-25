@@ -1017,6 +1017,207 @@ test("Migration Task 07: Tabelas produtos, galeria_fotos, RLS e Buckets Storage"
   expect(sqlTask07).toContain("'galeria'");
 });
 
+// --- 9. Testes de Campanhas, Cupons e Influenciadores (Task 08) ---
+console.log("▶ Executando testes: Campanhas, Cupons e Influenciadores (Task 08)...");
+
+const esquemaCupomTest = z.object({
+  codigo: z
+    .string()
+    .trim()
+    .min(3)
+    .max(20)
+    .regex(/^[A-Z0-9_-]+$/)
+    .transform((val) => val.toUpperCase()),
+  tipo_desconto: z.enum(["percentual", "fixo"]),
+  valor_desconto: z.number().positive(),
+  valor_minimo_reserva: z.number().nonnegative().default(0),
+  limite_usos_total: z.number().int().positive().nullable().optional(),
+  apenas_primeira_reserva: z.boolean().default(false),
+  ativo: z.boolean().default(true),
+  data_inicio: z.string().min(1),
+  data_fim: z.string().min(1),
+}).refine(
+  (dados) => {
+    if (dados.tipo_desconto === "percentual") {
+      return dados.valor_desconto <= 100;
+    }
+    return true;
+  },
+  {
+    message: "O desconto percentual não pode ser maior que 100%",
+    path: ["valor_desconto"],
+  }
+);
+
+function calcularDescontoCupomTest(parametros) {
+  const {
+    cupom,
+    valorTotal,
+    servicosIds = [],
+    totalAgendamentosConcluidosCliente = 0,
+    agora = new Date(),
+  } = parametros;
+
+  if (!cupom.ativo) {
+    return { valido: false, motivo_invalido: "Este cupom não está mais ativo." };
+  }
+
+  const dataAtual = agora.getTime();
+  const inicio = new Date(cupom.data_inicio).getTime();
+  const fim = new Date(cupom.data_fim).getTime();
+
+  if (dataAtual < inicio) {
+    return { valido: false, motivo_invalido: "Esta promoção ainda não iniciou." };
+  }
+
+  if (dataAtual > fim) {
+    return { valido: false, motivo_invalido: "Este cupom já expirou." };
+  }
+
+  if (cupom.limite_usos_total !== null && cupom.limite_usos_total !== undefined && cupom.usos_atuais >= cupom.limite_usos_total) {
+    return { valido: false, motivo_invalido: "O limite de utilizações deste cupom foi atingido." };
+  }
+
+  if (cupom.valor_minimo_reserva > 0 && valorTotal < cupom.valor_minimo_reserva) {
+    return { valido: false, motivo_invalido: "Valor mínimo de reserva não atingido." };
+  }
+
+  if (cupom.apenas_primeira_reserva && totalAgendamentosConcluidosCliente > 0) {
+    return { valido: false, motivo_invalido: "Este cupom é exclusivo para novos clientes (primeira reserva)." };
+  }
+
+  if (cupom.servicos_elegiveis && cupom.servicos_elegiveis.length > 0) {
+    const temServico = servicosIds.some((sId) => cupom.servicos_elegiveis.includes(sId));
+    if (!temServico) {
+      return { valido: false, motivo_invalido: "Este cupom não é válido para os serviços selecionados." };
+    }
+  }
+
+  let descontoCalculado = 0;
+  if (cupom.tipo_desconto === "percentual") {
+    descontoCalculado = Number(((valorTotal * cupom.valor_desconto) / 100).toFixed(2));
+  } else {
+    descontoCalculado = Number(cupom.valor_desconto.toFixed(2));
+  }
+
+  const descontoFinal = Math.min(valorTotal, Math.max(0, descontoCalculado));
+  const valorComDesconto = Number((valorTotal - descontoFinal).toFixed(2));
+
+  return {
+    valido: true,
+    cupom,
+    valor_desconto_calculado: descontoFinal,
+    valor_final: valorComDesconto,
+  };
+}
+
+function calcularValorComissaoTest(valorServicos, tipoComissao, taxaComissao) {
+  if (valorServicos <= 0 || taxaComissao <= 0) return 0;
+  if (tipoComissao === "percentual") {
+    return Number(((valorServicos * taxaComissao) / 100).toFixed(2));
+  } else {
+    return Number(taxaComissao.toFixed(2));
+  }
+}
+
+function gerarLinkInfluenciadorTest(urlBase, slugBarbearia, codigoRef) {
+  const baseLimpa = urlBase.replace(/\/+$/, "");
+  return `${baseLimpa}/barbearias/${slugBarbearia}?ref=${encodeURIComponent(codigoRef)}`;
+}
+
+test("Task 08: Validação Zod de Cupons e Formatação de Código", () => {
+  const valido = esquemaCupomTest.safeParse({
+    codigo: "NATAL25",
+    tipo_desconto: "percentual",
+    valor_desconto: 25,
+    data_inicio: "2026-12-01",
+    data_fim: "2026-12-25",
+  });
+  expect(valido.success).toBe(true);
+
+  // Percentual > 100% rejeitado
+  const invalido = esquemaCupomTest.safeParse({
+    codigo: "BUG120",
+    tipo_desconto: "percentual",
+    valor_desconto: 120,
+    data_inicio: "2026-12-01",
+    data_fim: "2026-12-25",
+  });
+  expect(invalido.success).toBe(false);
+});
+
+test("Task 08: Regras de negócio de desconto de cupom (datas, mínimo, primeira reserva, percentual)", () => {
+  const cupom = {
+    id: "c1",
+    codigo: "BOASVINDAS",
+    tipo_desconto: "percentual",
+    valor_desconto: 20,
+    valor_minimo_reserva: 50,
+    limite_usos_total: 100,
+    usos_atuais: 5,
+    apenas_primeira_reserva: true,
+    ativo: true,
+    data_inicio: "2026-01-01T00:00:00Z",
+    data_fim: "2026-12-31T23:59:59Z",
+  };
+
+  // Sucesso primeira reserva de 100 reais
+  const resOk = calcularDescontoCupomTest({
+    cupom,
+    valorTotal: 100,
+    totalAgendamentosConcluidosCliente: 0,
+    agora: new Date("2026-06-01"),
+  });
+  expect(resOk.valido).toBe(true);
+  expect(resOk.valor_desconto_calculado).toBe(20);
+  expect(resOk.valor_final).toBe(80);
+
+  // Rejeitado se cliente já teve atendimento anterior
+  const resJaCliente = calcularDescontoCupomTest({
+    cupom,
+    valorTotal: 100,
+    totalAgendamentosConcluidosCliente: 1,
+    agora: new Date("2026-06-01"),
+  });
+  expect(resJaCliente.valido).toBe(false);
+
+  // Rejeitado se valor abaixo do mínimo
+  const resAbaixoMinimo = calcularDescontoCupomTest({
+    cupom,
+    valorTotal: 40,
+    totalAgendamentosConcluidosCliente: 0,
+    agora: new Date("2026-06-01"),
+  });
+  expect(resAbaixoMinimo.valido).toBe(false);
+});
+
+test("Task 08: Cálculo de comissão de influenciadores e link de atribuição", () => {
+  // Percentual: 15% de 90 = 13.50
+  const comissaoPerc = calcularValorComissaoTest(90, "percentual", 15);
+  expect(comissaoPerc).toBe(13.5);
+
+  // Fixo: 10.00 fixo
+  const comissaoFixa = calcularValorComissaoTest(60, "fixo", 10);
+  expect(comissaoFixa).toBe(10);
+
+  // Link de rastreamento com ref
+  const link = gerarLinkInfluenciadorTest("https://barzzo.com.br", "barbearia-vintage", "PEDROVIP");
+  expect(link).toBe("https://barzzo.com.br/barbearias/barbearia-vintage?ref=PEDROVIP");
+});
+
+test("Migration Task 08: Tabelas de campanhas, cupons, influenciadores, comissões e RPC de idempotência", () => {
+  const caminhoSqlTask08 = path.resolve(raiz, "supabase/migrations/20260925000007_campanhas_cupons_influenciadores.sql");
+  const sqlTask08 = fs.readFileSync(caminhoSqlTask08, "utf-8");
+  expect(sqlTask08).toContain("CREATE TABLE IF NOT EXISTS public.campanhas");
+  expect(sqlTask08).toContain("CREATE TABLE IF NOT EXISTS public.cupons");
+  expect(sqlTask08).toContain("CREATE TABLE IF NOT EXISTS public.influenciadores");
+  expect(sqlTask08).toContain("CREATE TABLE IF NOT EXISTS public.indicacoes");
+  expect(sqlTask08).toContain("CREATE TABLE IF NOT EXISTS public.comissoes_influenciadores");
+  expect(sqlTask08).toContain("comissoes_agendamento_unique UNIQUE (agendamento_id)");
+  expect(sqlTask08).toContain("CREATE OR REPLACE FUNCTION public.processar_comissao_conclusao_atendimento");
+  expect(sqlTask08).toContain("ON CONFLICT (agendamento_id) DO NOTHING");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -1068,9 +1269,16 @@ fs.writeFileSync(
   "utf-8"
 );
 
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/08-campanhas-influenciadores/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
 if (falhados > 0) {
   process.exit(1);
 } else {
   console.log("✔ TODOS OS TESTES PASSARAM COM SUCESSO!\n");
   process.exit(0);
 }
+

@@ -21,6 +21,7 @@ import {
   calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
   salvarRascunhoReserva,
+  calcularDescontoCupom,
 } from "@barzzo/dominio";
 import type {
   Barbearia,
@@ -32,6 +33,7 @@ import type {
   SlotDisponivel,
   DiaSemana,
   RascunhoReserva,
+  Cupom,
 } from "@barzzo/tipos";
 import {
   Scissors,
@@ -81,6 +83,10 @@ export default function PaginaWizardReservaCliente() {
   const [slotSelecionado, setSlotSelecionado] = React.useState<string | null>(null);
   const [observacoes, setObservacoes] = React.useState("");
   const [codigoCupom, setCodigoCupom] = React.useState("");
+  const [cupomAplicado, setCupomAplicado] = React.useState<Cupom | null>(null);
+  const [descontoCalculado, setDescontoCalculado] = React.useState<number>(0);
+  const [validandoCupom, setValidandoCupom] = React.useState<boolean>(false);
+  const [msgCupom, setMsgCupom] = React.useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
 
   // Slots em tempo real
   const [slotsDisponiveis, setSlotsDisponiveis] = React.useState<SlotDisponivel[]>([]);
@@ -96,6 +102,14 @@ export default function PaginaWizardReservaCliente() {
     try {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
+
+      // Recuperar código de influenciador/cupom do localStorage se presente
+      if (typeof window !== "undefined") {
+        const refArmazenada = localStorage.getItem("@barzzo:atribuicao_influenciador");
+        if (refArmazenada && !codigoCupom) {
+          setCodigoCupom(refArmazenada);
+        }
+      }
 
       // Verificar sessão (pode ser anônimo!)
       const {
@@ -267,13 +281,100 @@ export default function PaginaWizardReservaCliente() {
     }
   }
 
-  function handleProsseguirResumo() {
+
+  async function aplicarValidarCupom() {
+    if (!barbearia || !servicoSelecionado) return;
+    const codigoLimpo = codigoCupom.trim().toUpperCase();
+    if (!codigoLimpo) {
+      setCupomAplicado(null);
+      setDescontoCalculado(0);
+      setMsgCupom(null);
+      return;
+    }
+
+    try {
+      setValidandoCupom(true);
+      setMsgCupom(null);
+      const supabase = criarClienteSupabaseBrowser();
+
+      // 1. Buscar cupom
+      let { data: cupDb } = await (supabase.from("cupons") as any)
+        .select("*")
+        .eq("barbearia_id", barbearia.id)
+        .ilike("codigo", codigoLimpo)
+        .eq("ativo", true)
+        .maybeSingle();
+
+      // Se não encontrou como cupom direto, buscar se é código de influenciador com cupom padrão
+      if (!cupDb) {
+        const { data: infDb } = await (supabase.from("influenciadores") as any)
+          .select("*, cupons(*)")
+          .eq("barbearia_id", barbearia.id)
+          .ilike("codigo_ref", codigoLimpo)
+          .eq("ativo", true)
+          .maybeSingle();
+
+        if (infDb?.cupons) {
+          cupDb = infDb.cupons;
+        }
+      }
+
+      if (!cupDb) {
+        setCupomAplicado(null);
+        setDescontoCalculado(0);
+        setMsgCupom({ tipo: "erro", texto: "Cupom não encontrado ou inválido nesta barbearia." });
+        return;
+      }
+
+      // 2. Verificar histórico de agendamentos anteriores do cliente se logado
+      let totalConcluidos = 0;
+      if (usuarioId) {
+        const { count } = await (supabase.from("agendamentos") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("barbearia_id", barbearia.id)
+          .eq("cliente_id", usuarioId)
+          .eq("status", "concluido");
+        totalConcluidos = count || 0;
+      }
+
+      // 3. Executar cálculo de domínio
+      const resultado = calcularDescontoCupom({
+        cupom: cupDb as Cupom,
+        valorTotal: Number(servicoSelecionado.preco),
+        servicosIds: [servicoSelecionado.id],
+        totalAgendamentosConcluidosCliente: totalConcluidos,
+      });
+
+      if (!resultado.valido) {
+        setCupomAplicado(null);
+        setDescontoCalculado(0);
+        setMsgCupom({ tipo: "erro", texto: resultado.motivo_invalido || "Cupom não aplicável." });
+        return;
+      }
+
+      setCupomAplicado(cupDb as Cupom);
+      setDescontoCalculado(resultado.valor_desconto_calculado || 0);
+      setMsgCupom({
+        tipo: "sucesso",
+        texto: `Cupom ${codigoLimpo} aplicado! Desconto de ${(resultado.valor_desconto_calculado || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`,
+      });
+    } catch {
+      setMsgCupom({ tipo: "erro", texto: "Erro ao validar cupom de desconto." });
+    } finally {
+      setValidandoCupom(false);
+    }
+  }
+
+  async function handleProsseguirResumo() {
     if (!slotSelecionado) {
       setErro("Selecione um horário disponível para prosseguir.");
       return;
     }
     setErro(null);
     setPassoAtual(4);
+    if (codigoCupom.trim() && !cupomAplicado) {
+      aplicarValidarCupom();
+    }
   }
 
   async function handleFinalizarReserva() {
@@ -282,20 +383,25 @@ export default function PaginaWizardReservaCliente() {
       return;
     }
 
+    const precoOriginal = Number(servicoSelecionado.preco);
+    const precoFinal = Math.max(0, precoOriginal - descontoCalculado);
+
     const rascunho: RascunhoReserva = {
       barbearia_id: barbearia.id,
       barbearia_nome: barbearia.nome,
       barbearia_slug: barbearia.slug,
       servico_id: servicoSelecionado.id,
       servico_nome: servicoSelecionado.nome,
-      preco: Number(servicoSelecionado.preco),
+      preco: precoOriginal,
+      valor_desconto: descontoCalculado > 0 ? descontoCalculado : null,
+      preco_final: precoFinal,
       duracao_minutos: servicoSelecionado.duracao_minutos,
       profissional_id: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.id : null,
       profissional_nome: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.nome : null,
       data: dataSelecionada,
       horario: slotSelecionado,
       observacoes: observacoes ? observacoes : null,
-      codigo_cupom: codigoCupom ? codigoCupom : null,
+      codigo_cupom: codigoCupom ? codigoCupom.trim().toUpperCase() : null,
     };
 
     // Caso 1: Usuário NÃO está autenticado (Anônimo)
@@ -361,7 +467,7 @@ export default function PaginaWizardReservaCliente() {
       const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
       const fimIso = new Date(`${dataSelecionada}T${horaFimStr}:00.000Z`).toISOString();
 
-      // 1. Inserir agendamento definitivo
+      // 1. Inserir agendamento definitivo com preço com desconto
       const { data: novoAgendamento, error: erroAg } = await (supabase.from("agendamentos") as any)
         .insert({
           barbearia_id: barbearia.id,
@@ -374,7 +480,7 @@ export default function PaginaWizardReservaCliente() {
           status: "confirmado",
           origem: "marketplace",
           observacoes: observacoes ? observacoes : null,
-          preco_total: servicoSelecionado.preco,
+          preco_total: precoFinal,
           duracao_total_minutos: servicoSelecionado.duracao_minutos,
         })
         .select("id")
@@ -396,9 +502,39 @@ export default function PaginaWizardReservaCliente() {
         agendamento_id: novoAgendamento.id,
         servico_id: servicoSelecionado.id,
         nome_servico: servicoSelecionado.nome,
-        preco: servicoSelecionado.preco,
+        preco: precoOriginal,
         duracao_minutos: servicoSelecionado.duracao_minutos,
       });
+
+      // 3. Atualizar usos do cupom se aplicado
+      if (cupomAplicado) {
+        await (supabase.from("cupons") as any)
+          .update({ usos_atuais: cupomAplicado.usos_atuais + 1 })
+          .eq("id", cupomAplicado.id);
+      }
+
+      // 4. Se houver código de influenciador ou cupom com influenciador, registrar indicação
+      const codigoRef = codigoCupom.trim().toUpperCase();
+      if (codigoRef) {
+        const { data: infDb } = await (supabase.from("influenciadores") as any)
+          .select("id")
+          .eq("barbearia_id", barbearia.id)
+          .ilike("codigo_ref", codigoRef)
+          .eq("ativo", true)
+          .maybeSingle();
+
+        if (infDb) {
+          await (supabase.from("indicacoes") as any).insert({
+            barbearia_id: barbearia.id,
+            influenciador_id: infDb.id,
+            cupom_id: cupomAplicado?.id || null,
+            agendamento_id: novoAgendamento.id,
+            cliente_id: usuarioId,
+            codigo_ref_usado: codigoRef,
+            status: "pendente",
+          });
+        }
+      }
 
       router.push(`/agendamentos/${novoAgendamento.id}?sucesso=true`);
     } catch {
@@ -732,11 +868,31 @@ export default function PaginaWizardReservaCliente() {
                   {dataSelecionada} às {slotSelecionado}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2 border-t border-neutral-200 dark:border-neutral-800 font-extrabold text-base">
-                <span>Valor Total:</span>
-                <span className="text-[#B45A2B]">
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servicoSelecionado?.preco || 0))}
-                </span>
+              <div className="flex flex-col gap-1.5 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                <div className="flex items-center justify-between text-xs opacity-75">
+                  <span>Valor do Serviço:</span>
+                  <span>
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servicoSelecionado?.preco || 0))}
+                  </span>
+                </div>
+
+                {descontoCalculado > 0 && (
+                  <div className="flex items-center justify-between text-xs font-bold text-[#16A34A]">
+                    <span>Desconto ({cupomAplicado?.codigo || codigoCupom}):</span>
+                    <span>
+                      -{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(descontoCalculado)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between pt-1 font-extrabold text-base border-t border-neutral-200/60 dark:border-neutral-800/60">
+                  <span>Valor Final:</span>
+                  <span className="text-[#B45A2B]">
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+                      Math.max(0, Number(servicoSelecionado?.preco || 0) - descontoCalculado)
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -744,16 +900,46 @@ export default function PaginaWizardReservaCliente() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="cupom">Cupom de Desconto / Influenciador</Label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
-                  <Input
-                    id="cupom"
-                    placeholder="Código (opcional)"
-                    value={codigoCupom}
-                    onChange={(e) => setCodigoCupom(e.target.value.toUpperCase())}
-                    className="pl-9 font-semibold uppercase"
-                  />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
+                    <Input
+                      id="cupom"
+                      placeholder="Código (ex: PROMO10)"
+                      value={codigoCupom}
+                      onChange={(e) => {
+                        setCodigoCupom(e.target.value.toUpperCase());
+                        setCupomAplicado(null);
+                        setDescontoCalculado(0);
+                        setMsgCupom(null);
+                      }}
+                      className="pl-9 font-semibold uppercase"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variante="secundario"
+                    tamanho="sm"
+                    disabled={validandoCupom || !codigoCupom.trim()}
+                    carregando={validandoCupom}
+                    onClick={aplicarValidarCupom}
+                    className="min-h-[44px] text-xs font-semibold px-4"
+                  >
+                    Aplicar
+                  </Button>
                 </div>
+
+                {msgCupom && (
+                  <span
+                    className={`text-xs font-semibold mt-0.5 ${
+                      msgCupom.tipo === "sucesso"
+                        ? "text-[#16A34A]"
+                        : "text-[#DC2626]"
+                    }`}
+                  >
+                    {msgCupom.texto}
+                  </span>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">

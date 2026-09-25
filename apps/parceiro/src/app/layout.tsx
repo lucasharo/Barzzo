@@ -80,6 +80,18 @@ export default function LayoutParceiro({
                   Galeria
                 </Link>
                 <Link
+                  href="/campanhas"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Campanhas
+                </Link>
+                <Link
+                  href="/influenciadores"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Influenciadores
+                </Link>
+                <Link
                   href="/horarios"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >

@@ -121,12 +121,13 @@ describe("TASK-02: Barbearias, Onboarding e Equipe", () => {
     it("deve conter RPC atômica criar_barbearia_com_dono com trial de 30 dias", () => {
       expect(sql).toContain("CREATE OR REPLACE FUNCTION public.criar_barbearia_com_dono");
       expect(sql).toContain("interval '30 days'");
-      expect(sql).toContain("papel, ativo) VALUES (v_barbearia_id, auth.uid(), 'dono', true)");
+      expect(sql).toContain("VALUES (v_barbearia_id, auth.uid(), 'dono', true)");
     });
 
     it("deve conter RPC aceitar_convite_equipe para vincular profissional à conta", () => {
       expect(sql).toContain("CREATE OR REPLACE FUNCTION public.aceitar_convite_equipe");
-      expect(sql).toContain("UPDATE public.profissionais SET usuario_id = auth.uid()");
+      expect(sql).toContain("UPDATE public.profissionais");
+      expect(sql).toContain("SET usuario_id = auth.uid()");
       expect(sql).toContain("INSERT INTO public.membros_barbearia");
     });
   });

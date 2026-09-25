@@ -19,7 +19,9 @@ export const esquemaRascunhoReserva = z.object({
   data: z.string().regex(formatoData, "Formato de data inválido (AAAA-MM-DD)."),
   horario: z.string().regex(formatoHora, "Formato de horário inválido (HH:MM)."),
   observacoes: z.string().max(500).optional().nullable(),
-  codigo_cupom: z.string().max(50).optional().nullable()
+  codigo_cupom: z.string().max(50).optional().nullable(),
+  valor_desconto: z.coerce.number().min(0).optional().nullable(),
+  preco_final: z.coerce.number().min(0).optional().nullable(),
 });
 
 export type EntradaRascunhoReserva = z.infer<typeof esquemaRascunhoReserva>;
