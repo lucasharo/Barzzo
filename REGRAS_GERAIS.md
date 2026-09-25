@@ -72,3 +72,15 @@
 
 ## UX
 Mobile-first, touch-friendly, acessível, com loading/vazio/erro/sucesso. ux-pro-max obrigatório.
+
+O Design System oficial está em `docs/design/design_system.md` e deve ser seguido por PO, Líder Técnico, Dev, QA e ux-pro-max.
+
+Regras visuais obrigatórias:
+- fonte Roboto;
+- tema claro e tema escuro;
+- uma única cor-base de texto por tema: preto no claro e branco no escuro;
+- hierarquia textual por tamanho e peso;
+- quatro níveis de superfície por tema: fundo, card primário, card secundário e card terciário;
+- cor principal cobre definida no Design System;
+- alertas restritos a azul, verde, amarelo e vermelho;
+- botões destrutivos seguem os dois padrões definidos no Design System.
