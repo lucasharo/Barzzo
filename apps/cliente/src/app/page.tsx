@@ -78,11 +78,11 @@ export default function PaginaInicialCliente() {
           onSubmit={handlePesquisar}
           className="w-full max-w-2xl mt-4 flex flex-col sm:flex-row gap-2 p-2 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-md"
         >
-          <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
+          <div className="flex-1 min-w-0 flex items-center px-3 gap-2 min-h-[44px]">
             <Search className="h-5 w-5 text-[#B45A2B] shrink-0" />
             <input
               type="text"
-              placeholder="Buscar barbearia, corte, barba..."
+              placeholder="Buscar pelo nome..."
               value={termoBusca}
               onChange={(e) => setTermoBusca(e.target.value)}
               className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50"
@@ -91,14 +91,14 @@ export default function PaginaInicialCliente() {
 
           <div className="h-8 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-          <div className="flex items-center px-3 gap-2 min-h-[44px]">
+          <div className="flex-1 sm:flex-[1.4] min-w-0 flex items-center px-3 gap-2 min-h-[44px]">
             <MapPin className="h-5 w-5 opacity-60 shrink-0 text-[#B45A2B]" />
             <input
               type="text"
               placeholder="Bairro, Cidade, Rua ou CEP..."
               value={localidadeBusca}
               onChange={(e) => setLocalidadeBusca(e.target.value)}
-              className="w-full sm:w-56 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
+              className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50"
             />
           </div>
 

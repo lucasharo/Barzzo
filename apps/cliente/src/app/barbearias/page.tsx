@@ -490,21 +490,32 @@ function ConteudoListagemBarbearias() {
         {/* Linha Principal de Busca e Ações de Filtro */}
         <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
           <div className="flex-1 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-2 sm:p-2.5 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
-            <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
+            {/* Campo de Busca por Nome */}
+            <div className="flex-1 min-w-0 flex items-center px-3 gap-2 min-h-[44px]">
               <Search className="h-4 w-4 text-[#B45A2B] shrink-0" />
               <input
                 type="text"
-                placeholder="Filtrar por nome ou serviço..."
+                placeholder="Buscar pelo nome..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
               />
+              {busca && (
+                <button
+                  type="button"
+                  onClick={() => setBusca("")}
+                  className="text-xs opacity-50 hover:opacity-100 p-1"
+                  title="Limpar nome"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-            {/* Campo de Endereço com Popover Integrado de Bairros e Localização */}
-            <div ref={containerEnderecoRef} className="relative flex-1 sm:flex-initial">
+            {/* Campo de Endereço com Maior Largura e Popover Integrado */}
+            <div ref={containerEnderecoRef} className="relative flex-1 sm:flex-[1.5] min-w-0">
               <div
                 className="flex items-center px-3 gap-2 min-h-[44px] cursor-pointer"
                 onClick={() => setDropdownEnderecoAberto(true)}
@@ -519,7 +530,7 @@ function ConteudoListagemBarbearias() {
                     setLocalidade(e.target.value);
                     setBairroFiltro("");
                   }}
-                  className="w-full sm:w-60 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+                  className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
                 />
                 {(localidade || bairroFiltro) && (
                   <button
@@ -544,7 +555,7 @@ function ConteudoListagemBarbearias() {
 
               {/* Popover / Dropdown de Endereço e Bairros */}
               {dropdownEnderecoAberto && (
-                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm p-4 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-md p-4 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-150">
                   <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white">
                       <MapPin className="h-3.5 w-3.5 text-[#B45A2B]" />
