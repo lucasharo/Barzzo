@@ -6,17 +6,17 @@
 - Próximo agente: PO
 - Bloqueios: nenhum
 
-| Task | Nome | Estado |
-|---|---|---|
-| 01 | Fundação, autenticação e usuários | PENDENTE |
-| 02 | Barbearias, onboarding e equipe | PENDENTE |
-| 03 | Serviços, jornadas e disponibilidade | PENDENTE |
-| 04 | Agenda e agendamentos | PENDENTE |
-| 05 | Marketplace e jornada do cliente | PENDENTE |
-| 06 | Clientes, favoritos e avaliações | PENDENTE |
-| 07 | Produtos, galeria e imagens | PENDENTE |
-| 08 | Campanhas, cupons e influenciadores | PENDENTE |
-| 09 | Notificações, dashboard e relatórios | PENDENTE |
-| 10 | Assinaturas, Admin e produção | PENDENTE |
+| Task | Issue | Nome | Estado |
+|---|---:|---|---|
+| 01 | #1 | Fundação, autenticação e usuários | PENDENTE |
+| 02 | #2 | Barbearias, onboarding e equipe | PENDENTE |
+| 03 | #3 | Serviços, jornadas e disponibilidade | PENDENTE |
+| 04 | #4 | Agenda e agendamentos | PENDENTE |
+| 05 | #5 | Marketplace e jornada do cliente | PENDENTE |
+| 06 | #6 | Clientes, favoritos e avaliações | PENDENTE |
+| 07 | #7 | Produtos, galeria e imagens | PENDENTE |
+| 08 | #8 | Campanhas, cupons e influenciadores | PENDENTE |
+| 09 | #9 | Notificações, dashboard e relatórios | PENDENTE |
+| 10 | #10 | Assinaturas, Admin e produção | PENDENTE |
 
 Atualizar em toda troca de gate. Nunca iniciar task posterior antes da anterior estar CONCLUIDA.
