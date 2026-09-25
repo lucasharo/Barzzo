@@ -4,11 +4,11 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Carregar configuração unificada de local.env ou .env.local na raiz do monorepo
+// Carregar configuração unificada de .env.local ou local.env na raiz do monorepo
 function carregarEnvRaiz() {
   const caminhos = [
-    path.resolve(__dirname, "../../local.env"),
     path.resolve(__dirname, "../../.env.local"),
+    path.resolve(__dirname, "../../local.env"),
     path.resolve(__dirname, "../../.env"),
   ];
 
@@ -21,14 +21,16 @@ function carregarEnvRaiz() {
           const sep = l.indexOf("=");
           if (sep > -1) {
             const k = l.slice(0, sep).trim();
-            const v = l.slice(sep + 1).trim();
-            if (k && !process.env[k]) {
+            let v = l.slice(sep + 1).trim();
+            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+              v = v.slice(1, -1);
+            }
+            if (k && v && !process.env[k]) {
               process.env[k] = v;
             }
           }
         }
       }
-      break;
     }
   }
 }
