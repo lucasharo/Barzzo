@@ -231,15 +231,18 @@ export default function PaginaPainelParceiro() {
         <Card camada="primaria">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardDescription>Próximas Etapas</CardDescription>
-              <Store className="h-5 w-5 opacity-60" />
+              <CardDescription>Catálogo de Serviços</CardDescription>
+              <Store className="h-5 w-5 text-[#B45A2B]" />
             </div>
-            <CardTitle className="text-base font-semibold">Serviços & Agenda</CardTitle>
+            <CardTitle className="text-base font-semibold">Serviços & Horários</CardTitle>
           </CardHeader>
           <CardContent>
-            <span className="text-xs opacity-70">
-              Pronto para Task 03 e 04 (Serviços e Horários)
-            </span>
+            <Link
+              href="/servicos"
+              className="text-xs font-semibold text-[#B45A2B] hover:underline flex items-center gap-1"
+            >
+              Configurar serviços e horários <ArrowRight className="h-3 w-3" />
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -265,13 +268,13 @@ export default function PaginaPainelParceiro() {
             <CheckCircle className="h-5 w-5 text-[#16A34A]" />
             <span className="font-medium">Estrutura de equipe e convites operacionais</span>
           </div>
-          <div className="flex items-center gap-3 text-sm opacity-60">
-            <Circle className="h-5 w-5" />
-            <span>Serviços e jornadas de trabalho (Task 03)</span>
+          <div className="flex items-center gap-3 text-sm">
+            <CheckCircle className="h-5 w-5 text-[#16A34A]" />
+            <span className="font-medium">Serviços, jornadas e disponibilidade</span>
           </div>
           <div className="flex items-center gap-3 text-sm opacity-60">
             <Circle className="h-5 w-5" />
-            <span>Grade de horários e agendamentos (Task 04)</span>
+            <span>Grade de agendamentos e concorrência (Task 04)</span>
           </div>
         </CardContent>
       </Card>

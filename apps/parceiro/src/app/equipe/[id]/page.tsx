@@ -117,13 +117,21 @@ export default function PaginaDetalhesProfissional() {
 
   return (
     <div className="flex-1 max-w-2xl mx-auto w-full py-4 flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <Link href="/equipe">
-          <Button variante="fantasma" tamanho="sm">
-            <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link href="/equipe">
+            <Button variante="fantasma" tamanho="sm">
+              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+            </Button>
+          </Link>
+          <h1 className="text-2xl font-bold">Editar Profissional</h1>
+        </div>
+
+        <Link href={`/equipe/${id}/jornada`}>
+          <Button variante="secundario" tamanho="sm">
+            <UserCheck className="h-4 w-4 mr-1.5" /> Configurar Jornada Semanal
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Editar Profissional</h1>
       </div>
 
       {erro && (

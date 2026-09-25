@@ -44,6 +44,24 @@ export default function LayoutParceiro({
                   Painel
                 </Link>
                 <Link
+                  href="/servicos"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Serviços
+                </Link>
+                <Link
+                  href="/horarios"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Horários
+                </Link>
+                <Link
+                  href="/agenda/bloqueios"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Bloqueios
+                </Link>
+                <Link
                   href="/equipe"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >
@@ -54,12 +72,6 @@ export default function LayoutParceiro({
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >
                   Convites
-                </Link>
-                <Link
-                  href="/onboarding"
-                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                >
-                  Onboarding
                 </Link>
                 <Link
                   href="/configuracoes/perfil"

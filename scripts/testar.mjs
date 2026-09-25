@@ -269,6 +269,310 @@ test("Migration Task 02: isolamento multi-tenant usuario_eh_dono_ou_gerente", ()
   expect(sqlTask02).toContain("papel IN ('dono', 'gerente')");
 });
 
+// --- 6. Testes da Task 03: Serviços, Jornadas e Disponibilidade ---
+console.log("▶ Executando testes: Serviços, Jornadas e Disponibilidade (Task 03)...");
+
+// Schemas Zod Task 03
+const formatoHora = /^([01]\d|2[0-3]):([0-5]\d)(:([0-5]\d))?$/;
+
+const esquemaServico = z.object({
+  nome: z.string().min(2).max(100).trim(),
+  descricao: z.string().max(500).optional().nullable(),
+  preco: z.coerce.number().min(0),
+  duracao_minutos: z.coerce.number().int().min(5).max(480),
+  ativo: z.boolean().default(true),
+});
+
+const esquemaHorarioBarbearia = z.object({
+  dia_semana: z.number().int().min(0).max(6),
+  hora_abertura: z.string().regex(formatoHora),
+  hora_fechamento: z.string().regex(formatoHora),
+  hora_inicio_almoco: z.string().regex(formatoHora).optional().nullable(),
+  hora_fim_almoco: z.string().regex(formatoHora).optional().nullable(),
+  ativo: z.boolean().default(true),
+}).refine((data) => data.hora_abertura < data.hora_fechamento);
+
+const esquemaBloqueioAgenda = z.object({
+  barbearia_id: z.string().uuid(),
+  profissional_id: z.string().uuid().optional().nullable(),
+  inicio: z.string().datetime(),
+  fim: z.string().datetime(),
+  motivo: z.string().min(3).max(200).trim(),
+}).refine((data) => new Date(data.inicio) < new Date(data.fim));
+
+// Utilitários de tempo e disponibilidade
+function timeParaMinutos(horaStr) {
+  const partes = horaStr.split(":");
+  return (parseInt(partes[0], 10) || 0) * 60 + (parseInt(partes[1], 10) || 0);
+}
+
+function minutosParaTime(minutosTotal) {
+  const horas = Math.floor(minutosTotal / 60);
+  const minutos = minutosTotal % 60;
+  return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
+}
+
+function intervalosSobrepoem(aInicio, aFim, bInicio, bFim) {
+  return aInicio < bFim && aFim > bInicio;
+}
+
+function calcularHorariosDisponiveis(opcoes) {
+  const {
+    servico,
+    horarioBarbearia,
+    profissionais,
+    bloqueios = [],
+    data,
+    profissionalIdFiltro,
+    passoMinutos = 30,
+  } = opcoes;
+
+  if (!servico.ativo || servico.duracao_minutos <= 0) return [];
+  if (!horarioBarbearia || !horarioBarbearia.ativo) return [];
+
+  const aberturaBarbeariaMin = timeParaMinutos(horarioBarbearia.hora_abertura);
+  const fechamentoBarbeariaMin = timeParaMinutos(horarioBarbearia.hora_fechamento);
+
+  const almocoInicioMin = horarioBarbearia.hora_inicio_almoco
+    ? timeParaMinutos(horarioBarbearia.hora_inicio_almoco)
+    : null;
+  const almocoFimMin = horarioBarbearia.hora_fim_almoco
+    ? timeParaMinutos(horarioBarbearia.hora_fim_almoco)
+    : null;
+
+  const profsFiltrados = profissionais.filter((p) => {
+    if (!p.ativo || !p.habilitado) return false;
+    if (profissionalIdFiltro && p.id !== profissionalIdFiltro) return false;
+    if (!p.jornada || !p.jornada.ativo) return false;
+    return true;
+  });
+
+  const slots = [];
+
+  for (const prof of profsFiltrados) {
+    const jornada = prof.jornada;
+    const jornadaInicioMin = timeParaMinutos(jornada.hora_inicio);
+    const jornadaFimMin = timeParaMinutos(jornada.hora_fim);
+
+    const limiteInicioMin = Math.max(aberturaBarbeariaMin, jornadaInicioMin);
+    const limiteFimMin = Math.min(fechamentoBarbeariaMin, jornadaFimMin);
+
+    const pausaInicioMin = jornada.hora_inicio_pausa
+      ? timeParaMinutos(jornada.hora_inicio_pausa)
+      : null;
+    const pausaFimMin = jornada.hora_fim_pausa
+      ? timeParaMinutos(jornada.hora_fim_pausa)
+      : null;
+
+    let slotInicio = limiteInicioMin;
+
+    while (slotInicio + servico.duracao_minutos <= limiteFimMin) {
+      const slotFim = slotInicio + servico.duracao_minutos;
+      let valido = true;
+
+      // Almoço da barbearia
+      if (almocoInicioMin !== null && almocoFimMin !== null) {
+        if (intervalosSobrepoem(slotInicio, slotFim, almocoInicioMin, almocoFimMin)) {
+          valido = false;
+        }
+      }
+
+      // Pausa do profissional
+      if (valido && pausaInicioMin !== null && pausaFimMin !== null) {
+        if (intervalosSobrepoem(slotInicio, slotFim, pausaInicioMin, pausaFimMin)) {
+          valido = false;
+        }
+      }
+
+      // Bloqueios
+      if (valido && bloqueios.length > 0) {
+        const slotDataInicio = new Date(`${data}T${minutosParaTime(slotInicio)}:00.000Z`).getTime();
+        const slotDataFim = new Date(`${data}T${minutosParaTime(slotFim)}:00.000Z`).getTime();
+
+        for (const bloq of bloqueios) {
+          if (!bloq.profissional_id || bloq.profissional_id === prof.id) {
+            const bIni = new Date(bloq.inicio).getTime();
+            const bFim = new Date(bloq.fim).getTime();
+            if (intervalosSobrepoem(slotDataInicio, slotDataFim, bIni, bFim)) {
+              valido = false;
+              break;
+            }
+          }
+        }
+      }
+
+      if (valido) {
+        slots.push({
+          horario: minutosParaTime(slotInicio),
+          duracao_minutos: servico.duracao_minutos,
+          profissional_id: prof.id,
+          profissional_nome: prof.nome,
+        });
+      }
+
+      slotInicio += passoMinutos;
+    }
+  }
+
+  return slots;
+}
+
+test("esquemaServico: aceita serviço com dados válidos", () => {
+  const res = esquemaServico.safeParse({
+    nome: "Corte Tradicional",
+    preco: 45,
+    duracao_minutos: 30,
+    ativo: true,
+  });
+  expect(res.success).toBe(true);
+});
+
+test("esquemaServico: rejeita preço negativo e duração zero", () => {
+  expect(esquemaServico.safeParse({ nome: "Corte", preco: -1, duracao_minutos: 30 }).success).toBe(false);
+  expect(esquemaServico.safeParse({ nome: "Corte", preco: 40, duracao_minutos: 0 }).success).toBe(false);
+});
+
+test("esquemaHorarioBarbearia: rejeita horário onde abertura é posterior ao fechamento", () => {
+  const res = esquemaHorarioBarbearia.safeParse({
+    dia_semana: 1,
+    hora_abertura: "19:00",
+    hora_fechamento: "09:00",
+    ativo: true,
+  });
+  expect(res.success).toBe(false);
+});
+
+test("esquemaBloqueioAgenda: valida consistência de datas do bloqueio", () => {
+  const valido = esquemaBloqueioAgenda.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    inicio: "2026-10-01T10:00:00.000Z",
+    fim: "2026-10-01T12:00:00.000Z",
+    motivo: "Manutenção",
+  });
+  expect(valido.success).toBe(true);
+
+  const invalido = esquemaBloqueioAgenda.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    inicio: "2026-10-01T12:00:00.000Z",
+    fim: "2026-10-01T10:00:00.000Z",
+    motivo: "Manutenção",
+  });
+  expect(invalido.success).toBe(false);
+});
+
+// Testes do motor de disponibilidade
+const mockServico = { id: "s-1", nome: "Corte", preco: 40, duracao_minutos: 30, ativo: true };
+const mockHorario = { dia_semana: 1, hora_abertura: "09:00", hora_fechamento: "12:00", ativo: true, hora_inicio_almoco: null, hora_fim_almoco: null };
+const mockJornada = { dia_semana: 1, hora_inicio: "09:00", hora_fim: "12:00", ativo: true, hora_inicio_pausa: null, hora_fim_pausa: null };
+const mockProf = { id: "p-1", nome: "Barbeiro Lucas", ativo: true, habilitado: true, jornada: mockJornada };
+
+test("Disponibilidade: retorna lista vazia para serviço inativo ou barbearia fechada", () => {
+  const inativo = calcularHorariosDisponiveis({
+    servico: { ...mockServico, ativo: false },
+    horarioBarbearia: mockHorario,
+    profissionais: [mockProf],
+    data: "2026-10-05",
+  });
+  expect(inativo.length).toBe(0);
+
+  const fechada = calcularHorariosDisponiveis({
+    servico: mockServico,
+    horarioBarbearia: { ...mockHorario, ativo: false },
+    profissionais: [mockProf],
+    data: "2026-10-05",
+  });
+  expect(fechada.length).toBe(0);
+});
+
+test("Disponibilidade: gera slots a cada 30min e elimina duração cruzando fechamento", () => {
+  // Serviço de 45 minutos em expediente 09:00 - 12:00:
+  // Slots: 09:00 (até 09:45), 09:30 (até 10:15), 10:00 (até 10:45), 10:30 (até 11:15), 11:00 (até 11:45)
+  // 11:30 terminaria às 12:15 (cruzando fechamento) -> Deve ser eliminado!
+  const slots45 = calcularHorariosDisponiveis({
+    servico: { ...mockServico, duracao_minutos: 45 },
+    horarioBarbearia: mockHorario,
+    profissionais: [mockProf],
+    data: "2026-10-05",
+  });
+
+  const horarios = slots45.map((s) => s.horario);
+  expect(horarios).toContain("09:00");
+  expect(horarios).toContain("11:00");
+  expect(horarios.includes("11:30")).toBe(false);
+});
+
+test("Disponibilidade: exclui horários no almoço e em bloqueios de agenda", () => {
+  const hbComAlmoco = { ...mockHorario, hora_fechamento: "15:00", hora_inicio_almoco: "12:00", hora_fim_almoco: "13:00" };
+  const profComJornada = { ...mockProf, jornada: { ...mockJornada, hora_fim: "15:00" } };
+  const bloq = {
+    barbearia_id: "b-1",
+    profissional_id: null,
+    inicio: "2026-10-05T10:00:00.000Z",
+    fim: "2026-10-05T11:00:00.000Z",
+  };
+
+  const slots = calcularHorariosDisponiveis({
+    servico: mockServico,
+    horarioBarbearia: hbComAlmoco,
+    profissionais: [profComJornada],
+    bloqueios: [bloq],
+    data: "2026-10-05",
+  });
+
+  const horarios = slots.map((s) => s.horario);
+  // Bloqueio das 10:00 às 11:00
+  expect(horarios.includes("10:00")).toBe(false);
+  expect(horarios.includes("10:30")).toBe(false);
+  // Almoço das 12:00 às 13:00
+  expect(horarios.includes("12:00")).toBe(false);
+  expect(horarios.includes("12:30")).toBe(false);
+  // Horários livres
+  expect(horarios.includes("09:00")).toBe(true);
+  expect(horarios.includes("13:00")).toBe(true);
+});
+
+test("Disponibilidade: suporta múltiplos profissionais e filtro individual", () => {
+  const prof2 = { id: "p-2", nome: "Barbeira Maria", ativo: true, habilitado: true, jornada: mockJornada };
+  const slotsAmbos = calcularHorariosDisponiveis({
+    servico: mockServico,
+    horarioBarbearia: mockHorario,
+    profissionais: [mockProf, prof2],
+    data: "2026-10-05",
+  });
+
+  const slots09 = slotsAmbos.filter((s) => s.horario === "09:00");
+  expect(slots09.length).toBe(2);
+
+  const slotsFiltrados = calcularHorariosDisponiveis({
+    servico: mockServico,
+    horarioBarbearia: mockHorario,
+    profissionais: [mockProf, prof2],
+    data: "2026-10-05",
+    profissionalIdFiltro: "p-2",
+  });
+  expect(slotsFiltrados.every((s) => s.profissional_id === "p-2")).toBe(true);
+});
+
+// --- 7. Testes de Migrações SQL e RLS (Task 03) ---
+console.log("▶ Executando testes: Segurança, RLS e Migrações da Task 03...");
+
+const caminhoSqlTask03 = path.resolve(raiz, "supabase/migrations/20260925000002_criar_servicos_e_disponibilidade.sql");
+const sqlTask03 = fs.readFileSync(caminhoSqlTask03, "utf-8");
+
+test("Migration Task 03: RLS ativado nas tabelas de serviços e disponibilidade", () => {
+  expect(sqlTask03).toContain("ALTER TABLE public.servicos ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask03).toContain("ALTER TABLE public.profissionais_servicos ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask03).toContain("ALTER TABLE public.horarios_barbearia ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask03).toContain("ALTER TABLE public.jornadas_profissionais ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask03).toContain("ALTER TABLE public.bloqueios_agenda ENABLE ROW LEVEL SECURITY;");
+});
+
+test("Migration Task 03: RPC buscar_horarios_disponiveis implementada com segurança", () => {
+  expect(sqlTask03).toContain("CREATE OR REPLACE FUNCTION public.buscar_horarios_disponiveis");
+  expect(sqlTask03).toContain("EXTRACT(DOW FROM p_data)");
+  expect(sqlTask03).toContain("SECURITY DEFINER");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -286,6 +590,12 @@ const resultadoGeral = {
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/02-barbearias-equipe/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/03-servicos-disponibilidade/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

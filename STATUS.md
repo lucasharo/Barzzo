@@ -1,8 +1,8 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: TASK-03
-- Estado: PENDENTE
+- Task ativa: TASK-04
+- Estado: EM_REFINAMENTO
 - Próximo agente: PO
 - Bloqueios: nenhum
 
@@ -10,8 +10,8 @@
 |---|---:|---|---|
 | 01 | #1 | Fundação, autenticação e usuários | CONCLUIDA |
 | 02 | #2 | Barbearias, onboarding e equipe | CONCLUIDA |
-| 03 | #3 | Serviços, jornadas e disponibilidade | PENDENTE |
-| 04 | #4 | Agenda e agendamentos | PENDENTE |
+| 03 | #3 | Serviços, jornadas e disponibilidade | CONCLUIDA |
+| 04 | #4 | Agenda e agendamentos | EM_REFINAMENTO |
 | 05 | #5 | Marketplace e jornada do cliente | PENDENTE |
 | 06 | #6 | Clientes, favoritos e avaliações | PENDENTE |
 | 07 | #7 | Produtos, galeria e imagens | PENDENTE |
