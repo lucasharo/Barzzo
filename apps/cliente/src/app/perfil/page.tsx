@@ -22,7 +22,7 @@ import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitar
 import { redimensionarEComprimirImagem } from "@barzzo/imagens";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Usuario } from "@barzzo/tipos";
-import { Camera, LogOut, Trash2 } from "lucide-react";
+import { Camera, LogOut } from "lucide-react";
 
 export default function PaginaPerfil() {
   const router = useRouter();
@@ -164,37 +164,6 @@ export default function PaginaPerfil() {
     }
   };
 
-  // Remover foto de perfil
-  const removerFoto = async () => {
-    setErro(null);
-    setSucesso(null);
-
-    try {
-      setEnviandoFoto(true);
-      const supabase = criarClienteSupabaseBrowser();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) return;
-
-      const { error: updateError } = await (supabase.from("usuarios") as any)
-        .update({ foto_url: null })
-        .eq("id", session.user.id);
-
-      if (updateError) {
-        setErro("Falha ao remover foto do perfil.");
-        return;
-      }
-
-      setFotoUrl(null);
-      setSucesso("Foto removida.");
-    } catch {
-      setErro("Erro ao remover foto.");
-    } finally {
-      setEnviandoFoto(false);
-    }
-  };
 
   // Salvar alterações de nome e telefone
   const salvarPerfil = async (e: React.FormEvent) => {
@@ -314,7 +283,7 @@ export default function PaginaPerfil() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6">
-          <div className="relative group">
+          <div className="relative inline-block">
             <Avatar
               src={fotoUrl}
               nome={nome}
@@ -326,9 +295,20 @@ export default function PaginaPerfil() {
                 <LoadingSpinner tamanho="md" className="text-white" />
               </div>
             )}
+            {/* Ícone de câmera no canto inferior direito sobre a foto */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={enviandoFoto}
+              aria-label="Alterar foto de perfil"
+              title="Alterar foto de perfil"
+              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-[#B45A2B] hover:bg-[#C46632] text-white flex items-center justify-center shadow-md border-2 border-white dark:border-[#141416] transition-transform active:scale-95 disabled:opacity-50 cursor-pointer"
+            >
+              <Camera className="h-4 w-4" />
+            </button>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1 text-center sm:text-left">
             <input
               type="file"
               ref={fileInputRef}
@@ -336,32 +316,9 @@ export default function PaginaPerfil() {
               onChange={lidarComMudancaFoto}
               className="hidden"
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variante="secundario"
-                tamanho="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={enviandoFoto}
-                className="flex items-center gap-1.5"
-              >
-                <Camera className="h-4 w-4" />
-                Alterar foto
-              </Button>
-              {fotoUrl && (
-                <Button
-                  type="button"
-                  variante="cancelar-simples"
-                  tamanho="sm"
-                  onClick={removerFoto}
-                  disabled={enviandoFoto}
-                  className="flex items-center gap-1.5"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Remover
-                </Button>
-              )}
-            </div>
+            <p className="text-sm font-medium text-black dark:text-white">
+              Toque no ícone da câmera para trocar sua foto
+            </p>
             <span className="text-xs opacity-60">
               Formatos aceitos: JPG, PNG ou WebP. Máximo de 5MB.
             </span>
