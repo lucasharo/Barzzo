@@ -95,10 +95,10 @@ export default function PaginaInicialCliente() {
             <MapPin className="h-5 w-5 opacity-60 shrink-0 text-[#B45A2B]" />
             <input
               type="text"
-              placeholder="Cidade ou Bairro"
+              placeholder="Bairro, Cidade, Rua ou CEP..."
               value={localidadeBusca}
               onChange={(e) => setLocalidadeBusca(e.target.value)}
-              className="w-full sm:w-40 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
+              className="w-full sm:w-56 bg-transparent text-sm focus:outline-none placeholder:opacity-50"
             />
           </div>
 

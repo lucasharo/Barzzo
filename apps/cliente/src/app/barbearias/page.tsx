@@ -35,6 +35,7 @@ import {
   X,
   SlidersHorizontal,
   ArrowUpDown,
+  ChevronDown,
 } from "lucide-react";
 
 interface BarbeariaComDistancia extends Barbearia {
@@ -85,6 +86,23 @@ function ConteudoListagemBarbearias() {
   const [tempFaixaPreco, setTempFaixaPreco] = React.useState<"todos" | "ate-35" | "ate-50" | "ate-75" | "acima-75">("todos");
   const [tempRaioDistancia, setTempRaioDistancia] = React.useState<number | null>(null);
   const [tempNotaMinima, setTempNotaMinima] = React.useState<number | null>(null);
+
+  // Controle do menu popover de endereço e bairros
+  const [dropdownEnderecoAberto, setDropdownEnderecoAberto] = React.useState(false);
+  const containerEnderecoRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function lidarComCliqueFora(e: MouseEvent) {
+      if (
+        containerEnderecoRef.current &&
+        !containerEnderecoRef.current.contains(e.target as Node)
+      ) {
+        setDropdownEnderecoAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", lidarComCliqueFora);
+    return () => document.removeEventListener("mousedown", lidarComCliqueFora);
+  }, []);
 
   // Contagem de filtros ativos (excluindo busca textual)
   const totalFiltrosAtivos = React.useMemo(() => {
@@ -146,15 +164,15 @@ function ConteudoListagemBarbearias() {
         if (partes.length >= 2) {
           if (partes[1].length === 2) {
             query = query
-              .or(`cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[0]}%`)
+              .or(`cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[0]}%,endereco.ilike.%${partes[0]}%`)
               .ilike("estado", `%${partes[1]}%`);
           } else {
             query = query.or(
-              `and(bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[1]}%),and(cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[1]}%),bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[0]}%`
+              `and(bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[1]}%),and(cidade.ilike.%${partes[0]}%,bairro.ilike.%${partes[1]}%),bairro.ilike.%${partes[0]}%,cidade.ilike.%${partes[0]}%,endereco.ilike.%${partes[0]}%,endereco.ilike.%${partes[1]}%`
             );
           }
         } else {
-          query = query.or(`cidade.ilike.%${termoLoc}%,bairro.ilike.%${termoLoc}%`);
+          query = query.or(`cidade.ilike.%${termoLoc}%,bairro.ilike.%${termoLoc}%,endereco.ilike.%${termoLoc}%,cep.ilike.%${termoLoc}%`);
         }
       }
 
@@ -197,19 +215,26 @@ function ConteudoListagemBarbearias() {
           };
         });
 
-        // Refinamento em memória para tolerar variações de acentuação no bairro/cidade
+        // Refinamento em memória para tolerar variações de acentuação no endereço, bairro, cidade ou CEP
         if (termoLoc) {
           const termoNorm = normalizarTexto(termoLoc);
+          const termoDigitos = termoLoc.replace(/\D/g, "");
           lista = lista.filter((b) => {
             const bairroNorm = normalizarTexto(b.bairro || "");
             const cidadeNorm = normalizarTexto(b.cidade || "");
             const estadoNorm = normalizarTexto(b.estado || "");
+            const enderecoNorm = normalizarTexto(b.endereco || "");
+            const cepDigitos = (b.cep || "").replace(/\D/g, "");
+
             return (
               bairroNorm.includes(termoNorm) ||
               cidadeNorm.includes(termoNorm) ||
               estadoNorm.includes(termoNorm) ||
+              enderecoNorm.includes(termoNorm) ||
+              (termoDigitos.length >= 4 && cepDigitos.includes(termoDigitos)) ||
               `${bairroNorm} ${cidadeNorm}`.includes(termoNorm) ||
-              `${cidadeNorm} ${bairroNorm}`.includes(termoNorm)
+              `${cidadeNorm} ${bairroNorm}`.includes(termoNorm) ||
+              `${enderecoNorm} ${bairroNorm}`.includes(termoNorm)
             );
           });
         }
@@ -460,30 +485,138 @@ function ConteudoListagemBarbearias() {
 
             <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-            <div className="flex items-center px-3 gap-2 min-h-[44px]">
-              <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
-              <input
-                type="text"
-                placeholder="Cidade ou Bairro..."
-                value={localidade}
-                onChange={(e) => {
-                  setLocalidade(e.target.value);
-                  setBairroFiltro("");
-                }}
-                className="w-full sm:w-44 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
-              />
-              {(localidade || bairroFiltro) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocalidade("");
+            {/* Campo de Endereço com Popover Integrado de Bairros e Localização */}
+            <div ref={containerEnderecoRef} className="relative flex-1 sm:flex-initial">
+              <div
+                className="flex items-center px-3 gap-2 min-h-[44px] cursor-pointer"
+                onClick={() => setDropdownEnderecoAberto(true)}
+              >
+                <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Bairro, Cidade, Rua ou CEP..."
+                  value={bairroFiltro || localidade}
+                  onFocus={() => setDropdownEnderecoAberto(true)}
+                  onChange={(e) => {
+                    setLocalidade(e.target.value);
                     setBairroFiltro("");
                   }}
-                  className="text-xs opacity-50 hover:opacity-100 p-1"
-                  title="Limpar localização"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+                  className="w-full sm:w-60 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+                />
+                {(localidade || bairroFiltro) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLocalidade("");
+                      setBairroFiltro("");
+                    }}
+                    className="text-xs opacity-50 hover:opacity-100 p-1"
+                    title="Limpar localização"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 opacity-50 transition-transform ${
+                    dropdownEnderecoAberto ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
+
+              {/* Popover / Dropdown de Endereço e Bairros */}
+              {dropdownEnderecoAberto && (
+                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-sm p-4 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white">
+                      <MapPin className="h-3.5 w-3.5 text-[#B45A2B]" />
+                      <span>Endereço de Busca</span>
+                    </div>
+                    {(localidade || bairroFiltro) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLocalidade("");
+                          setBairroFiltro("");
+                        }}
+                        className="text-[11px] font-semibold text-[#DC2626] hover:underline"
+                      >
+                        Limpar endereço
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Ação rápida: Usar GPS */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      alternarLocalizacao();
+                      setDropdownEnderecoAberto(false);
+                    }}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] bg-[#F6F6F7] dark:bg-[#0A0A0B] text-xs font-semibold text-left transition-colors text-black dark:text-white"
+                  >
+                    <Compass className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                    <div className="flex flex-col">
+                      <span>Usar minha localização atual</span>
+                      <span className="text-[10px] opacity-60 font-normal">
+                        Ordenar barbearias mais próximas por GPS
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Bairros Cadastrados no Marketplace */}
+                  {bairrosDisponiveis.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">
+                        Bairros com Barbearias
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBairroFiltro("");
+                            setLocalidade("");
+                            setDropdownEnderecoAberto(false);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg text-xs transition-colors border ${
+                            !bairroFiltro && !localidade
+                              ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
+                              : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
+                          }`}
+                        >
+                          Todos os bairros
+                        </button>
+                        {bairrosDisponiveis.map((bNome) => {
+                          const ativo =
+                            bairroFiltro === bNome ||
+                            normalizarTexto(localidade) === normalizarTexto(bNome);
+                          return (
+                            <button
+                              key={bNome}
+                              type="button"
+                              onClick={() => {
+                                setBairroFiltro(bNome);
+                                setLocalidade(bNome);
+                                setDropdownEnderecoAberto(false);
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs transition-colors border ${
+                                ativo
+                                  ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
+                                  : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
+                              }`}
+                            >
+                              {bNome}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="text-[11px] opacity-60 leading-relaxed border-t border-neutral-200 dark:border-neutral-800 pt-2">
+                    💡 Dica: Você pode digitar o seu <strong>Bairro</strong>, <strong>Cidade</strong>, <strong>Rua/Avenida</strong> ou <strong>CEP</strong> no campo de busca.
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -702,55 +835,6 @@ function ConteudoListagemBarbearias() {
           </div>
         </Modal>
 
-        {/* Chips de Bairros Disponíveis para Acesso Rápido */}
-        {bairrosDisponiveis.length > 0 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-            <span className="text-neutral-500 dark:text-neutral-400 font-medium shrink-0 flex items-center gap-1 mr-1">
-              <MapPin className="h-3 w-3 text-[#B45A2B]" /> Bairros:
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setBairroFiltro("");
-                setLocalidade("");
-              }}
-              className={`px-3 py-1 rounded-full border transition-colors shrink-0 ${
-                !bairroFiltro && !localidade
-                  ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
-                  : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
-              }`}
-            >
-              Todos
-            </button>
-            {bairrosDisponiveis.map((bNome) => {
-              const ativo =
-                bairroFiltro === bNome ||
-                normalizarTexto(localidade) === normalizarTexto(bNome);
-              return (
-                <button
-                  key={bNome}
-                  type="button"
-                  onClick={() => {
-                    if (ativo) {
-                      setBairroFiltro("");
-                      setLocalidade("");
-                    } else {
-                      setBairroFiltro(bNome);
-                      setLocalidade(bNome);
-                    }
-                  }}
-                  className={`px-3 py-1 rounded-full border transition-colors shrink-0 ${
-                    ativo
-                      ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
-                      : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
-                  }`}
-                >
-                  {bNome}
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Lista de Resultados */}
