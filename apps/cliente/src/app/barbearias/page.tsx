@@ -15,7 +15,7 @@ import {
   Alert,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { calcularDistanciaKm } from "@barzzo/dominio";
+import { calcularDistanciaKm, calcularMediaAvaliacoes } from "@barzzo/dominio";
 import type { Barbearia } from "@barzzo/tipos";
 import {
   Search,
@@ -27,11 +27,17 @@ import {
   Filter,
   Check,
   X,
+  SlidersHorizontal,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface BarbeariaComDistancia extends Barbearia {
   distancia_calculada?: number | null;
   total_servicos?: number;
+  menor_preco?: number | null;
+  maior_preco?: number | null;
+  media_nota?: number;
+  total_avaliacoes?: number;
 }
 
 function normalizarTexto(texto: string): string {
@@ -60,6 +66,22 @@ function ConteudoListagemBarbearias() {
   const [obtendoLocalizacao, setObtendoLocalizacao] = React.useState(false);
   const [erroLocalizacao, setErroLocalizacao] = React.useState<string | null>(null);
   const [mensagemLocalizacao, setMensagemLocalizacao] = React.useState<string | null>(null);
+
+  // Novos estados para filtros de Preço, Distância, Nota e Ordenação
+  const [faixaPreco, setFaixaPreco] = React.useState<"todos" | "ate-35" | "ate-50" | "ate-75" | "acima-75">("todos");
+  const [raioDistancia, setRaioDistancia] = React.useState<number | null>(null);
+  const [notaMinima, setNotaMinima] = React.useState<number | null>(null);
+  const [ordenacao, setOrdenacao] = React.useState<"relevancia" | "distancia" | "menor-preco" | "maior-preco" | "melhor-nota">("relevancia");
+  const [painelFiltrosAberto, setPainelFiltrosAberto] = React.useState(false);
+
+  // Contagem de filtros ativos (excluindo busca textual)
+  const totalFiltrosAtivos = React.useMemo(() => {
+    let count = 0;
+    if (faixaPreco !== "todos") count++;
+    if (raioDistancia !== null) count++;
+    if (notaMinima !== null) count++;
+    return count;
+  }, [faixaPreco, raioDistancia, notaMinima]);
 
   // Carregar lista de bairros disponíveis para filtros rápidos
   React.useEffect(() => {
@@ -90,7 +112,7 @@ function ConteudoListagemBarbearias() {
 
   React.useEffect(() => {
     carregarBarbearias();
-  }, [busca, localidade, bairroFiltro, localizacaoUsuario]);
+  }, [busca, localidade, bairroFiltro, localizacaoUsuario, faixaPreco, raioDistancia, notaMinima, ordenacao]);
 
   async function carregarBarbearias() {
     try {
@@ -99,7 +121,7 @@ function ConteudoListagemBarbearias() {
 
       let query = supabase
         .from("barbearias")
-        .select("*, servicos (id, ativo, nome)")
+        .select("*, servicos (id, ativo, nome, preco), avaliacoes (nota)")
         .eq("ativa", true);
 
       if (busca.trim()) {
@@ -137,11 +159,27 @@ function ConteudoListagemBarbearias() {
               Number(b.longitude)
             );
           }
-          const servicosAtivos = (b.servicos || []).filter((s: any) => s.ativo).length;
+
+          const servicosAtivos = (b.servicos || []).filter((s: any) => s.ativo);
+          const totalServicos = servicosAtivos.length;
+          const precos = servicosAtivos
+            .map((s: any) => Number(s.preco))
+            .filter((p: number) => !isNaN(p) && p > 0);
+          const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+          const maiorPreco = precos.length > 0 ? Math.max(...precos) : null;
+
+          const avs = b.avaliacoes || [];
+          const mediaNota = calcularMediaAvaliacoes(avs);
+          const totalAvaliacoes = avs.length;
+
           return {
             ...b,
             distancia_calculada: dist,
-            total_servicos: servicosAtivos,
+            total_servicos: totalServicos,
+            menor_preco: menorPreco,
+            maior_preco: maiorPreco,
+            media_nota: mediaNota,
+            total_avaliacoes: totalAvaliacoes,
           };
         });
 
@@ -162,14 +200,65 @@ function ConteudoListagemBarbearias() {
           });
         }
 
-        // Se o usuário permitiu localização, ordenar por proximidade
-        if (localizacaoUsuario) {
-          lista.sort((a, b) => {
+        // Filtro por faixa de preço
+        if (faixaPreco !== "todos") {
+          lista = lista.filter((b) => {
+            if (b.menor_preco === null || b.menor_preco === undefined) return false;
+            if (faixaPreco === "ate-35") return b.menor_preco <= 35;
+            if (faixaPreco === "ate-50") return b.menor_preco <= 50;
+            if (faixaPreco === "ate-75") return b.menor_preco <= 75;
+            if (faixaPreco === "acima-75") return b.menor_preco > 75;
+            return true;
+          });
+        }
+
+        // Filtro por raio de distância
+        if (raioDistancia !== null && localizacaoUsuario) {
+          lista = lista.filter((b) => {
+            if (b.distancia_calculada === null || b.distancia_calculada === undefined) return false;
+            return b.distancia_calculada <= raioDistancia;
+          });
+        }
+
+        // Filtro por nota mínima
+        if (notaMinima !== null) {
+          lista = lista.filter((b) => {
+            if ((b.total_avaliacoes || 0) === 0) return false;
+            return (b.media_nota || 0) >= notaMinima;
+          });
+        }
+
+        // Ordenação
+        lista.sort((a, b) => {
+          if (ordenacao === "distancia" && localizacaoUsuario) {
             const dA = a.distancia_calculada ?? 999999;
             const dB = b.distancia_calculada ?? 999999;
             return dA - dB;
-          });
-        }
+          }
+          if (ordenacao === "menor-preco") {
+            const pA = a.menor_preco ?? 999999;
+            const pB = b.menor_preco ?? 999999;
+            return pA - pB;
+          }
+          if (ordenacao === "maior-preco") {
+            const pA = a.menor_preco ?? 0;
+            const pB = b.menor_preco ?? 0;
+            return pB - pA;
+          }
+          if (ordenacao === "melhor-nota") {
+            const nA = a.media_nota ?? 0;
+            const nB = b.media_nota ?? 0;
+            if (nB !== nA) return nB - nA;
+            return (b.total_avaliacoes ?? 0) - (a.total_avaliacoes ?? 0);
+          }
+          // Padrão / Relevância: se localização ativa, ordena por proximidade; senão alfabético
+          if (localizacaoUsuario) {
+            const dA = a.distancia_calculada ?? 999999;
+            const dB = b.distancia_calculada ?? 999999;
+            return dA - dB;
+          }
+          return a.nome.localeCompare(b.nome);
+        });
 
         setBarbearias(lista);
       }
@@ -344,49 +433,245 @@ function ConteudoListagemBarbearias() {
         </Alert>
       )}
 
-      {/* Barra de Filtros (Pesquisa por Nome/Serviço e Cidade/Bairro) */}
+      {/* Barra de Filtros e Busca */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-3 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
-          <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
-            <Search className="h-4 w-4 text-[#B45A2B] shrink-0" />
-            <input
-              type="text"
-              placeholder="Filtrar por nome ou serviço..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
-            />
-          </div>
+        {/* Linha Principal de Busca e Ações de Filtro */}
+        <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
+          <div className="flex-1 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center p-2 sm:p-2.5 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm">
+            <div className="flex-1 flex items-center px-3 gap-2 min-h-[44px]">
+              <Search className="h-4 w-4 text-[#B45A2B] shrink-0" />
+              <input
+                type="text"
+                placeholder="Filtrar por nome ou serviço..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+              />
+            </div>
 
-          <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
+            <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-          <div className="flex items-center px-3 gap-2 min-h-[44px]">
-            <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
-            <input
-              type="text"
-              placeholder="Cidade ou Bairro..."
-              value={localidade}
-              onChange={(e) => {
-                setLocalidade(e.target.value);
-                setBairroFiltro("");
-              }}
-              className="w-full sm:w-44 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
-            />
-            {(localidade || bairroFiltro) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setLocalidade("");
+            <div className="flex items-center px-3 gap-2 min-h-[44px]">
+              <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
+              <input
+                type="text"
+                placeholder="Cidade ou Bairro..."
+                value={localidade}
+                onChange={(e) => {
+                  setLocalidade(e.target.value);
                   setBairroFiltro("");
                 }}
-                className="text-xs opacity-50 hover:opacity-100 p-1"
-                title="Limpar localização"
+                className="w-full sm:w-44 bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
+              />
+              {(localidade || bairroFiltro) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalidade("");
+                    setBairroFiltro("");
+                  }}
+                  className="text-xs opacity-50 hover:opacity-100 p-1"
+                  title="Limpar localização"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Botão de Filtros Avançados e Seletor de Ordenação */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setPainelFiltrosAberto(!painelFiltrosAberto)}
+              className={`min-h-[44px] px-4 py-2 rounded-2xl border flex items-center gap-2 text-xs font-semibold transition-all select-none ${
+                painelFiltrosAberto || totalFiltrosAtivos > 0
+                  ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm hover:bg-[#C46632]"
+                  : "bg-[#F6F6F7] dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+              }`}
+              aria-label="Abrir filtros avançados"
+              aria-expanded={painelFiltrosAberto}
+            >
+              <SlidersHorizontal className="h-4 w-4 shrink-0" />
+              <span>Filtros</span>
+              {totalFiltrosAtivos > 0 && (
+                <span className="h-5 min-w-5 px-1 rounded-full bg-white text-black font-bold text-[10px] flex items-center justify-center">
+                  {totalFiltrosAtivos}
+                </span>
+              )}
+            </button>
+
+            {/* Ordenação */}
+            <div className="flex-1 sm:flex-initial flex items-center gap-2 border border-neutral-300 dark:border-neutral-700 rounded-2xl px-3 py-1.5 bg-[#F6F6F7] dark:bg-[#141416] min-h-[44px]">
+              <ArrowUpDown className="h-4 w-4 text-[#B45A2B] shrink-0" />
+              <select
+                value={ordenacao}
+                onChange={(e) => setOrdenacao(e.target.value as any)}
+                className="w-full sm:w-auto bg-transparent text-xs font-semibold focus:outline-none text-black dark:text-white cursor-pointer"
+                aria-label="Ordenar resultados"
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
+                <option value="relevancia" className="bg-white dark:bg-[#141416] text-black dark:text-white">
+                  Ordenar: Relevância
+                </option>
+                <option value="distancia" className="bg-white dark:bg-[#141416] text-black dark:text-white">
+                  Ordenar: Mais Próximas
+                </option>
+                <option value="menor-preco" className="bg-white dark:bg-[#141416] text-black dark:text-white">
+                  Ordenar: Menor Preço
+                </option>
+                <option value="maior-preco" className="bg-white dark:bg-[#141416] text-black dark:text-white">
+                  Ordenar: Maior Preço
+                </option>
+                <option value="melhor-nota" className="bg-white dark:bg-[#141416] text-black dark:text-white">
+                  Ordenar: Melhor Avaliadas
+                </option>
+              </select>
+            </div>
           </div>
         </div>
+
+        {/* Painel Expansível de Filtros Avançados (Preço, Distância, Nota) */}
+        {painelFiltrosAberto && (
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
+              <div className="flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-[#B45A2B]" />
+                <h3 className="font-bold text-sm">Filtros Refinados</h3>
+              </div>
+              {totalFiltrosAtivos > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFaixaPreco("todos");
+                    setRaioDistancia(null);
+                    setNotaMinima(null);
+                  }}
+                  className="text-xs font-bold text-[#DC2626] hover:underline"
+                >
+                  Limpar refinamentos
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Filtro por Faixa de Preço */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                  Faixa de Preço (A partir de)
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: "todos", rotulo: "Qualquer valor" },
+                    { id: "ate-35", rotulo: "Até R$ 35" },
+                    { id: "ate-50", rotulo: "Até R$ 50" },
+                    { id: "ate-75", rotulo: "Até R$ 75" },
+                    { id: "acima-75", rotulo: "R$ 75+" },
+                  ].map((opcao) => {
+                    const ativo = faixaPreco === opcao.id;
+                    return (
+                      <button
+                        key={opcao.id}
+                        type="button"
+                        onClick={() => setFaixaPreco(opcao.id as any)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
+                          ativo
+                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                        }`}
+                      >
+                        {opcao.rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Filtro por Raio de Distância */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                    Distância Máxima
+                  </span>
+                  {!localizacaoUsuario && (
+                    <button
+                      type="button"
+                      onClick={alternarLocalizacao}
+                      className="text-[11px] font-semibold text-[#B45A2B] hover:underline flex items-center gap-1"
+                    >
+                      <Compass className="h-3 w-3" /> Ativar GPS
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { valor: null, rotulo: "Qualquer" },
+                    { valor: 2, rotulo: "Até 2 km" },
+                    { valor: 5, rotulo: "Até 5 km" },
+                    { valor: 10, rotulo: "Até 10 km" },
+                    { valor: 25, rotulo: "Até 25 km" },
+                  ].map((opcao) => {
+                    const ativo = raioDistancia === opcao.valor;
+                    return (
+                      <button
+                        key={String(opcao.valor)}
+                        type="button"
+                        onClick={() => {
+                          if (!localizacaoUsuario && opcao.valor !== null) {
+                            alternarLocalizacao();
+                          }
+                          setRaioDistancia(opcao.valor);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
+                          ativo
+                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                        }`}
+                      >
+                        {opcao.rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+                {!localizacaoUsuario && (
+                  <span className="text-[11px] opacity-60">
+                    * Requer localização ativa para calcular a distância exata.
+                  </span>
+                )}
+              </div>
+
+              {/* Filtro por Avaliação Mínima */}
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                  Avaliação dos Clientes
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { valor: null, rotulo: "Todas as notas" },
+                    { valor: 4.5, rotulo: "★ 4.5+" },
+                    { valor: 4.0, rotulo: "★ 4.0+" },
+                    { valor: 3.5, rotulo: "★ 3.5+" },
+                  ].map((opcao) => {
+                    const ativo = notaMinima === opcao.valor;
+                    return (
+                      <button
+                        key={String(opcao.valor)}
+                        type="button"
+                        onClick={() => setNotaMinima(opcao.valor)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
+                          ativo
+                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                        }`}
+                      >
+                        {opcao.rotulo}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Chips de Bairros Disponíveis para Acesso Rápido */}
         {bairrosDisponiveis.length > 0 && (
@@ -454,10 +739,10 @@ function ConteudoListagemBarbearias() {
             <div className="flex flex-col gap-1">
               <h3 className="font-semibold text-lg">Nenhuma barbearia encontrada</h3>
               <p className="text-sm opacity-70 max-w-sm">
-                Tente ajustar os filtros de busca ou remover o filtro de cidade/bairro.
+                Tente ajustar os filtros de busca (preço, raio de distância ou avaliação).
               </p>
             </div>
-            {(busca || localidade || bairroFiltro) && (
+            {(busca || localidade || bairroFiltro || totalFiltrosAtivos > 0) && (
               <Button
                 variante="secundario"
                 tamanho="sm"
@@ -465,9 +750,13 @@ function ConteudoListagemBarbearias() {
                   setBusca("");
                   setLocalidade("");
                   setBairroFiltro("");
+                  setFaixaPreco("todos");
+                  setRaioDistancia(null);
+                  setNotaMinima(null);
+                  setOrdenacao("relevancia");
                 }}
               >
-                Limpar filtros
+                Limpar todos os filtros
               </Button>
             )}
           </CardContent>
@@ -486,11 +775,21 @@ function ConteudoListagemBarbearias() {
                 ) : (
                   <Scissors className="h-12 w-12 opacity-30 text-[#B45A2B]" />
                 )}
+
+                {/* Nota e Total de Avaliações Reais */}
                 <span className="absolute top-3 right-3 bg-black/75 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold backdrop-blur-sm">
                   <Star className="h-3.5 w-3.5 text-[#EAB308] fill-[#EAB308]" />
-                  5.0
+                  {b.total_avaliacoes && b.total_avaliacoes > 0 ? (
+                    <span>
+                      {b.media_nota}{" "}
+                      <span className="opacity-70 text-[10px]">({b.total_avaliacoes})</span>
+                    </span>
+                  ) : (
+                    <span>Novo</span>
+                  )}
                 </span>
 
+                {/* Distância */}
                 {b.distancia_calculada !== undefined && b.distancia_calculada !== null && (
                   <span className="absolute bottom-3 left-3 bg-[#B45A2B] text-white text-[11px] px-2 py-0.5 rounded-full font-bold shadow">
                     {b.distancia_calculada} km de você
@@ -523,9 +822,21 @@ function ConteudoListagemBarbearias() {
                 </div>
 
                 <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-                  <span className="text-xs opacity-75">
-                    <strong>{b.total_servicos || 0}</strong> serviços ativos
-                  </span>
+                  <div className="flex flex-col">
+                    {b.menor_preco ? (
+                      <span className="text-xs font-semibold text-[#B45A2B]">
+                        A partir de{" "}
+                        {new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(b.menor_preco)}
+                      </span>
+                    ) : (
+                      <span className="text-xs opacity-75">
+                        <strong>{b.total_servicos || 0}</strong> serviços ativos
+                      </span>
+                    )}
+                  </div>
 
                   <Link href={`/barbearias/${b.slug}`}>
                     <Button variante="principal" tamanho="sm">
