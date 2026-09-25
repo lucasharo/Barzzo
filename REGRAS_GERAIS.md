@@ -58,6 +58,17 @@
 - Comissão só após concluído.
 - Status: pendente, paga, cancelada.
 
+## Aplicações
+- Um único repositório deve conter três aplicações fisicamente separadas: `apps/cliente`, `apps/parceiro` e `apps/admin`.
+- Cliente, Parceiro e Admin não são apenas grupos de rotas de um único app.
+- App Cliente possui marketplace público e só exige login antes da confirmação definitiva do agendamento.
+- App Parceiro atende dono, gerente e profissional e exige autenticação.
+- Admin permanece web.
+- Futuro mobile: Barzzo Cliente e Barzzo Parceiro devem ser empacotáveis separadamente com Capacitor.
+- Código compartilhado deve viver em `packages/*`; apps não importam telas entre si.
+- Todos compartilham o mesmo backend Supabase e as mesmas regras de domínio/RLS.
+- Especificação: `docs/arquitetura/separacao_aplicacoes.md`.
+
 ## Tecnologia
 - Next.js + React + TypeScript.
 - Tailwind + shadcn/ui.
