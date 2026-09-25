@@ -4,7 +4,8 @@
 - Barzzo = marketplace + SaaS para barbearias.
 - Receita do MVP: assinatura da barbearia.
 - Cliente final não paga assinatura.
-- Pagamento de corte/produto não passa pelo Barzzo no MVP.
+- Mercado Pago faz parte do MVP para cobrar a assinatura da barbearia.
+- Pagamento de corte/produto do cliente não passa pelo Barzzo no MVP.
 - Produtos são catálogo, sem ecommerce.
 - Sem e-mail no MVP.
 - Push e central interna entram.
