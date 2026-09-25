@@ -33,3 +33,17 @@ Nunca grave segredos. Nunca exponha chave secreta no frontend. Nunca desative RL
 
 ## Resultado
 Ao fim da Task 10, o MVP deve estar funcional, testado, responsivo, seguro e pronto para homologação.
+
+
+## Protocolo entre tasks
+
+Ao concluir cada task, antes de iniciar a próxima, é obrigatório:
+
+1. consolidar decisões, implementação e testes nos arquivos versionados;
+2. compactar o contexto, descartando debugging e hipóteses temporárias;
+3. tratar a próxima task como uma nova sessão;
+4. reler STATUS.md, GEMINI.md, REGRAS_GERAIS.md, AGENTES.md, WORKFLOW.md e a documentação relevante;
+5. ler a nova TASK.md e inspecionar o código produzido que ela reutiliza;
+6. nunca depender apenas da memória acumulada da conversa.
+
+O procedimento completo está em `PROMPT_INICIAL_GEMINI.md`.
