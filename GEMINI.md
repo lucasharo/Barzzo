@@ -9,7 +9,8 @@ Este repositório é a fonte de verdade do Barzzo.
 4. STATUS.md
 5. docs/produto/produto.md
 6. docs/arquitetura/*
-7. TASK.md da task atual
+7. docs/design/design_system.md
+8. TASK.md da task atual
 
 ## Execução
 Execute as 10 tasks em ordem. Cada task passa por:
@@ -21,6 +22,8 @@ Nunca invente regra de negócio. Se uma decisão necessária não estiver docume
 
 ## UX
 Toda task com interface exige uso da skill ux-pro-max antes da implementação e novamente na revisão de QA. Registre decisões relevantes de UX.
+
+A implementação visual deve obedecer integralmente `docs/design/design_system.md`. Não criar cores, tipografias ou variantes visuais fora dos tokens documentados sem decisão explícita de produto/design.
 
 ## Idioma
 Código de domínio, banco, variáveis, rotas, telas e documentação em português. Identificadores técnicos sem acentos.
