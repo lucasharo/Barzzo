@@ -44,6 +44,12 @@ export default function LayoutParceiro({
                   Painel
                 </Link>
                 <Link
+                  href="/agenda"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Agenda
+                </Link>
+                <Link
                   href="/servicos"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >

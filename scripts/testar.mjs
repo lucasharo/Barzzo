@@ -573,6 +573,150 @@ test("Migration Task 03: RPC buscar_horarios_disponiveis implementada com segura
   expect(sqlTask03).toContain("SECURITY DEFINER");
 });
 
+// --- 8. Testes da Task 04: Agenda e Agendamentos ---
+console.log("▶ Executando testes: Agenda, Concorrência e Agendamentos (Task 04)...");
+
+// Regras e Funções de Domínio da Agenda
+const TRANSICOES_VALIDAS = {
+  pendente: ["confirmado", "cancelado"],
+  confirmado: ["em_atendimento", "cancelado", "nao_compareceu", "confirmado"],
+  em_atendimento: ["concluido", "cancelado"],
+  concluido: [],
+  cancelado: [],
+  nao_compareceu: [],
+};
+
+function validarTransicaoStatus(statusAtual, novoStatus) {
+  if (statusAtual === novoStatus && statusAtual === "confirmado") return true;
+  const permitidos = TRANSICOES_VALIDAS[statusAtual];
+  return permitidos ? permitidos.includes(novoStatus) : false;
+}
+
+function selecionarProfissionalMenorCarga(candidatos) {
+  if (!candidatos || candidatos.length === 0) return null;
+  const ativos = candidatos.filter((c) => c.ativo);
+  if (ativos.length === 0) return null;
+  return [...ativos].sort((a, b) => {
+    if (a.totalAgendamentosNoDia !== b.totalAgendamentosNoDia) {
+      return a.totalAgendamentosNoDia - b.totalAgendamentosNoDia;
+    }
+    const cmpNome = a.nome.localeCompare(b.nome);
+    if (cmpNome !== 0) return cmpNome;
+    return a.id.localeCompare(b.id);
+  })[0];
+}
+
+function calcularComparativoTempo(inicioPrevistoIso, fimPrevistoIso, inicioRealIso, fimRealIso) {
+  const iniPrev = new Date(inicioPrevistoIso).getTime();
+  const fimPrev = new Date(fimPrevistoIso).getTime();
+  const duracaoPrevistaMinutos = Math.round((fimPrev - iniPrev) / 60000);
+  let duracaoRealMinutos = null;
+  let atrasoInicioMinutos = null;
+  if (inicioRealIso) {
+    const iniReal = new Date(inicioRealIso).getTime();
+    atrasoInicioMinutos = Math.round((iniReal - iniPrev) / 60000);
+    if (fimRealIso) {
+      const fimReal = new Date(fimRealIso).getTime();
+      duracaoRealMinutos = Math.round((fimReal - iniReal) / 60000);
+    }
+  }
+  return { duracaoPrevistaMinutos, duracaoRealMinutos, atrasoInicioMinutos };
+}
+
+// Schemas Zod Task 04
+const esquemaCriarAgendamentoManual = z.object({
+  barbearia_id: z.string().uuid(),
+  profissional_id: z.string().uuid(),
+  cliente_nome: z.string().min(2).max(100).trim(),
+  inicio_previsto: z.string().datetime(),
+  fim_previsto: z.string().datetime(),
+  servicos: z.array(z.object({
+    servico_id: z.string().uuid(),
+    nome_servico: z.string().min(1),
+    preco: z.coerce.number().min(0),
+    duracao_minutos: z.coerce.number().int().min(1),
+  })).min(1),
+}).refine((data) => new Date(data.inicio_previsto) < new Date(data.fim_previsto));
+
+test("Máquina de Estados: valida transições operacionais permitidas e bloqueia terminais", () => {
+  expect(validarTransicaoStatus("pendente", "confirmado")).toBe(true);
+  expect(validarTransicaoStatus("confirmado", "em_atendimento")).toBe(true);
+  expect(validarTransicaoStatus("em_atendimento", "concluido")).toBe(true);
+  expect(validarTransicaoStatus("confirmado", "cancelado")).toBe(true);
+  expect(validarTransicaoStatus("confirmado", "nao_compareceu")).toBe(true);
+  expect(validarTransicaoStatus("concluido", "em_atendimento")).toBe(false);
+  expect(validarTransicaoStatus("cancelado", "confirmado")).toBe(false);
+});
+
+test("Qualquer Profissional: seleciona menor carga do dia com desempate estável", () => {
+  const candidatos = [
+    { id: "p-1", nome: "Thiago", ativo: true, totalAgendamentosNoDia: 3 },
+    { id: "p-2", nome: "Carlos", ativo: true, totalAgendamentosNoDia: 1 },
+    { id: "p-3", nome: "André", ativo: true, totalAgendamentosNoDia: 1 },
+  ];
+  // Carlos e André empatam em 1 agendamento. Desempate alfabético: André!
+  const escolhido = selecionarProfissionalMenorCarga(candidatos);
+  expect(escolhido.id).toBe("p-3");
+  expect(escolhido.nome).toBe("André");
+});
+
+test("Comparativo de Tempo: calcula duração prevista e atraso real de atendimento", () => {
+  const comp = calcularComparativoTempo(
+    "2026-10-05T09:00:00.000Z",
+    "2026-10-05T09:30:00.000Z",
+    "2026-10-05T09:05:00.000Z",
+    "2026-10-05T09:40:00.000Z"
+  );
+  expect(comp.duracaoPrevistaMinutos).toBe(30);
+  expect(comp.atrasoInicioMinutos).toBe(5);
+  expect(comp.duracaoRealMinutos).toBe(35);
+});
+
+test("esquemaCriarAgendamentoManual: valida estrutura e impede horário invertido", () => {
+  const valido = esquemaCriarAgendamentoManual.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    profissional_id: "00000000-0000-0000-0000-000000000002",
+    cliente_nome: "Rafael",
+    inicio_previsto: "2026-10-05T09:00:00.000Z",
+    fim_previsto: "2026-10-05T09:30:00.000Z",
+    servicos: [{ servico_id: "00000000-0000-0000-0000-000000000003", nome_servico: "Barba", preco: 35, duracao_minutos: 30 }],
+  });
+  expect(valido.success).toBe(true);
+
+  const invertido = esquemaCriarAgendamentoManual.safeParse({
+    barbearia_id: "00000000-0000-0000-0000-000000000001",
+    profissional_id: "00000000-0000-0000-0000-000000000002",
+    cliente_nome: "Rafael",
+    inicio_previsto: "2026-10-05T10:00:00.000Z",
+    fim_previsto: "2026-10-05T09:30:00.000Z",
+    servicos: [{ servico_id: "00000000-0000-0000-0000-000000000003", nome_servico: "Barba", preco: 35, duracao_minutos: 30 }],
+  });
+  expect(invertido.success).toBe(false);
+});
+
+// --- 9. Testes de Migrações SQL e Concorrência GiST (Task 04) ---
+console.log("▶ Executando testes: Segurança, RLS e Concorrência GiST da Task 04...");
+
+const caminhoSqlTask04 = path.resolve(raiz, "supabase/migrations/20260925000003_criar_agendamentos_e_agenda.sql");
+const sqlTask04 = fs.readFileSync(caminhoSqlTask04, "utf-8");
+
+test("Migration Task 04: extensão btree_gist e exclusão GiST sem sobreposição", () => {
+  expect(sqlTask04).toContain("CREATE EXTENSION IF NOT EXISTS btree_gist;");
+  expect(sqlTask04).toContain("EXCLUDE USING gist");
+  expect(sqlTask04).toContain("tstzrange(inicio_previsto, fim_previsto, '[)') WITH &&");
+});
+
+test("Migration Task 04: RLS ativado em agendamentos e snapshot de serviços", () => {
+  expect(sqlTask04).toContain("ALTER TABLE public.agendamentos ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask04).toContain("ALTER TABLE public.agendamentos_servicos ENABLE ROW LEVEL SECURITY;");
+});
+
+test("Migration Task 04: RPCs transacionais atualizar_status, reagendar e menor_carga", () => {
+  expect(sqlTask04).toContain("CREATE OR REPLACE FUNCTION public.atualizar_status_agendamento");
+  expect(sqlTask04).toContain("CREATE OR REPLACE FUNCTION public.reagendar_agendamento");
+  expect(sqlTask04).toContain("CREATE OR REPLACE FUNCTION public.selecionar_profissional_menor_carga");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -596,6 +740,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/03-servicos-disponibilidade/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/04-agenda-agendamentos/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );
