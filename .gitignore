@@ -1,0 +1,33 @@
+# dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# ambiente e segredos
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# testes
+coverage/
+playwright-report/
+test-results/
+
+# sistema/editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Capacitor futuro
+android/.gradle/
+ios/App/Pods/
