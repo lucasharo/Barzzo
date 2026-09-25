@@ -4,3 +4,4 @@ export * from "./disponibilidade";
 export * from "./agenda";
 export * from "./marketplace";
 export * from "./crm";
+export * from "./produtos-galeria";

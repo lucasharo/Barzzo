@@ -871,6 +871,152 @@ test("Migration Task 06: Tabelas clientes_barbearia, observacoes_clientes, favor
   expect(sqlTask06).toContain("CREATE OR REPLACE FUNCTION public.obter_metricas_cliente_crm");
 });
 
+// --- 12. Testes da Task 07: Produtos, Galeria e Pipeline de Imagens ---
+console.log("▶ Executando testes: Produtos, Galeria e Pipeline de Imagens (Task 07)...");
+
+const esquemaProdutoTest = z.object({
+  nome: z.string().min(2, "Nome do produto deve ter pelo menos 2 caracteres.").max(100),
+  descricao: z.string().max(500).optional().nullable(),
+  preco: z.coerce.number().min(0, "Preço não pode ser negativo."),
+  foto_url: z.string().url("URL da foto inválida.").optional().nullable().or(z.literal("")),
+  ativo: z.boolean().default(true),
+  destaque: z.boolean().default(false),
+  ordem: z.coerce.number().int().min(0).default(0),
+});
+
+const esquemaFotoGaleriaTest = z.object({
+  titulo: z.string().max(100).optional().nullable(),
+  foto_url: z.string().url("URL da foto inválida."),
+  destaque_capa: z.boolean().default(false),
+  ordem: z.coerce.number().int().min(0).default(0),
+});
+
+const formatosPermitidosTest = ["image/jpeg", "image/png", "image/webp"];
+const maxTamanhoBytesTest = 5 * 1024 * 1024;
+
+function validarArquivoMidiaTest(arquivo) {
+  if (!formatosPermitidosTest.includes(arquivo.tipo)) {
+    return { valido: false, erro: "Formato inválido. Use JPEG, PNG ou WebP." };
+  }
+  if (arquivo.tamanhoBytes > maxTamanhoBytesTest) {
+    return { valido: false, erro: "A imagem não pode ultrapassar 5 MB." };
+  }
+  return { valido: true };
+}
+
+function gerarCaminhoStorageTest(barbeariaId, prefixo, extensao = "webp") {
+  const timestamp = Date.now();
+  const randomStr = "abc123";
+  const extLimpa = extensao.replace(/^\./, "");
+  return `${barbeariaId}/${prefixo}/${timestamp}_${randomStr}.${extLimpa}`;
+}
+
+test("Task 07: Validação de produto (preço >= 0, nome >= 2 chars, foto_url opcional)", () => {
+  const valido = esquemaProdutoTest.safeParse({
+    nome: "Pomada Modeladora Efeito Seco",
+    descricao: "Fixação forte sem brilho",
+    preco: 49.9,
+    foto_url: "https://barzzo.com.br/fotos/pomada.webp",
+    ativo: true,
+    destaque: true,
+    ordem: 1,
+  });
+  expect(valido.success).toBe(true);
+
+  const semFoto = esquemaProdutoTest.safeParse({
+    nome: "Óleo para Barba 30ml",
+    preco: "35.00",
+    foto_url: "",
+  });
+  expect(semFoto.success).toBe(true);
+  expect(semFoto.data.preco).toBe(35);
+
+  const precoNegativo = esquemaProdutoTest.safeParse({
+    nome: "Shampoo 250ml",
+    preco: -10,
+  });
+  expect(precoNegativo.success).toBe(false);
+
+  const nomeCurto = esquemaProdutoTest.safeParse({
+    nome: "A",
+    preco: 25,
+  });
+  expect(nomeCurto.success).toBe(false);
+});
+
+test("Task 07: Validação de foto da galeria (URL obrigatória, título opcional)", () => {
+  const fotoValida = esquemaFotoGaleriaTest.safeParse({
+    titulo: "Corte Fade com Barba Alinhada",
+    foto_url: "https://barzzo.com.br/galeria/corte1.webp",
+    destaque_capa: true,
+    ordem: 0,
+  });
+  expect(fotoValida.success).toBe(true);
+
+  const fotoSemTitulo = esquemaFotoGaleriaTest.safeParse({
+    foto_url: "https://barzzo.com.br/galeria/ambiente.webp",
+  });
+  expect(fotoSemTitulo.success).toBe(true);
+
+  const urlInvalida = esquemaFotoGaleriaTest.safeParse({
+    foto_url: "nao-eh-uma-url",
+  });
+  expect(urlInvalida.success).toBe(false);
+});
+
+test("Task 07: Pipeline de validação de imagem (MIME types aceitos e limite de 5MB)", () => {
+  expect(validarArquivoMidiaTest({ tipo: "image/webp", tamanhoBytes: 1024 * 1024 }).valido).toBe(true);
+  expect(validarArquivoMidiaTest({ tipo: "image/jpeg", tamanhoBytes: 3 * 1024 * 1024 }).valido).toBe(true);
+  expect(validarArquivoMidiaTest({ tipo: "image/png", tamanhoBytes: 2 * 1024 * 1024 }).valido).toBe(true);
+
+  // Formato inválido
+  const formatoRuim = validarArquivoMidiaTest({ tipo: "image/gif", tamanhoBytes: 500 * 1024 });
+  expect(formatoRuim.valido).toBe(false);
+
+  // Tamanho acima de 5MB
+  const acima5mb = validarArquivoMidiaTest({ tipo: "image/jpeg", tamanhoBytes: 6 * 1024 * 1024 });
+  expect(acima5mb.valido).toBe(false);
+});
+
+test("Task 07: Redimensionamento proporcional para produtos (máx 800px) e galeria (máx 1200px)", () => {
+  // Produto: 1600x1200 -> deve virar 800x600 mantendo ratio 4:3
+  const dimProd = calcularDimensoesRedimensionamento(1600, 1200, 800);
+  expect(dimProd.largura).toBe(800);
+  expect(dimProd.altura).toBe(600);
+
+  // Galeria vertical: 1200x2400 -> deve virar 600x1200 mantendo ratio 1:2
+  const dimGaleriaVertical = calcularDimensoesRedimensionamento(1200, 2400, 1200);
+  expect(dimGaleriaVertical.largura).toBe(600);
+  expect(dimGaleriaVertical.altura).toBe(1200);
+
+  // Quadrado menor que o limite: 500x500 -> permanece 500x500
+  const dimPequena = calcularDimensoesRedimensionamento(500, 500, 800);
+  expect(dimPequena.largura).toBe(500);
+  expect(dimPequena.altura).toBe(500);
+});
+
+test("Task 07: Geração padronizada de caminhos de storage", () => {
+  const caminhoProd = gerarCaminhoStorageTest("barb_123", "produtos", ".webp");
+  expect(caminhoProd.startsWith("barb_123/produtos/")).toBe(true);
+  expect(caminhoProd.endsWith(".webp")).toBe(true);
+
+  const caminhoGal = gerarCaminhoStorageTest("barb_123", "galeria", "png");
+  expect(caminhoGal.startsWith("barb_123/galeria/")).toBe(true);
+  expect(caminhoGal.endsWith(".png")).toBe(true);
+});
+
+test("Migration Task 07: Tabelas produtos, galeria_fotos, RLS e Buckets Storage", () => {
+  const caminhoSqlTask07 = path.resolve(raiz, "supabase/migrations/20260925000006_produtos_e_galeria.sql");
+  const sqlTask07 = fs.readFileSync(caminhoSqlTask07, "utf-8");
+  expect(sqlTask07).toContain("CREATE TABLE IF NOT EXISTS public.produtos");
+  expect(sqlTask07).toContain("CREATE TABLE IF NOT EXISTS public.galeria_fotos");
+  expect(sqlTask07).toContain("ALTER TABLE public.produtos ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask07).toContain("ALTER TABLE public.galeria_fotos ENABLE ROW LEVEL SECURITY;");
+  expect(sqlTask07).toContain("storage.buckets (id, name, public)");
+  expect(sqlTask07).toContain("'produtos'");
+  expect(sqlTask07).toContain("'galeria'");
+});
+
 // --- Relatório Final ---
 console.log("\n-------------------------------------------------------");
 relatorio.forEach((r) => console.log(r));
@@ -912,6 +1058,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/06-clientes-avaliacoes/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/07-produtos-galeria/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

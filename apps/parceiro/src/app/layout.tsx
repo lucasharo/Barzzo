@@ -68,6 +68,18 @@ export default function LayoutParceiro({
                   Serviços
                 </Link>
                 <Link
+                  href="/produtos"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Produtos
+                </Link>
+                <Link
+                  href="/galeria"
+                  className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                >
+                  Galeria
+                </Link>
+                <Link
                   href="/horarios"
                   className="px-3 py-1.5 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 >

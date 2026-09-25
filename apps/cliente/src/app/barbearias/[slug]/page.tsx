@@ -22,6 +22,8 @@ import {
   type DiaSemana,
   type Avaliacao,
   type ResumoReputacaoBarbearia,
+  type FotoGaleria,
+  type Produto,
 } from "@barzzo/tipos";
 import { formatarResumoReputacao } from "@barzzo/dominio";
 import {
@@ -39,6 +41,10 @@ import {
   Sparkles,
   Heart,
   MessageSquare,
+  Images,
+  Package,
+  ZoomIn,
+  X,
 } from "lucide-react";
 
 export default function PaginaPerfilPublicoBarbearia() {
@@ -51,6 +57,11 @@ export default function PaginaPerfilPublicoBarbearia() {
   const [servicos, setServicos] = React.useState<Servico[]>([]);
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
   const [horarios, setHorarios] = React.useState<HorarioBarbearia[]>([]);
+
+  // Estados de Galeria e Produtos
+  const [fotosGaleria, setFotosGaleria] = React.useState<FotoGaleria[]>([]);
+  const [produtos, setProdutos] = React.useState<Produto[]>([]);
+  const [fotoAmpliada, setFotoAmpliada] = React.useState<FotoGaleria | null>(null);
 
   // Estados de Avaliações e Favoritos
   const [avaliacoes, setAvaliacoes] = React.useState<Avaliacao[]>([]);
@@ -148,6 +159,27 @@ export default function PaginaPerfilPublicoBarbearia() {
           setFavoritoId(null);
         }
       }
+
+      // 7. Fotos da galeria
+      const { data: gDb } = await (supabase.from("galeria_fotos") as any)
+        .select("*")
+        .eq("barbearia_id", barb.id)
+        .order("destaque_capa", { ascending: false })
+        .order("ordem", { ascending: true })
+        .order("created_at", { ascending: false });
+
+      setFotosGaleria((gDb || []) as FotoGaleria[]);
+
+      // 8. Produtos físicos ativos disponíveis no balcão
+      const { data: prodDb } = await (supabase.from("produtos") as any)
+        .select("*")
+        .eq("barbearia_id", barb.id)
+        .eq("ativo", true)
+        .order("destaque", { ascending: false })
+        .order("ordem", { ascending: true })
+        .order("nome", { ascending: true });
+
+      setProdutos((prodDb || []) as Produto[]);
     } catch {
       // Silencioso
     } finally {
@@ -222,6 +254,7 @@ export default function PaginaPerfilPublicoBarbearia() {
 
   const hojeIndex = new Date().getDay() as DiaSemana;
   const horarioHoje = horarios.find((h) => h.dia_semana === hojeIndex);
+  const fotoCapa = fotosGaleria.find((f) => f.destaque_capa) || fotosGaleria[0];
 
   return (
     <div className="flex flex-col gap-8 py-4">
@@ -233,7 +266,19 @@ export default function PaginaPerfilPublicoBarbearia() {
       </Link>
 
       {/* Banner / Header da Barbearia */}
-      <div className="relative rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 overflow-hidden p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+      <div className="relative rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 overflow-hidden shadow-sm">
+        {fotoCapa && (
+          <div className="h-40 sm:h-52 w-full relative overflow-hidden bg-neutral-900">
+            <img
+              src={fotoCapa.foto_url}
+              alt={barbearia.nome}
+              className="w-full h-full object-cover opacity-80"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+          </div>
+        )}
+
+        <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
         <div className="flex items-start md:items-center gap-5">
           <div className="h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-[#B45A2B]/10 border border-[#B45A2B]/20 flex items-center justify-center text-[#B45A2B] shrink-0 overflow-hidden font-bold text-2xl">
             {barbearia.logo_url ? (
@@ -314,6 +359,7 @@ export default function PaginaPerfilPublicoBarbearia() {
           ) : (
             <span className="text-xs text-center opacity-50">Consulte horários da semana</span>
           )}
+        </div>
         </div>
       </div>
 
@@ -408,6 +454,123 @@ export default function PaginaPerfilPublicoBarbearia() {
               </div>
             )}
           </div>
+
+          {/* Seção Galeria de Fotos */}
+          {fotosGaleria.length > 0 && (
+            <div className="flex flex-col gap-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Images className="w-5 h-5 text-[#B45A2B]" />
+                    Galeria do Estabelecimento
+                  </h2>
+                  <p className="text-sm opacity-70">
+                    Conheça o espaço, os cortes e a estrutura da barbearia.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800">
+                  {fotosGaleria.length} {fotosGaleria.length === 1 ? "foto" : "fotos"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {fotosGaleria.map((foto) => (
+                  <button
+                    key={foto.id}
+                    type="button"
+                    onClick={() => setFotoAmpliada(foto)}
+                    className="group relative aspect-[4/3] rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#B45A2B] text-left"
+                    aria-label={`Ver foto: ${foto.titulo || "Foto da barbearia"}`}
+                  >
+                    <img
+                      src={foto.foto_url}
+                      alt={foto.titulo || "Foto da galeria"}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold">
+                      <ZoomIn className="w-4 h-4" />
+                      <span>Ampliar</span>
+                    </div>
+                    {foto.titulo && (
+                      <span className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[11px] px-2 py-1 truncate">
+                        {foto.titulo}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seção Produtos Disponíveis no Balcão */}
+          {produtos.length > 0 && (
+            <div className="flex flex-col gap-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold flex items-center gap-2">
+                    <Package className="w-5 h-5 text-[#B45A2B]" />
+                    Produtos Disponíveis
+                  </h2>
+                  <p className="text-sm opacity-70">
+                    Cosméticos e produtos para barba e cabelo disponíveis para compra presencial.
+                  </p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800">
+                  {produtos.length} {produtos.length === 1 ? "produto" : "produtos"}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {produtos.map((prod) => (
+                  <Card
+                    key={prod.id}
+                    camada="primaria"
+                    className="overflow-hidden flex flex-col justify-between hover:border-[#B45A2B]/40 transition-colors"
+                  >
+                    <div>
+                      <div className="h-36 w-full bg-neutral-100 dark:bg-neutral-900 relative overflow-hidden flex items-center justify-center border-b border-neutral-100 dark:border-neutral-800">
+                        {prod.foto_url ? (
+                          <img
+                            src={prod.foto_url}
+                            alt={prod.nome}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-700" />
+                        )}
+                        {prod.destaque && (
+                          <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-sm flex items-center gap-1">
+                            <Star className="w-3 h-3 fill-white" /> Destaque
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="p-3.5 space-y-1.5">
+                        <h3 className="font-bold text-sm line-clamp-1">{prod.nome}</h3>
+                        {prod.descricao && (
+                          <p className="text-xs opacity-70 line-clamp-2 leading-relaxed">
+                            {prod.descricao}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-3 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 flex items-center justify-between">
+                      <span className="text-base font-extrabold text-[#B45A2B]">
+                        {new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(Number(prod.preco))}
+                      </span>
+                      <span className="text-[11px] font-medium text-neutral-500 bg-neutral-200/60 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                        Venda no balcão
+                      </span>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Seção de Avaliações e Reputação */}
           <div className="flex flex-col gap-4 pt-4 border-t border-neutral-200/60 dark:border-neutral-800/60">
@@ -550,6 +713,38 @@ export default function PaginaPerfilPublicoBarbearia() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de Foto Ampliada */}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setFotoAmpliada(null)}
+              className="absolute -top-12 right-0 p-2 text-white hover:text-neutral-300 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center bg-black/50"
+              aria-label="Fechar foto ampliada"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={fotoAmpliada.foto_url}
+              alt={fotoAmpliada.titulo || "Foto ampliada"}
+              className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain shadow-2xl"
+            />
+            {fotoAmpliada.titulo && (
+              <p className="text-white text-sm font-semibold mt-3 bg-black/60 px-4 py-1.5 rounded-full">
+                {fotoAmpliada.titulo}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
