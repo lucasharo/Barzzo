@@ -142,7 +142,7 @@ Exemplo:
 --erro: #DC2626;
 ```
 
-## Regras para ux-pro-max, Dev e QA
+## Regras para ui-ux-pro-max, Dev e QA
 
 1. Não introduzir novas cores de superfície sem decisão documentada.
 2. Não introduzir novas cores de texto.

@@ -24,7 +24,7 @@ Elegíveis e disponíveis; menor carga do dia; desempate estável.
 /parceiro/agendamentos/[id]
 
 ## UX
-ux-pro-max obrigatório; agenda por dia/semana e por profissional, utilizável por toque.
+ui-ux-pro-max obrigatório; agenda por dia/semana e por profissional, utilizável por toque.
 
 ## Testes críticos
 Concorrência, reagendamento em conflito, bloqueio recente, transições inválidas, tempos reais, snapshot, RLS e regressão.

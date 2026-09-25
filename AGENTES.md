@@ -21,11 +21,11 @@ Fonte de verdade técnica.
 
 ## QA
 - testa critérios, integração, regressão, RLS, responsividade e edge cases;
-- usa ux-pro-max na revisão visual;
+- usa ui-ux-pro-max na revisão visual;
 - não corrige produção diretamente;
 - aprova ou reprova, nunca "aprova parcialmente".
 
-## ux-pro-max
+## ui-ux-pro-max
 Obrigatória em toda interface nova ou alteração relevante. Deve revisar mobile-first, touch, hierarquia, acessibilidade, estados, formulários, navegação e consistência. shadcn/ui é base, não identidade final.
 
 ## Autoridade

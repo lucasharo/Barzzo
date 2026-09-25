@@ -17,7 +17,7 @@ Sem ecommerce/estoque avançado.
 /parceiro/galeria
 
 ## UX
-ux-pro-max obrigatório; preview, progresso e erro de upload.
+ui-ux-pro-max obrigatório; preview, progresso e erro de upload.
 
 ## Testes
 Arquivo inválido, imagem grande redimensionada, substituição, exclusão, ordem, permissão tenant, indisponível e regressão.

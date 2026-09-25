@@ -21,7 +21,7 @@ Dados, endereço/contato, horários básicos, equipe e checklist. Serviços/foto
 /parceiro/configuracoes/perfil
 
 ## UX
-ux-pro-max obrigatório; checklist e estados de convite claros.
+ui-ux-pro-max obrigatório; checklist e estados de convite claros.
 
 ## Testes
 Criar barbearia, múltiplas, profissional sem conta, convite/expiração, aceite, gerente/profissional sem permissão indevida, isolamento tenant, regressão Task 01.

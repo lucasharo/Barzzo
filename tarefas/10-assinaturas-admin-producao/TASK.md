@@ -34,7 +34,7 @@ Ações sensíveis auditadas.
 Integração encapsulada. Se credencial Mercado Pago ainda não estiver disponível, não inventar chave; domínio/testes podem ser preparados e bloquear apenas a integração externa indispensável.
 
 ## Revisão final
-RLS, índices, migrations, Storage, segredos, performance, responsividade, PWA, ux-pro-max, acessibilidade, erros, estados e regressão completa.
+RLS, índices, migrations, Storage, segredos, performance, responsividade, PWA, ui-ux-pro-max, acessibilidade, erros, estados e regressão completa.
 
 ## Aceite
 Trial/benefício/planos/admin funcionam, RLS sem vazamento, suíte e build passam, QA/PO aprovam e STATUS vira MVP_PRONTO_PARA_HOMOLOGACAO.

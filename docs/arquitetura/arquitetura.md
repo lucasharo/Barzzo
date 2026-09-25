@@ -26,4 +26,4 @@ supabase/functions/
 Mobile-first. Offline total não é requisito; reserva exige conexão. Abstrair câmera, geolocalização e push para adaptação futura ao Capacitor.
 
 ## UX
-Toda tela nova passa por ux-pro-max antes de implementar e no QA.
+Toda tela nova passa por ui-ux-pro-max antes de implementar e no QA.

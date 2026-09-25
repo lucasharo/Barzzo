@@ -23,7 +23,7 @@ Comissão só após atendimento concluído; idempotente; status pendente, paga, 
 Cliques quando rastreáveis, reservas, concluídos, desconto, comissão pendente/paga.
 
 ## UX
-ux-pro-max obrigatório.
+ui-ux-pro-max obrigatório.
 
 ## Testes
 Validade, limite, primeira reserva, referência após login, cancelado/no-show sem comissão, conclusão gera uma só comissão, RLS, regressão.

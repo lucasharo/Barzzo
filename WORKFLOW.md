@@ -24,7 +24,7 @@ Implementa e cria RESULTADO.md. Antes de revisão:
 Líder verifica arquitetura, tipagem, duplicação, banco, RLS, índices, concorrência, erros e impacto futuro. Falhou -> Dev.
 
 ## Gate QA
-Cria QA.md e testa funcional, integração, RLS, regressão, erros, responsividade, acessibilidade e ux-pro-max. Falhou -> Dev -> revisão -> QA.
+Cria QA.md e testa funcional, integração, RLS, regressão, erros, responsividade, acessibilidade e ui-ux-pro-max. Falhou -> Dev -> revisão -> QA.
 
 ## Gate PO final
 Confere critérios de aceite. Só então CONCLUIDA.

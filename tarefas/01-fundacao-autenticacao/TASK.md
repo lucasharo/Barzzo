@@ -16,7 +16,7 @@ usuarios: id, nome, email, telefone, foto_url, criado_em, atualizado_em; víncul
 Validar, redimensionar (referência 800x800), comprimir, upload Supabase Storage e política do proprietário.
 
 ## UX
-ux-pro-max obrigatório. Formulários mobile-first, labels/foco, erros claros, feedback de upload e ações.
+ui-ux-pro-max obrigatório. Formulários mobile-first, labels/foco, erros claros, feedback de upload e ações.
 
 ## Segurança
 Usuário só altera próprio perfil. Nenhuma secret no cliente. Não usar metadata editável para autorização.

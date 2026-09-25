@@ -71,9 +71,9 @@
 - Nunca expor secret/service key.
 
 ## UX
-Mobile-first, touch-friendly, acessível, com loading/vazio/erro/sucesso. ux-pro-max obrigatório.
+Mobile-first, touch-friendly, acessível, com loading/vazio/erro/sucesso. ui-ux-pro-max obrigatório.
 
-O Design System oficial está em `docs/design/design_system.md` e deve ser seguido por PO, Líder Técnico, Dev, QA e ux-pro-max.
+O Design System oficial está em `docs/design/design_system.md` e deve ser seguido por PO, Líder Técnico, Dev, QA e ui-ux-pro-max.
 
 Regras visuais obrigatórias:
 - fonte Roboto;

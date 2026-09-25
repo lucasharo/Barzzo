@@ -26,7 +26,7 @@ Não criar reserva definitiva antes da autenticação.
 Preservar barbearia, serviço, profissional, data, horário e referência futura de cupom/influencer.
 
 ## UX
-ux-pro-max obrigatório com foco em conversão e mínimo atrito.
+ui-ux-pro-max obrigatório com foco em conversão e mínimo atrito.
 
 ## Testes
 Fluxo anônimo completo, login sem perder seleção, horário ocupado durante login, sem disponibilidade, geolocalização negada, mobile, público/privado e regressão.

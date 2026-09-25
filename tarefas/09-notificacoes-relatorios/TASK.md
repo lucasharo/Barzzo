@@ -24,7 +24,7 @@ Marketing: cupons, reservas por influencer e comissões.
 /parceiro/relatorios
 
 ## UX
-ux-pro-max obrigatório; informação acionável, sem excesso de gráficos.
+ui-ux-pro-max obrigatório; informação acionável, sem excesso de gráficos.
 
 ## Testes
 Múltiplos dispositivos, token inválido, preferência promocional, lembrete sem duplicação, períodos, visão funcionário, RLS e regressão.

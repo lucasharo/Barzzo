@@ -26,6 +26,6 @@ O desenvolvimento é dividido em 10 tasks sequenciais em `tarefas/`, também rep
 - imagens no Supabase Storage e sempre redimensionadas;
 - cliente navega até o resumo da reserva sem login;
 - pagamento de serviços não passa pelo Barzzo no MVP;
-- ux-pro-max obrigatório nas interfaces.
+- ui-ux-pro-max obrigatório nas interfaces.
 
 Branch de preparação: `feature/init`.

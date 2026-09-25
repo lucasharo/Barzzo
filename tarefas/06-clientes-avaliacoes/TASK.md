@@ -22,7 +22,7 @@ Uma por agendamento concluído, nota 1-5, comentário opcional, resposta da barb
 /parceiro/avaliacoes
 
 ## UX
-ux-pro-max obrigatório.
+ui-ux-pro-max obrigatório.
 
 ## Testes
 Isolamento, observação privada, avaliação sem conclusão/duplicada, favorito, resposta, regressão.

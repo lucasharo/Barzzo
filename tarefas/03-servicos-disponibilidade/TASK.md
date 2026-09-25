@@ -20,7 +20,7 @@ Considerar funcionamento, jornada, duração, bloqueios e reservas existentes. P
 /parceiro/agenda/bloqueios
 
 ## UX
-ux-pro-max obrigatório; edição semanal simples em mobile/desktop.
+ui-ux-pro-max obrigatório; edição semanal simples em mobile/desktop.
 
 ## Testes
 Ativo/inativo, jornada menor que funcionamento, bloqueios, duração cruzando fechamento, múltiplos profissionais, RLS, regressão.
