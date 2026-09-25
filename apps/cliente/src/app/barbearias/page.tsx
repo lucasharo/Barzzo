@@ -91,6 +91,18 @@ function ConteudoListagemBarbearias() {
   const [dropdownEnderecoAberto, setDropdownEnderecoAberto] = React.useState(false);
   const containerEnderecoRef = React.useRef<HTMLDivElement>(null);
 
+  // Controle do seletor customizado de ordenação
+  const [dropdownOrdenacaoAberto, setDropdownOrdenacaoAberto] = React.useState(false);
+  const containerOrdenacaoRef = React.useRef<HTMLDivElement>(null);
+
+  const opcoesOrdenacao = [
+    { id: "relevancia", rotuloCompleto: "Ordenar: Relevância" },
+    { id: "distancia", rotuloCompleto: "Ordenar: Mais Próximas" },
+    { id: "menor-preco", rotuloCompleto: "Ordenar: Menor Preço" },
+    { id: "maior-preco", rotuloCompleto: "Ordenar: Maior Preço" },
+    { id: "melhor-nota", rotuloCompleto: "Ordenar: Melhor Avaliadas" },
+  ] as const;
+
   React.useEffect(() => {
     function lidarComCliqueFora(e: MouseEvent) {
       if (
@@ -98,6 +110,12 @@ function ConteudoListagemBarbearias() {
         !containerEnderecoRef.current.contains(e.target as Node)
       ) {
         setDropdownEnderecoAberto(false);
+      }
+      if (
+        containerOrdenacaoRef.current &&
+        !containerOrdenacaoRef.current.contains(e.target as Node)
+      ) {
+        setDropdownOrdenacaoAberto(false);
       }
     }
     document.addEventListener("mousedown", lidarComCliqueFora);
@@ -648,31 +666,64 @@ function ConteudoListagemBarbearias() {
               )}
             </button>
 
-            {/* Ordenação */}
-            <div className="flex-1 sm:flex-initial flex items-center gap-2 border border-neutral-300 dark:border-neutral-700 rounded-2xl px-3 py-1.5 bg-[#F6F6F7] dark:bg-[#141416] min-h-[44px]">
-              <ArrowUpDown className="h-4 w-4 text-[#B45A2B] shrink-0" />
-              <select
-                value={ordenacao}
-                onChange={(e) => setOrdenacao(e.target.value as any)}
-                className="w-full sm:w-auto bg-transparent text-xs font-semibold focus:outline-none text-black dark:text-white cursor-pointer"
-                aria-label="Ordenar resultados"
+            {/* Seletor Customizado de Ordenação */}
+            <div ref={containerOrdenacaoRef} className="relative flex-1 sm:flex-initial">
+              <button
+                type="button"
+                onClick={() => setDropdownOrdenacaoAberto(!dropdownOrdenacaoAberto)}
+                aria-haspopup="listbox"
+                aria-expanded={dropdownOrdenacaoAberto}
+                aria-label="Opções de ordenação"
+                className={`w-full sm:w-auto min-h-[44px] px-3.5 py-2 rounded-2xl border flex items-center justify-between gap-2.5 text-xs font-semibold transition-all select-none cursor-pointer ${
+                  dropdownOrdenacaoAberto
+                    ? "border-[#B45A2B] bg-[#F6F6F7] dark:bg-[#141416] text-black dark:text-white shadow-sm"
+                    : "bg-[#F6F6F7] dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                }`}
               >
-                <option value="relevancia" className="bg-white dark:bg-[#141416] text-black dark:text-white">
-                  Ordenar: Relevância
-                </option>
-                <option value="distancia" className="bg-white dark:bg-[#141416] text-black dark:text-white">
-                  Ordenar: Mais Próximas
-                </option>
-                <option value="menor-preco" className="bg-white dark:bg-[#141416] text-black dark:text-white">
-                  Ordenar: Menor Preço
-                </option>
-                <option value="maior-preco" className="bg-white dark:bg-[#141416] text-black dark:text-white">
-                  Ordenar: Maior Preço
-                </option>
-                <option value="melhor-nota" className="bg-white dark:bg-[#141416] text-black dark:text-white">
-                  Ordenar: Melhor Avaliadas
-                </option>
-              </select>
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                  <span className="truncate">
+                    {opcoesOrdenacao.find((o) => o.id === ordenacao)?.rotuloCompleto || "Ordenar: Relevância"}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 opacity-50 shrink-0 transition-transform duration-200 ${
+                    dropdownOrdenacaoAberto ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Menu Dropdown de Ordenação Customizado */}
+              {dropdownOrdenacaoAberto && (
+                <div
+                  role="listbox"
+                  className="absolute right-0 top-full mt-2 w-56 p-1.5 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-150"
+                >
+                  {opcoesOrdenacao.map((opcao) => {
+                    const ativo = ordenacao === opcao.id;
+                    return (
+                      <button
+                        key={opcao.id}
+                        type="button"
+                        role="option"
+                        aria-selected={ativo}
+                        onClick={() => {
+                          setOrdenacao(opcao.id as any);
+                          setDropdownOrdenacaoAberto(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors text-left ${
+                          ativo
+                            ? "bg-[#B45A2B]/10 text-[#B45A2B] font-bold"
+                            : "text-black dark:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800/80"
+                        }`}
+                      >
+                        <span>{opcao.rotuloCompleto}</span>
+                        {ativo && <Check className="h-3.5 w-3.5 text-[#B45A2B] shrink-0 ml-2" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
