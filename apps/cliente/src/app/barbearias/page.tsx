@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
   Alert,
   AlertaTemporizado,
+  Modal,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
@@ -78,7 +79,12 @@ function ConteudoListagemBarbearias() {
   const [raioDistancia, setRaioDistancia] = React.useState<number | null>(null);
   const [notaMinima, setNotaMinima] = React.useState<number | null>(null);
   const [ordenacao, setOrdenacao] = React.useState<"relevancia" | "distancia" | "menor-preco" | "maior-preco" | "melhor-nota">("relevancia");
-  const [painelFiltrosAberto, setPainelFiltrosAberto] = React.useState(false);
+  const [modalFiltrosAberto, setModalFiltrosAberto] = React.useState(false);
+
+  // Estados temporários do modal (rascunho até o clique em "Aplicar")
+  const [tempFaixaPreco, setTempFaixaPreco] = React.useState<"todos" | "ate-35" | "ate-50" | "ate-75" | "acima-75">("todos");
+  const [tempRaioDistancia, setTempRaioDistancia] = React.useState<number | null>(null);
+  const [tempNotaMinima, setTempNotaMinima] = React.useState<number | null>(null);
 
   // Contagem de filtros ativos (excluindo busca textual)
   const totalFiltrosAtivos = React.useMemo(() => {
@@ -486,14 +492,19 @@ function ConteudoListagemBarbearias() {
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => setPainelFiltrosAberto(!painelFiltrosAberto)}
+              onClick={() => {
+                setTempFaixaPreco(faixaPreco);
+                setTempRaioDistancia(raioDistancia);
+                setTempNotaMinima(notaMinima);
+                setModalFiltrosAberto(true);
+              }}
               className={`min-h-[44px] px-4 py-2 rounded-2xl border flex items-center gap-2 text-xs font-semibold transition-all select-none ${
-                painelFiltrosAberto || totalFiltrosAtivos > 0
+                modalFiltrosAberto || totalFiltrosAtivos > 0
                   ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm hover:bg-[#C46632]"
                   : "bg-[#F6F6F7] dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
               }`}
               aria-label="Abrir filtros avançados"
-              aria-expanded={painelFiltrosAberto}
+              aria-expanded={modalFiltrosAberto}
             >
               <SlidersHorizontal className="h-4 w-4 shrink-0" />
               <span>Filtros</span>
@@ -533,148 +544,163 @@ function ConteudoListagemBarbearias() {
           </div>
         </div>
 
-        {/* Painel Expansível de Filtros Avançados (Preço, Distância, Nota) */}
-        {painelFiltrosAberto && (
-          <div className="p-4 sm:p-5 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-300 dark:border-neutral-700 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3">
-              <div className="flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-[#B45A2B]" />
-                <h3 className="font-bold text-sm">Filtros Refinados</h3>
+        {/* Modal de Filtros Refinados */}
+        <Modal
+          aberto={modalFiltrosAberto}
+          aoFechar={() => setModalFiltrosAberto(false)}
+          titulo="Filtros Refinados"
+          descricao="Ajuste os critérios para encontrar a barbearia ideal"
+          tamanho="md"
+          rodape={
+            <div className="grid grid-cols-2 gap-3 w-full">
+              <Button
+                type="button"
+                variante="cancelar-simples"
+                tamanho="md"
+                onClick={() => {
+                  setTempFaixaPreco("todos");
+                  setTempRaioDistancia(null);
+                  setTempNotaMinima(null);
+                }}
+                className="w-full min-h-[44px]"
+              >
+                Limpar
+              </Button>
+              <Button
+                type="button"
+                variante="principal"
+                tamanho="md"
+                onClick={() => {
+                  setFaixaPreco(tempFaixaPreco);
+                  setRaioDistancia(tempRaioDistancia);
+                  setNotaMinima(tempNotaMinima);
+                  setModalFiltrosAberto(false);
+                }}
+                className="w-full min-h-[44px]"
+              >
+                Aplicar
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-6 py-1">
+            {/* Filtro por Faixa de Preço do Corte */}
+            <div className="flex flex-col gap-2.5">
+              <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Preço do Corte
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "todos", rotulo: "Qualquer valor" },
+                  { id: "ate-35", rotulo: "Até R$ 35" },
+                  { id: "ate-50", rotulo: "Até R$ 50" },
+                  { id: "ate-75", rotulo: "Até R$ 75" },
+                  { id: "acima-75", rotulo: "R$ 75+" },
+                ].map((opcao) => {
+                  const ativo = tempFaixaPreco === opcao.id;
+                  return (
+                    <button
+                      key={opcao.id}
+                      type="button"
+                      onClick={() => setTempFaixaPreco(opcao.id as any)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors min-h-[38px] ${
+                        ativo
+                          ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                          : "bg-white dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                      }`}
+                    >
+                      {opcao.rotulo}
+                    </button>
+                  );
+                })}
               </div>
-              {totalFiltrosAtivos > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFaixaPreco("todos");
-                    setRaioDistancia(null);
-                    setNotaMinima(null);
-                  }}
-                  className="text-xs font-bold text-[#DC2626] hover:underline"
-                >
-                  Limpar refinamentos
-                </button>
+            </div>
+
+            {/* Filtro por Raio de Distância */}
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                  Distância Máxima
+                </span>
+                {!localizacaoUsuario && (
+                  <button
+                    type="button"
+                    onClick={alternarLocalizacao}
+                    className="text-[11px] font-semibold text-[#B45A2B] hover:underline flex items-center gap-1"
+                  >
+                    <Compass className="h-3 w-3" /> Ativar GPS
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { valor: null, rotulo: "Qualquer" },
+                  { valor: 2, rotulo: "Até 2 km" },
+                  { valor: 5, rotulo: "Até 5 km" },
+                  { valor: 10, rotulo: "Até 10 km" },
+                  { valor: 25, rotulo: "Até 25 km" },
+                ].map((opcao) => {
+                  const ativo = tempRaioDistancia === opcao.valor;
+                  return (
+                    <button
+                      key={String(opcao.valor)}
+                      type="button"
+                      onClick={() => {
+                        if (!localizacaoUsuario && opcao.valor !== null) {
+                          alternarLocalizacao();
+                        }
+                        setTempRaioDistancia(opcao.valor);
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors min-h-[38px] ${
+                        ativo
+                          ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                          : "bg-white dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                      }`}
+                    >
+                      {opcao.rotulo}
+                    </button>
+                  );
+                })}
+              </div>
+              {!localizacaoUsuario && (
+                <span className="text-[11px] opacity-60">
+                  * Requer localização ativa para calcular a distância exata.
+                </span>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Filtro por Faixa de Preço do Corte */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
-                  Preço do Corte
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: "todos", rotulo: "Qualquer valor" },
-                    { id: "ate-35", rotulo: "Até R$ 35" },
-                    { id: "ate-50", rotulo: "Até R$ 50" },
-                    { id: "ate-75", rotulo: "Até R$ 75" },
-                    { id: "acima-75", rotulo: "R$ 75+" },
-                  ].map((opcao) => {
-                    const ativo = faixaPreco === opcao.id;
-                    return (
-                      <button
-                        key={opcao.id}
-                        type="button"
-                        onClick={() => setFaixaPreco(opcao.id as any)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
-                          ativo
-                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
-                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
-                        }`}
-                      >
-                        {opcao.rotulo}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Filtro por Raio de Distância */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider opacity-70">
-                    Distância Máxima
-                  </span>
-                  {!localizacaoUsuario && (
+            {/* Filtro por Avaliação Mínima */}
+            <div className="flex flex-col gap-2.5">
+              <span className="text-xs font-bold uppercase tracking-wider opacity-70">
+                Avaliação dos Clientes
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { valor: null, rotulo: "Todas as notas" },
+                  { valor: 4.5, rotulo: "★ 4.5+" },
+                  { valor: 4.0, rotulo: "★ 4.0+" },
+                  { valor: 3.5, rotulo: "★ 3.5+" },
+                ].map((opcao) => {
+                  const ativo = tempNotaMinima === opcao.valor;
+                  return (
                     <button
+                      key={String(opcao.valor)}
                       type="button"
-                      onClick={alternarLocalizacao}
-                      className="text-[11px] font-semibold text-[#B45A2B] hover:underline flex items-center gap-1"
+                      onClick={() => setTempNotaMinima(opcao.valor)}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-medium border transition-colors min-h-[38px] ${
+                        ativo
+                          ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
+                          : "bg-white dark:bg-[#141416] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
+                      }`}
                     >
-                      <Compass className="h-3 w-3" /> Ativar GPS
+                      {opcao.rotulo}
                     </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { valor: null, rotulo: "Qualquer" },
-                    { valor: 2, rotulo: "Até 2 km" },
-                    { valor: 5, rotulo: "Até 5 km" },
-                    { valor: 10, rotulo: "Até 10 km" },
-                    { valor: 25, rotulo: "Até 25 km" },
-                  ].map((opcao) => {
-                    const ativo = raioDistancia === opcao.valor;
-                    return (
-                      <button
-                        key={String(opcao.valor)}
-                        type="button"
-                        onClick={() => {
-                          if (!localizacaoUsuario && opcao.valor !== null) {
-                            alternarLocalizacao();
-                          }
-                          setRaioDistancia(opcao.valor);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
-                          ativo
-                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
-                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
-                        }`}
-                      >
-                        {opcao.rotulo}
-                      </button>
-                    );
-                  })}
-                </div>
-                {!localizacaoUsuario && (
-                  <span className="text-[11px] opacity-60">
-                    * Requer localização ativa para calcular a distância exata.
-                  </span>
-                )}
-              </div>
-
-              {/* Filtro por Avaliação Mínima */}
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
-                  Avaliação dos Clientes
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { valor: null, rotulo: "Todas as notas" },
-                    { valor: 4.5, rotulo: "★ 4.5+" },
-                    { valor: 4.0, rotulo: "★ 4.0+" },
-                    { valor: 3.5, rotulo: "★ 3.5+" },
-                  ].map((opcao) => {
-                    const ativo = notaMinima === opcao.valor;
-                    return (
-                      <button
-                        key={String(opcao.valor)}
-                        type="button"
-                        onClick={() => setNotaMinima(opcao.valor)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors min-h-[36px] ${
-                          ativo
-                            ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold shadow-sm"
-                            : "bg-white dark:bg-[#0A0A0B] border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
-                        }`}
-                      >
-                        {opcao.rotulo}
-                      </button>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        )}
+        </Modal>
 
         {/* Chips de Bairros Disponíveis para Acesso Rápido */}
         {bairrosDisponiveis.length > 0 && (
