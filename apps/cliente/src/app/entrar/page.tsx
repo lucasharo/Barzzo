@@ -17,6 +17,7 @@ import {
 } from "@barzzo/ui";
 import { esquemaLogin } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 
 export default function PaginaEntrar() {
   const router = useRouter();
@@ -47,16 +48,12 @@ export default function PaginaEntrar() {
       });
 
       if (error) {
-        setErro(
-          error.message === "Invalid login credentials"
-            ? "E-mail ou senha incorretos."
-            : error.message
-        );
+        setErro(traduzirErro(error, "E-mail ou senha incorretos. Por favor, verifique e tente novamente."));
         return;
       }
 
       if (data.session) {
-        setSucesso("Login realizado com sucesso! Redirecionando...");
+        setSucesso("Conectado com sucesso! Redirecionando...");
         setTimeout(() => {
           router.push("/perfil");
         }, 800);

@@ -17,6 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import { esquemaCupom } from "@barzzo/dominio";
 import type { Cupom, Servico } from "@barzzo/tipos";
 import {
@@ -207,7 +208,7 @@ export default function PaginaFormularioCampanha() {
           if (erroInsert.message.includes("cupons_codigo_barbearia_unique")) {
             setErro("Já existe um cupom com este código nesta barbearia.");
           } else {
-            setErro("Não foi possível cadastrar o cupom: " + erroInsert.message);
+            setErro(traduzirErro(erroInsert, "Não foi possível cadastrar o cupom."));
           }
           setSalvando(false);
           return;
@@ -219,7 +220,7 @@ export default function PaginaFormularioCampanha() {
           .eq("barbearia_id", barbeariaId);
 
         if (erroUpdate) {
-          setErro("Não foi possível atualizar o cupom: " + erroUpdate.message);
+          setErro(traduzirErro(erroUpdate, "Não foi possível atualizar o cupom."));
           setSalvando(false);
           return;
         }
@@ -250,7 +251,7 @@ export default function PaginaFormularioCampanha() {
         .eq("barbearia_id", barbeariaId);
 
       if (error) {
-        setErro("Não foi possível excluir o cupom: " + error.message);
+        setErro(traduzirErro(error, "Não foi possível excluir o cupom. Tente novamente."));
         setExcluindo(false);
         return;
       }

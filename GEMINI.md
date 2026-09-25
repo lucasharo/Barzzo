@@ -36,6 +36,7 @@ A implementação visual deve obedecer integralmente `docs/design/design_system.
 
 ## Idioma
 Código de domínio, banco, variáveis, rotas, telas e documentação em português. Identificadores técnicos sem acentos.
+É terminantemente proibido exibir mensagens, erros, alertas, placeholders ou qualquer texto em inglês para o usuário final. Mensagens de SDKs externos (Supabase Auth, Postgres, etc.) devem ser interceptadas e traduzidas com `traduzirErro` (`@barzzo/utilitarios`).
 
 ## Segurança
 Nunca grave segredos. Nunca exponha chave secreta no frontend. Nunca desative RLS para contornar erro.

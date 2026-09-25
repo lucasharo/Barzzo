@@ -15,6 +15,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaCriarConvite } from "@barzzo/validacoes";
+import { traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { ConviteProfissional, Profissional } from "@barzzo/tipos";
 import { Mail, Send, Copy, Check, Clock, CheckCircle } from "lucide-react";
@@ -140,7 +141,7 @@ export default function PaginaConvites() {
         });
 
       if (errConvite) {
-        setErro(errConvite.message);
+        setErro(traduzirErro(errConvite, "Não foi possível gerar o convite. Verifique se o e-mail já foi convidado."));
         return;
       }
 

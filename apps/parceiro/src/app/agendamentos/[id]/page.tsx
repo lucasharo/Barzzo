@@ -17,6 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import { calcularComparativoTempo, validarTransicaoStatus } from "@barzzo/dominio";
 import type {
   AgendamentoComDetalhes,
@@ -127,7 +128,7 @@ export default function PaginaDetalhesAgendamento() {
       });
 
       if (error) {
-        setErro(error.message || "Não foi possível atualizar o status.");
+        setErro(traduzirErro(error, "Não foi possível atualizar o status."));
         return;
       }
 
@@ -170,7 +171,7 @@ export default function PaginaDetalhesAgendamento() {
         if (error.message.includes("conflitante") || error.message.includes("exclusion_violation")) {
           setErro("Conflito de horário: O profissional já tem um agendamento neste horário.");
         } else {
-          setErro(error.message || "Erro ao reagendar.");
+          setErro(traduzirErro(error, "Não foi possível reagendar o atendimento."));
         }
         return;
       }

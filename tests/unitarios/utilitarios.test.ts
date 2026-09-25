@@ -4,6 +4,7 @@ import {
   limparTelefone,
   extrairPrimeiroNome,
   obterIniciais,
+  traduzirErro,
 } from "@barzzo/utilitarios";
 
 describe("Utilitários e Formatadores", () => {
@@ -55,6 +56,53 @@ describe("Utilitários e Formatadores", () => {
     it("deve retornar fallback se vazio", () => {
       expect(obterIniciais("")).toBe("BZ");
       expect(obterIniciais(null)).toBe("BZ");
+    });
+  });
+
+  describe("traduzirErro", () => {
+    it("deve traduzir erros de autenticação do Supabase", () => {
+      expect(traduzirErro("Invalid login credentials")).toBe(
+        "E-mail ou senha incorretos. Por favor, verifique seus dados e tente novamente."
+      );
+      expect(traduzirErro(new Error("User already registered"))).toBe(
+        "Este e-mail já está cadastrado na plataforma. Tente fazer login."
+      );
+      expect(traduzirErro({ message: "JWT expired" })).toBe(
+        "Sua sessão expirou. Por favor, faça login novamente para continuar."
+      );
+    });
+
+    it("deve traduzir erros de conexão e rede", () => {
+      expect(traduzirErro(new TypeError("Failed to fetch"))).toBe(
+        "Falha na conexão de internet. Verifique sua rede e tente novamente."
+      );
+      expect(traduzirErro("NetworkError when attempting to fetch resource")).toBe(
+        "Falha na conexão de internet. Verifique sua rede e tente novamente."
+      );
+    });
+
+    it("deve traduzir erros de banco de dados e RLS", () => {
+      expect(traduzirErro("new row violates row-level security policy")).toBe(
+        "Você não tem permissão para realizar esta ação."
+      );
+      expect(traduzirErro("duplicate key value violates unique constraint")).toBe(
+        "Já existe um registro com essas informações cadastradas."
+      );
+      expect(traduzirErro("exclusion_violation")).toBe(
+        "Este horário já foi reservado ou está indisponível. Por favor, selecione outro horário."
+      );
+    });
+
+    it("deve filtrar mensagens em inglês genéricas usando fallback em português", () => {
+      const msgTraduzida = traduzirErro("Something went wrong with the database connection");
+      expect(msgTraduzida).toBe(
+        "Ocorreu um erro ao processar sua solicitação. Tente novamente."
+      );
+    });
+
+    it("deve manter mensagens que já estão em português sem termos em inglês", () => {
+      const msgPt = "Informe um e-mail válido para continuar";
+      expect(traduzirErro(msgPt)).toBe(msgPt);
     });
   });
 });

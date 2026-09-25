@@ -17,6 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import {
   esquemaFotoGaleria,
   calcularDimensoesRedimensionamento,
@@ -185,7 +186,7 @@ export default function PaginaGaleriaParceiro() {
         0.85
       );
     } catch (err: any) {
-      setErro(err?.message || "Erro ao processar arquivo de foto.");
+      setErro(traduzirErro(err, "Erro ao processar arquivo de foto."));
       setProcessando(false);
     }
   }
@@ -224,7 +225,7 @@ export default function PaginaGaleriaParceiro() {
         });
 
       if (erroUpload) {
-        setErro("Falha no upload da foto: " + erroUpload.message);
+        setErro(traduzirErro(erroUpload, "Falha no upload da foto. Tente novamente."));
         setEnviando(false);
         return;
       }
@@ -255,7 +256,7 @@ export default function PaginaGaleriaParceiro() {
         .single();
 
       if (erroInsert || !novaFotoDb) {
-        setErro("Não foi possível salvar o registro da foto: " + erroInsert?.message);
+        setErro(traduzirErro(erroInsert, "Não foi possível salvar o registro da foto."));
         setEnviando(false);
         return;
       }
@@ -330,7 +331,7 @@ export default function PaginaGaleriaParceiro() {
         .eq("barbearia_id", barbeariaId);
 
       if (error) {
-        setErro("Não foi possível excluir a foto: " + error.message);
+        setErro(traduzirErro(error, "Não foi possível excluir a foto. Tente novamente."));
         setExcluindoId(null);
         return;
       }

@@ -17,6 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import {
   esquemaInfluenciador,
   gerarLinkInfluenciador,
@@ -195,10 +196,10 @@ export default function PaginaInfluenciadoresParceiro() {
         .single();
 
       if (erroInsert || !novoInf) {
-        if (erroInsert?.message.includes("influenciadores_codigo_barbearia_unique")) {
+        if (erroInsert?.message?.includes("influenciadores_codigo_barbearia_unique")) {
           setErro("Já existe um influenciador com este código nesta barbearia.");
         } else {
-          setErro("Erro ao cadastrar influenciador: " + erroInsert?.message);
+          setErro(traduzirErro(erroInsert, "Erro ao cadastrar influenciador. Tente novamente."));
         }
         setSalvando(false);
         return;

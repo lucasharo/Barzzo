@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import type {
   Agendamento,
   AgendamentoComDetalhes,
@@ -172,7 +173,7 @@ export default function PaginaAgendaParceiro() {
       });
 
       if (error) {
-        setErro(error.message || "Não foi possível atualizar o status.");
+        setErro(traduzirErro(error, "Não foi possível atualizar o status do agendamento."));
         return;
       }
 

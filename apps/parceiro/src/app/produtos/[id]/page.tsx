@@ -17,6 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import {
   esquemaProduto,
   calcularDimensoesRedimensionamento,
@@ -193,7 +194,7 @@ export default function PaginaFormularioProduto() {
         0.85
       );
     } catch (err: any) {
-      setErro(err?.message || "Erro ao processar imagem.");
+      setErro(traduzirErro(err, "Erro ao processar imagem."));
       setProcessandoImagem(false);
     }
   }
@@ -250,7 +251,7 @@ export default function PaginaFormularioProduto() {
           });
 
         if (erroUpload) {
-          setErro("Falha no upload da foto: " + erroUpload.message);
+          setErro(traduzirErro(erroUpload, "Falha no upload da foto do produto. Tente novamente."));
           setSalvando(false);
           return;
         }
@@ -277,7 +278,7 @@ export default function PaginaFormularioProduto() {
       if (isNovo) {
         const { error: erroInsert } = await (supabase.from("produtos") as any).insert(payload);
         if (erroInsert) {
-          setErro("Não foi possível cadastrar o produto: " + erroInsert.message);
+          setErro(traduzirErro(erroInsert, "Não foi possível cadastrar o produto."));
           setSalvando(false);
           return;
         }
@@ -288,7 +289,7 @@ export default function PaginaFormularioProduto() {
           .eq("barbearia_id", barbeariaId);
 
         if (erroUpdate) {
-          setErro("Não foi possível atualizar o produto: " + erroUpdate.message);
+          setErro(traduzirErro(erroUpdate, "Não foi possível atualizar o produto."));
           setSalvando(false);
           return;
         }
@@ -319,7 +320,7 @@ export default function PaginaFormularioProduto() {
         .eq("barbearia_id", barbeariaId);
 
       if (error) {
-        setErro("Não foi possível excluir o produto: " + error.message);
+        setErro(traduzirErro(error, "Não foi possível excluir o produto. Tente novamente."));
         setExcluindo(false);
         return;
       }

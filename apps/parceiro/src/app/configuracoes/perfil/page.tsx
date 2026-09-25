@@ -14,7 +14,7 @@ import {
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia } from "@barzzo/tipos";
 import { Store } from "lucide-react";
@@ -113,7 +113,7 @@ export default function PaginaConfiguracoesBarbearia() {
         .eq("id", barbearia.id);
 
       if (dbError) {
-        setErro(dbError.message);
+        setErro(traduzirErro(dbError, "Erro ao salvar informações da barbearia."));
         return;
       }
 

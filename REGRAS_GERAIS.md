@@ -96,3 +96,10 @@ Regras visuais obrigatórias:
 - cor principal cobre definida no Design System;
 - alertas restritos a azul, verde, amarelo e vermelho;
 - botões destrutivos seguem os dois padrões definidos no Design System.
+
+## Idioma e Comunicação com o Usuário
+- É terminantemente proibido exibir mensagens, erros, alertas, placeholders, tooltips, modais ou qualquer texto em inglês para o usuário final.
+- Toda a interface com o usuário deve ser 100% em português do Brasil (pt-BR).
+- Mensagens de erro de infraestrutura, SDKs externos (Supabase, Auth, PostgreSQL, Mercado Pago, Firebase, Geolocalização, Fetch de rede) DEVEM ser interceptadas e traduzidas para português claro antes de serem renderizadas na tela.
+- Utilize sempre o tradutor centralizado `traduzirErro` (`@barzzo/utilitarios`) para converter erros técnicos em mensagens amigáveis em português.
+

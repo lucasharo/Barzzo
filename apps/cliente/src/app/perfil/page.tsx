@@ -18,7 +18,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaAtualizarPerfil } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { redimensionarEComprimirImagem } from "@barzzo/imagens";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Usuario } from "@barzzo/tipos";
@@ -133,7 +133,7 @@ export default function PaginaPerfil() {
         });
 
       if (uploadError) {
-        setErro(`Falha ao enviar imagem: ${uploadError.message}`);
+        setErro(traduzirErro(uploadError, "Falha ao enviar imagem."));
         return;
       }
 
@@ -148,18 +148,14 @@ export default function PaginaPerfil() {
         .eq("id", session.user.id);
 
       if (updateError) {
-        setErro(`Falha ao vincular imagem ao perfil: ${updateError.message}`);
+        setErro(traduzirErro(updateError, "Falha ao vincular imagem ao perfil."));
         return;
       }
 
       setFotoUrl(publicUrl);
       setSucesso("Foto de perfil atualizada com sucesso!");
     } catch (err: unknown) {
-      setErro(
-        err instanceof Error
-          ? err.message
-          : "Erro ao processar imagem para envio."
-      );
+      setErro(traduzirErro(err, "Erro ao processar imagem para envio."));
     } finally {
       setEnviandoFoto(false);
       if (fileInputRef.current) {
@@ -240,7 +236,7 @@ export default function PaginaPerfil() {
         .eq("id", session.user.id);
 
       if (dbError) {
-        setErro(`Erro ao atualizar perfil: ${dbError.message}`);
+        setErro(traduzirErro(dbError, "Erro ao atualizar perfil. Tente novamente."));
         return;
       }
 

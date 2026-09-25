@@ -17,7 +17,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaCriarProfissional } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Profissional, MembroBarbearia } from "@barzzo/tipos";
 import { Users, UserPlus, Mail, Shield, UserCheck, Phone } from "lucide-react";
@@ -120,7 +120,7 @@ export default function PaginaEquipe() {
       });
 
       if (dbError) {
-        setErro(dbError.message);
+        setErro(traduzirErro(dbError, "Erro ao cadastrar profissional. Tente novamente."));
         return;
       }
 

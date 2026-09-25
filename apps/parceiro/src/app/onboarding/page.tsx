@@ -15,7 +15,7 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { esquemaCriarBarbearia } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { CheckCircle2, Store, MapPin, Users, ArrowRight } from "lucide-react";
 
@@ -127,7 +127,7 @@ export default function PaginaOnboarding() {
         if (rpcError.message.includes("barbearias_slug_key")) {
           setErro("Este identificador (slug) já está em uso por outra barbearia.");
         } else {
-          setErro(rpcError.message);
+          setErro(traduzirErro(rpcError, "Não foi possível concluir o cadastro da barbearia."));
         }
         return;
       }

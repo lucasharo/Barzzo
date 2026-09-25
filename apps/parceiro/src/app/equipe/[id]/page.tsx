@@ -17,7 +17,7 @@ import {
   Avatar,
   LoadingSpinner,
 } from "@barzzo/ui";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Profissional } from "@barzzo/tipos";
 import { ArrowLeft, UserCheck } from "lucide-react";
@@ -94,7 +94,7 @@ export default function PaginaDetalhesProfissional() {
         .eq("id", id);
 
       if (error) {
-        setErro(error.message);
+        setErro(traduzirErro(error, "Não foi possível atualizar os dados do profissional."));
         return;
       }
 

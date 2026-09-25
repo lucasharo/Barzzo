@@ -16,7 +16,7 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { esquemaCadastro } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 
 export default function PaginaCadastro() {
@@ -72,11 +72,7 @@ export default function PaginaCadastro() {
       });
 
       if (error) {
-        setErro(
-          error.message.includes("already registered")
-            ? "Este e-mail já está cadastrado no sistema."
-            : error.message
-        );
+        setErro(traduzirErro(error, "Não foi possível criar sua conta. Verifique os dados informados."));
         return;
       }
 

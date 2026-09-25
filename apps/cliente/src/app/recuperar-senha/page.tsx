@@ -16,6 +16,7 @@ import {
 } from "@barzzo/ui";
 import { esquemaRecuperarSenha } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 
 export default function PaginaRecuperarSenha() {
   const [email, setEmail] = React.useState("");
@@ -43,7 +44,7 @@ export default function PaginaRecuperarSenha() {
       });
 
       if (error) {
-        setErro(error.message);
+        setErro(traduzirErro(error, "Não foi possível solicitar a recuperação de senha. Tente novamente mais tarde."));
         return;
       }
 

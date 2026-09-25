@@ -15,6 +15,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { traduzirErro } from "@barzzo/utilitarios";
 import type { ConviteProfissional } from "@barzzo/tipos";
 import { Users, CheckCircle2, AlertTriangle, ArrowRight } from "lucide-react";
 
@@ -88,7 +89,7 @@ export default function PaginaAceitarConvite() {
       });
 
       if (rpcError) {
-        setErro(rpcError.message);
+        setErro(traduzirErro(rpcError, "Convite inválido ou expirado."));
         return;
       }
 
