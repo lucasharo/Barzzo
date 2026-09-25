@@ -16,7 +16,11 @@ import {
   AlertaTemporizado,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { calcularDistanciaKm, calcularMediaAvaliacoes } from "@barzzo/dominio";
+import {
+  calcularDistanciaKm,
+  calcularMediaAvaliacoes,
+  obterPrecoCorte,
+} from "@barzzo/dominio";
 import type { Barbearia } from "@barzzo/tipos";
 import {
   Search,
@@ -37,6 +41,7 @@ interface BarbeariaComDistancia extends Barbearia {
   total_servicos?: number;
   menor_preco?: number | null;
   maior_preco?: number | null;
+  preco_corte?: number | null;
   media_nota?: number;
   total_avaliacoes?: number;
 }
@@ -168,6 +173,7 @@ function ConteudoListagemBarbearias() {
             .filter((p: number) => !isNaN(p) && p > 0);
           const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
           const maiorPreco = precos.length > 0 ? Math.max(...precos) : null;
+          const precoCorte = obterPrecoCorte(servicosAtivos);
 
           const avs = b.avaliacoes || [];
           const mediaNota = calcularMediaAvaliacoes(avs);
@@ -179,6 +185,7 @@ function ConteudoListagemBarbearias() {
             total_servicos: totalServicos,
             menor_preco: menorPreco,
             maior_preco: maiorPreco,
+            preco_corte: precoCorte,
             media_nota: mediaNota,
             total_avaliacoes: totalAvaliacoes,
           };
@@ -201,14 +208,15 @@ function ConteudoListagemBarbearias() {
           });
         }
 
-        // Filtro por faixa de preço
+        // Filtro por faixa de preço baseado no valor do "Corte"
         if (faixaPreco !== "todos") {
           lista = lista.filter((b) => {
-            if (b.menor_preco === null || b.menor_preco === undefined) return false;
-            if (faixaPreco === "ate-35") return b.menor_preco <= 35;
-            if (faixaPreco === "ate-50") return b.menor_preco <= 50;
-            if (faixaPreco === "ate-75") return b.menor_preco <= 75;
-            if (faixaPreco === "acima-75") return b.menor_preco > 75;
+            const precoReferencia = b.preco_corte ?? b.menor_preco;
+            if (precoReferencia === null || precoReferencia === undefined) return false;
+            if (faixaPreco === "ate-35") return precoReferencia <= 35;
+            if (faixaPreco === "ate-50") return precoReferencia <= 50;
+            if (faixaPreco === "ate-75") return precoReferencia <= 75;
+            if (faixaPreco === "acima-75") return precoReferencia > 75;
             return true;
           });
         }
@@ -237,13 +245,13 @@ function ConteudoListagemBarbearias() {
             return dA - dB;
           }
           if (ordenacao === "menor-preco") {
-            const pA = a.menor_preco ?? 999999;
-            const pB = b.menor_preco ?? 999999;
+            const pA = a.preco_corte ?? a.menor_preco ?? 999999;
+            const pB = b.preco_corte ?? b.menor_preco ?? 999999;
             return pA - pB;
           }
           if (ordenacao === "maior-preco") {
-            const pA = a.menor_preco ?? 0;
-            const pB = b.menor_preco ?? 0;
+            const pA = a.preco_corte ?? a.menor_preco ?? 0;
+            const pB = b.preco_corte ?? b.menor_preco ?? 0;
             return pB - pA;
           }
           if (ordenacao === "melhor-nota") {
@@ -549,10 +557,10 @@ function ConteudoListagemBarbearias() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Filtro por Faixa de Preço */}
+              {/* Filtro por Faixa de Preço do Corte */}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider opacity-70">
-                  Faixa de Preço (A partir de)
+                  Preço do Corte
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {[
@@ -818,7 +826,15 @@ function ConteudoListagemBarbearias() {
 
                 <div className="pt-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
                   <div className="flex flex-col">
-                    {b.menor_preco ? (
+                    {b.preco_corte ? (
+                      <span className="text-xs font-semibold text-[#B45A2B]">
+                        Corte a partir de{" "}
+                        {new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: "BRL",
+                        }).format(b.preco_corte)}
+                      </span>
+                    ) : b.menor_preco ? (
                       <span className="text-xs font-semibold text-[#B45A2B]">
                         A partir de{" "}
                         {new Intl.NumberFormat("pt-BR", {

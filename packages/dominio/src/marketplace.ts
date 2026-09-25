@@ -70,3 +70,60 @@ export function limparRascunhoReserva(): void {
     // Falha silenciosa
   }
 }
+
+/**
+ * Extrai o valor do serviço de "Corte" a partir da lista de serviços de uma barbearia.
+ * Dá prioridade a serviços de corte avulsos/tradicionais (ex: "Corte Tradicional", "Corte Degradê", "Corte Social"),
+ * ignorando combos (ex: "Corte + Barba") se houver corte individual disponível.
+ * Retorna null se não houver serviços válidos.
+ */
+export function obterPrecoCorte(
+  servicos: Array<{ nome?: string | null; preco?: number | string | null; ativo?: boolean | null }>
+): number | null {
+  if (!servicos || servicos.length === 0) return null;
+
+  const ativos = servicos.filter((s) => s.ativo !== false);
+  if (ativos.length === 0) return null;
+
+  function normalizar(texto: string): string {
+    return texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  // Filtrar serviços cujo nome mencione "corte" ou "cabelo"
+  const servicosCorte = ativos.filter((s) => {
+    const nomeNorm = normalizar(s.nome || "");
+    return nomeNorm.includes("corte") || nomeNorm.includes("cabelo");
+  });
+
+  // Priorizar cortes avulsos (sem barba, sem combo, sem "+", etc.)
+  const cortesAvulsos = servicosCorte.filter((s) => {
+    const nomeNorm = normalizar(s.nome || "");
+    return (
+      !nomeNorm.includes("barba") &&
+      !nomeNorm.includes("combo") &&
+      !nomeNorm.includes("+") &&
+      !nomeNorm.includes(" e ")
+    );
+  });
+
+  const candidatos = cortesAvulsos.length > 0 ? cortesAvulsos : servicosCorte;
+
+  const precos = candidatos
+    .map((s) => Number(s.preco))
+    .filter((p) => !isNaN(p) && p > 0);
+
+  if (precos.length > 0) {
+    return Math.min(...precos);
+  }
+
+  // Fallback: se não houver nenhum serviço chamado explicitamente "corte",
+  // usa o menor preço entre os serviços ativos
+  const todosPrecos = ativos
+    .map((s) => Number(s.preco))
+    .filter((p) => !isNaN(p) && p > 0);
+
+  return todosPrecos.length > 0 ? Math.min(...todosPrecos) : null;
+}

@@ -4,6 +4,7 @@ import {
   salvarRascunhoReserva,
   obterRascunhoReserva,
   limparRascunhoReserva,
+  obterPrecoCorte,
   CHAVE_RASCUNHO_RESERVA,
 } from "../../packages/dominio/src/marketplace";
 import { esquemaRascunhoReserva } from "../../packages/validacoes/src/marketplace";
@@ -185,6 +186,55 @@ describe("TASK-05: Marketplace e Jornada do Cliente", () => {
     it("deve retornar null se o storage estiver vazio ou com json corrompido", () => {
       mockStorage[CHAVE_RASCUNHO_RESERVA] = "JSON_CORROMPIDO{";
       expect(obterRascunhoReserva()).toBeNull();
+    });
+  });
+
+  describe("4. Extração do Preço do Corte para Filtros do Marketplace", () => {
+    it("deve priorizar o menor preço de corte avulso ignorando serviços secundários mais baratos como sobrancelha", () => {
+      const servicos = [
+        { nome: "Sobrancelha / Pezinho", preco: 15, ativo: true },
+        { nome: "Corte Tradicional", preco: 35, ativo: true },
+        { nome: "Corte Degradê Navalhado", preco: 45, ativo: true },
+        { nome: "Corte + Barba Terapia", preco: 70, ativo: true },
+      ];
+
+      const precoCorte = obterPrecoCorte(servicos);
+      expect(precoCorte).toBe(35);
+    });
+
+    it("deve ignorar serviços inativos", () => {
+      const servicos = [
+        { nome: "Corte Antigo Promocional", preco: 20, ativo: false },
+        { nome: "Corte Masculino", preco: 40, ativo: true },
+      ];
+
+      const precoCorte = obterPrecoCorte(servicos);
+      expect(precoCorte).toBe(40);
+    });
+
+    it("deve aceitar combo de corte se for o único serviço de corte disponível na barbearia", () => {
+      const servicos = [
+        { nome: "Barba Terapia", preco: 30, ativo: true },
+        { nome: "Corte e Barba Completo", preco: 65, ativo: true },
+      ];
+
+      const precoCorte = obterPrecoCorte(servicos);
+      expect(precoCorte).toBe(65);
+    });
+
+    it("deve realizar fallback para o menor preço geral caso nenhum serviço tenha o nome corte", () => {
+      const servicos = [
+        { nome: "Estilo Clássico", preco: 50, ativo: true },
+        { nome: "Barboterapia", preco: 35, ativo: true },
+      ];
+
+      const precoCorte = obterPrecoCorte(servicos);
+      expect(precoCorte).toBe(35);
+    });
+
+    it("deve retornar null se a barbearia não tiver serviços ativos cadastrados", () => {
+      expect(obterPrecoCorte([])).toBeNull();
+      expect(obterPrecoCorte([{ nome: "Corte", preco: 40, ativo: false }])).toBeNull();
     });
   });
 });
