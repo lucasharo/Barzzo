@@ -5,6 +5,7 @@ import {
   obterRascunhoReserva,
   limparRascunhoReserva,
   obterPrecoCorte,
+  calcularDestinoAposAuth,
   CHAVE_RASCUNHO_RESERVA,
 } from "../../packages/dominio/src/marketplace";
 import { esquemaRascunhoReserva } from "../../packages/validacoes/src/marketplace";
@@ -235,6 +236,50 @@ describe("TASK-05: Marketplace e Jornada do Cliente", () => {
     it("deve retornar null se a barbearia não tiver serviços ativos cadastrados", () => {
       expect(obterPrecoCorte([])).toBeNull();
       expect(obterPrecoCorte([{ nome: "Corte", preco: 40, ativo: false }])).toBeNull();
+    });
+  });
+
+  describe("5. Resolução de Destino Pós-Autenticação e Preservação de Rascunho", () => {
+    const draftExemplo: RascunhoReserva = {
+      barbearia_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      barbearia_nome: "Barbearia Vintage Club",
+      barbearia_slug: "vintage-club",
+      servico_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      servico_nome: "Corte Degradê",
+      preco: 50,
+      duracao_minutos: 30,
+      profissional_id: null,
+      data: "2026-10-20",
+      horario: "15:00",
+    };
+
+    it("deve retornar o retornoUrl quando fornecido e seguro (começando com /)", () => {
+      expect(calcularDestinoAposAuth("/reservar/vintage-club", draftExemplo)).toBe("/reservar/vintage-club");
+      expect(calcularDestinoAposAuth("/agendamentos", null)).toBe("/agendamentos");
+      expect(calcularDestinoAposAuth("/barbearias/vintage-club", null)).toBe("/barbearias/vintage-club");
+    });
+
+    it("deve ignorar retornoUrl malicioso (open redirect) e fazer fallback para o rascunho", () => {
+      expect(calcularDestinoAposAuth("https://malicious.com", draftExemplo)).toBe("/reservar/vintage-club");
+      expect(calcularDestinoAposAuth("//evil.com", draftExemplo)).toBe("/reservar/vintage-club");
+      expect(calcularDestinoAposAuth("javascript:alert(1)", draftExemplo)).toBe("/reservar/vintage-club");
+    });
+
+    it("deve retornar a página de reserva da barbearia do rascunho quando não houver retornoUrl", () => {
+      expect(calcularDestinoAposAuth(null, draftExemplo)).toBe("/reservar/vintage-club");
+      expect(calcularDestinoAposAuth("", draftExemplo)).toBe("/reservar/vintage-club");
+      expect(calcularDestinoAposAuth(undefined, draftExemplo)).toBe("/reservar/vintage-club");
+    });
+
+    it("deve retornar /perfil se não houver retornoUrl nem rascunho ativo", () => {
+      expect(calcularDestinoAposAuth(null, null)).toBe("/perfil");
+      expect(calcularDestinoAposAuth(undefined, undefined)).toBe("/perfil");
+      expect(calcularDestinoAposAuth("", null)).toBe("/perfil");
+    });
+
+    it("deve retornar /perfil se o rascunho não contiver barbearia_slug", () => {
+      const draftSemSlug = { ...draftExemplo, barbearia_slug: "" };
+      expect(calcularDestinoAposAuth(null, draftSemSlug)).toBe("/perfil");
     });
   });
 });

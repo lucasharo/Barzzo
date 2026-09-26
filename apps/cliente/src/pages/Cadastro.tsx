@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -16,9 +16,18 @@ import {
 import { esquemaCadastro } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterRascunhoReserva, calcularDestinoAposAuth } from "@barzzo/dominio";
+import { Sparkles } from "lucide-react";
 
 export default function PaginaCadastro() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const retornoUrl = searchParams.get("retorno");
+
+  const draft = React.useMemo(() => {
+    return typeof window !== "undefined" ? obterRascunhoReserva() : null;
+  }, []);
+
   const [nome, setNome] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [telefone, setTelefone] = React.useState("");
@@ -76,8 +85,9 @@ export default function PaginaCadastro() {
 
       if (data.user) {
         setSucesso("Conta criada com sucesso! Redirecionando...");
+        const destino = calcularDestinoAposAuth(retornoUrl, draft);
         setTimeout(() => {
-          navigate("/perfil");
+          navigate(destino);
         }, 1000);
       }
     } catch (err: unknown) {
@@ -98,6 +108,20 @@ export default function PaginaCadastro() {
         </CardHeader>
 
         <CardContent>
+          {draft && (
+            <div className="mb-4 p-3.5 rounded-xl border border-[#B45A2B]/20 bg-[#B45A2B]/5 flex items-start gap-3">
+              <div className="p-1 rounded-full bg-[#B45A2B]/10 text-[#B45A2B] shrink-0 mt-0.5">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="text-xs">
+                <span className="font-bold text-sm block text-[#B45A2B]">
+                  Conclua seu agendamento
+                </span>
+                Crie sua conta para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {draft.data} às {draft.horario}).
+              </div>
+            </div>
+          )}
+
           <form onSubmit={lidarComCadastro} className="flex flex-col gap-4">
             {erro && (
               <Alert variante="erro">
@@ -202,7 +226,7 @@ export default function PaginaCadastro() {
             <div className="text-center text-sm opacity-80 pt-2">
               Já tem uma conta?{" "}
               <Link
-                to="/entrar"
+                to={retornoUrl ? `/entrar?retorno=${encodeURIComponent(retornoUrl)}` : "/entrar"}
                 className="font-semibold text-[#B45A2B] hover:underline"
               >
                 Fazer login

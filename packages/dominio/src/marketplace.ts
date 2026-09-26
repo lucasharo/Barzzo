@@ -127,3 +127,21 @@ export function obterPrecoCorte(
 
   return todosPrecos.length > 0 ? Math.min(...todosPrecos) : null;
 }
+
+/**
+ * Calcula o destino de redirecionamento após login ou cadastro com segurança,
+ * priorizando o parâmetro de retorno e recuperando o fluxo de agendamento em andamento.
+ */
+export function calcularDestinoAposAuth(
+  retornoUrl: string | null | undefined,
+  draft: RascunhoReserva | null | undefined
+): string {
+  if (retornoUrl && retornoUrl.startsWith("/") && !retornoUrl.startsWith("//")) {
+    return retornoUrl;
+  }
+  if (draft && draft.barbearia_slug) {
+    return `/reservar/${draft.barbearia_slug}`;
+  }
+  return "/perfil";
+}
+

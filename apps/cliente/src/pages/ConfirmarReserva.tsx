@@ -70,7 +70,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
 
       if (!session) {
         // Redireciona para entrar se por algum motivo a sessão não existir
-        navigate(`/entrar?retorno=/reservar/${slug}/confirmar`);
+        navigate(`/entrar?retorno=${encodeURIComponent(`/reservar/${slug}/confirmar`)}`);
         return;
       }
 
@@ -486,9 +486,14 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           <AlertDescription>{erro}</AlertDescription>
         </Alert>
       )}
-      <Link to="/barbearias">
-        <Button variante="secundario">Explorar outras barbearias</Button>
-      </Link>
+      <div className="flex items-center gap-3">
+        <Link to={`/reservar/${slug}`}>
+          <Button variante="principal">Voltar para o agendamento</Button>
+        </Link>
+        <Link to="/barbearias">
+          <Button variante="secundario">Explorar outras barbearias</Button>
+        </Link>
+      </div>
     </div>
   );
 }

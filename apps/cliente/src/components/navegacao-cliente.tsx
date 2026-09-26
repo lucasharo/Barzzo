@@ -64,6 +64,11 @@ export function NavegacaoCliente() {
 
   const itensNav = usuario ? itensAutenticados : [];
 
+  const rotaLoginComRetorno =
+    pathname && pathname !== "/" && pathname !== "/entrar" && pathname !== "/cadastro"
+      ? `/entrar?retorno=${encodeURIComponent(pathname)}`
+      : "/entrar";
+
   return (
     <>
       {/* Header Principal */}
@@ -108,7 +113,7 @@ export function NavegacaoCliente() {
                   Sair
                 </Button>
               ) : (
-                <Link to="/entrar">
+                <Link to={rotaLoginComRetorno}>
                   <Button variante="principal" tamanho="sm">
                     Entrar
                   </Button>
@@ -152,7 +157,7 @@ export function NavegacaoCliente() {
                 Sair da Conta
               </Button>
             ) : (
-              <Link to="/entrar" className="w-full">
+              <Link to={rotaLoginComRetorno} className="w-full">
                 <Button
                   variante="principal"
                   tamanho="md"
@@ -234,7 +239,7 @@ export function NavegacaoCliente() {
             icone={LogIn}
             rotulo="Entrar"
             ativo={pathname === "/entrar"}
-            onClick={() => navigate("/entrar")}
+            onClick={() => navigate(rotaLoginComRetorno)}
           />
         )}
       </BottomNav>

@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -16,9 +16,18 @@ import {
 import { esquemaLogin } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro } from "@barzzo/utilitarios";
+import { obterRascunhoReserva, calcularDestinoAposAuth } from "@barzzo/dominio";
+import { Sparkles } from "lucide-react";
 
 export default function PaginaEntrar() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const retornoUrl = searchParams.get("retorno");
+
+  const draft = React.useMemo(() => {
+    return typeof window !== "undefined" ? obterRascunhoReserva() : null;
+  }, []);
+
   const [email, setEmail] = React.useState("");
   const [senha, setSenha] = React.useState("");
   const [carregando, setCarregando] = React.useState(false);
@@ -52,8 +61,9 @@ export default function PaginaEntrar() {
 
       if (data.session) {
         setSucesso("Conectado com sucesso! Redirecionando...");
+        const destino = calcularDestinoAposAuth(retornoUrl, draft);
         setTimeout(() => {
-          navigate("/perfil");
+          navigate(destino);
         }, 800);
       }
     } catch (err: unknown) {
@@ -74,6 +84,20 @@ export default function PaginaEntrar() {
         </CardHeader>
 
         <CardContent>
+          {draft && (
+            <div className="mb-4 p-3.5 rounded-xl border border-[#B45A2B]/20 bg-[#B45A2B]/5 flex items-start gap-3">
+              <div className="p-1 rounded-full bg-[#B45A2B]/10 text-[#B45A2B] shrink-0 mt-0.5">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="text-xs">
+                <span className="font-bold text-sm block text-[#B45A2B]">
+                  Conclua seu agendamento
+                </span>
+                Faça login para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {draft.data} às {draft.horario}).
+              </div>
+            </div>
+          )}
+
           <form onSubmit={lidarComLogin} className="flex flex-col gap-4">
             {erro && (
               <Alert variante="erro">
@@ -140,7 +164,7 @@ export default function PaginaEntrar() {
             <div className="text-center text-sm opacity-80 pt-2">
               Não possui uma conta?{" "}
               <Link
-                to="/cadastro"
+                to={retornoUrl ? `/cadastro?retorno=${encodeURIComponent(retornoUrl)}` : "/cadastro"}
                 className="font-semibold text-[#B45A2B] hover:underline"
               >
                 Cadastre-se

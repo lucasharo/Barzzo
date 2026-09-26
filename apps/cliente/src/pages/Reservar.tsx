@@ -20,6 +20,8 @@ import {
   calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
   salvarRascunhoReserva,
+  obterRascunhoReserva,
+  limparRascunhoReserva,
   calcularDescontoCupom,
 } from "@barzzo/dominio";
 import type {
@@ -157,14 +159,6 @@ function ConteudoWizardReservaCliente() {
       const listaServicos = (sDb || []) as Servico[];
       setServicos(listaServicos);
 
-      if (servicoIdUrl) {
-        const preSel = listaServicos.find((s) => s.id === servicoIdUrl);
-        if (preSel) {
-          setServicoSelecionado(preSel);
-          setPassoAtual(2); // Avança direto para profissional
-        }
-      }
-
       // Profissionais
       const { data: pDb } = await supabase
         .from("profissionais")
@@ -173,7 +167,8 @@ function ConteudoWizardReservaCliente() {
         .eq("ativo", true)
         .order("nome", { ascending: true });
 
-      setProfissionais((pDb || []) as Profissional[]);
+      const listaProfissionais = (pDb || []) as Profissional[];
+      setProfissionais(listaProfissionais);
 
       // Horários
       const { data: hbDb } = await supabase
@@ -194,6 +189,61 @@ function ConteudoWizardReservaCliente() {
       // Vínculos
       const { data: psDb } = await supabase.from("profissionais_servicos").select("profissional_id, servico_id").eq("ativo", true);
       setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
+
+      // Restaurar rascunho de reserva salvo se pertencer a esta barbearia
+      const draft = typeof window !== "undefined" ? obterRascunhoReserva() : null;
+      if (draft && (draft.barbearia_slug === slug || draft.barbearia_id === barb.id)) {
+        const servicoSalvo = listaServicos.find((s) => s.id === draft.servico_id);
+        if (servicoSalvo) {
+          setServicoSelecionado(servicoSalvo);
+
+          if (draft.profissional_id) {
+            const profSalvo = listaProfissionais.find((p) => p.id === draft.profissional_id);
+            if (profSalvo) {
+              setModoProfissional("especifico");
+              setProfissionalSelecionado(profSalvo);
+            }
+          } else {
+            setModoProfissional("qualquer");
+            setProfissionalSelecionado(null);
+          }
+
+          const hojeStr = new Date().toISOString().split("T")[0];
+          if (draft.data && draft.data >= hojeStr) {
+            setDataSelecionada(draft.data);
+          }
+
+          if (draft.horario) {
+            setSlotSelecionado(draft.horario);
+          }
+
+          if (draft.observacoes) {
+            setObservacoes(draft.observacoes);
+          }
+
+          if (draft.codigo_cupom) {
+            setCodigoCupom(draft.codigo_cupom);
+          }
+
+          if (draft.valor_desconto) {
+            setDescontoCalculado(draft.valor_desconto);
+          }
+
+          if (draft.horario) {
+            setPassoAtual(4); // Avança direto para o resumo final
+          } else if (draft.profissional_id || draft.data) {
+            setPassoAtual(3);
+          } else {
+            setPassoAtual(2);
+          }
+        }
+      } else if (servicoIdUrl) {
+        const preSel = listaServicos.find((s) => s.id === servicoIdUrl);
+        if (preSel) {
+          setServicoSelecionado(preSel);
+          setPassoAtual(2); // Avança direto para profissional
+        }
+      }
     } catch {
       setErro("Erro ao inicializar fluxo de reserva.");
     } finally {
@@ -372,6 +422,31 @@ function ConteudoWizardReservaCliente() {
     }
     setErro(null);
     setPassoAtual(4);
+
+    if (barbearia && servicoSelecionado) {
+      const precoOriginal = Number(servicoSelecionado.preco);
+      const precoFinal = Math.max(0, precoOriginal - descontoCalculado);
+
+      const rascunho: RascunhoReserva = {
+        barbearia_id: barbearia.id,
+        barbearia_nome: barbearia.nome,
+        barbearia_slug: barbearia.slug,
+        servico_id: servicoSelecionado.id,
+        servico_nome: servicoSelecionado.nome,
+        preco: precoOriginal,
+        valor_desconto: descontoCalculado > 0 ? descontoCalculado : null,
+        preco_final: precoFinal,
+        duracao_minutos: servicoSelecionado.duracao_minutos,
+        profissional_id: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.id : null,
+        profissional_nome: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.nome : null,
+        data: dataSelecionada,
+        horario: slotSelecionado,
+        observacoes: observacoes ? observacoes : null,
+        codigo_cupom: codigoCupom ? codigoCupom.trim().toUpperCase() : null,
+      };
+      salvarRascunhoReserva(rascunho);
+    }
+
     if (codigoCupom.trim() && !cupomAplicado) {
       aplicarValidarCupom();
     }
@@ -408,7 +483,7 @@ function ConteudoWizardReservaCliente() {
     // Preserva seleção completa no localStorage e redireciona para login/cadastro sem atrito
     if (!usuarioAutenticado) {
       salvarRascunhoReserva(rascunho);
-      const urlRetorno = encodeURIComponent(`/reservar/${barbearia.slug}/confirmar`);
+      const urlRetorno = encodeURIComponent(`/reservar/${barbearia.slug}`);
       navigate(`/entrar?retorno=${urlRetorno}`);
       return;
     }
@@ -534,6 +609,11 @@ function ConteudoWizardReservaCliente() {
             status: "pendente",
           });
         }
+      }
+
+      limparRascunhoReserva();
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("@barzzo:atribuicao_influenciador");
       }
 
       navigate(`/agendamentos/${novoAgendamento.id}?sucesso=true`);
