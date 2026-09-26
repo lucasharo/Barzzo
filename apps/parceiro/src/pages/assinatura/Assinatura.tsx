@@ -179,7 +179,7 @@ export default function PaginaAssinaturaParceiro() {
   }
 
   const emTrial = barbearia.status_assinatura === "trial";
-  const ativa = barbearia.status_assinatura === "ativa";
+  const ativa = barbearia.status_assinatura === "ativa" || barbearia.status_assinatura === "ativo";
   const diasRestantesTrial = calcularDiasRestantes(barbearia.trial_fim);
 
   return (
@@ -210,7 +210,7 @@ export default function PaginaAssinaturaParceiro() {
                   : "bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20"
               }`}
             >
-              {ativa ? "Assinatura Ativa" : emTrial ? "Período de Testes (Trial)" : "Vencida"}
+              {ativa ? "Assinatura Ativa" : emTrial ? "Período de Testes" : "Vencida"}
             </span>
           </div>
           <p className="text-sm opacity-70 mt-1">
@@ -225,7 +225,7 @@ export default function PaginaAssinaturaParceiro() {
             {emTrial ? (
               <>
                 <strong className="block font-bold text-sm">
-                  {diasRestantesTrial} dia(s) restantes de Trial
+                  {diasRestantesTrial} dia(s) restantes de teste
                 </strong>
                 <span>Válido até {new Date(barbearia.trial_fim).toLocaleDateString("pt-BR")}</span>
               </>
@@ -239,7 +239,7 @@ export default function PaginaAssinaturaParceiro() {
             ) : (
               <>
                 <strong className="block font-bold text-sm text-[#DC2626]">
-                  Trial Expirado
+                  Período de Teste Expirado
                 </strong>
                 <span>Contrate um plano abaixo para manter acesso total</span>
               </>

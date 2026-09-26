@@ -100,7 +100,7 @@ export default function PaginaCadastroParceiro() {
           </div>
           <CardTitle className="text-2xl font-bold">Cadastre sua Barbearia</CardTitle>
           <CardDescription>
-            Crie sua conta de parceiro e ganhe 30 dias de trial gratuito sem taxa de adesão.
+            Crie sua conta de parceiro e ganhe 30 dias de teste gratuito sem taxa de adesão.
           </CardDescription>
         </CardHeader>
 

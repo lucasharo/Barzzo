@@ -217,7 +217,7 @@ export default function PaginaOnboarding() {
             Cadastre sua Barbearia no Barzzo
           </h1>
           <p className="text-sm opacity-75 max-w-md mx-auto">
-            Para ativar seu <strong>trial gratuito de 30 dias</strong> e vincular sua barbearia com segurança, você precisa estar conectado à sua conta de parceiro.
+            Para ativar seu <strong>teste gratuito de 30 dias</strong> e vincular sua barbearia com segurança, você precisa estar conectado à sua conta de parceiro.
           </p>
         </div>
 
@@ -510,7 +510,7 @@ export default function PaginaOnboarding() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5 text-[#B45A2B]" />
-              <CardTitle className="text-xl">Passo 3: Equipe e Trial</CardTitle>
+              <CardTitle className="text-xl">Passo 3: Equipe e Teste Gratuito</CardTitle>
             </div>
             <CardDescription>
               Cadastre o primeiro profissional da sua equipe. Você pode convidar mais barbeiros a qualquer momento.
@@ -520,7 +520,7 @@ export default function PaginaOnboarding() {
             <div className="p-4 rounded-lg bg-[#16A34A]/10 border border-[#16A34A]/30 flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-[#16A34A] shrink-0 mt-0.5" />
               <div className="flex flex-col text-sm">
-                <span className="font-semibold text-[#16A34A]">Trial Gratuito de 30 Dias Ativado</span>
+                <span className="font-semibold text-[#16A34A]">Teste Gratuito de 30 Dias Ativado</span>
                 <span className="opacity-80">
                   Sua barbearia recebe 30 dias de acesso completo sem necessidade de cartão de crédito.
                 </span>

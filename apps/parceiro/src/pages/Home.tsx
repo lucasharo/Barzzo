@@ -30,7 +30,7 @@ export default function PaginaInicialParceiro() {
 
         <div className="flex items-center gap-2 text-xs font-semibold text-[#16A34A] pt-1">
           <CheckCircle2 className="h-4 w-4" />
-          <span>30 dias de trial gratuito sem necessidade de cartão</span>
+          <span>30 dias de teste gratuito sem necessidade de cartão</span>
         </div>
       </section>
 
