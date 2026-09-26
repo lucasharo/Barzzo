@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto } from "next/font/google";
 import { NavegacaoAdmin } from "../components/navegacao-admin";
+import { AdminGuard } from "../components/admin-guard";
 import "./globals.css";
 
 const roboto = Roboto({
@@ -25,8 +26,8 @@ export default function LayoutAdmin({
       <body className="min-h-screen flex flex-col bg-[#FFFFFF] text-black dark:bg-[#0A0A0B] dark:text-white transition-colors duration-150">
         <NavegacaoAdmin />
 
-        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 pb-24 md:pb-8">
-          {children}
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-8 pb-24 md:pb-8 flex flex-col">
+          <AdminGuard>{children}</AdminGuard>
         </main>
       </body>
     </html>
