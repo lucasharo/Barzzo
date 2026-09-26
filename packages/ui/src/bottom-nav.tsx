@@ -10,15 +10,20 @@ export interface BottomNavProps {
 
 export function BottomNav({ children, className }: BottomNavProps) {
   return (
-    <nav
-      className={cn(
-        "fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-neutral-200/80 dark:border-neutral-800/80 bg-white/95 dark:bg-[#0A0A0B]/95 backdrop-blur-md px-2 py-1 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))] md:hidden shadow-lg",
-        className
-      )}
-      aria-label="Navegação inferior móvel"
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 md:hidden flex justify-center pointer-events-none"
+      style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
     >
-      {children}
-    </nav>
+      <nav
+        className={cn(
+          "pointer-events-auto flex items-center justify-around gap-1 px-3 py-1.5 rounded-[28px] bg-[#111112]/95 dark:bg-[#111112]/97 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.45)] border border-white/[0.06] mx-4 w-full max-w-sm",
+          className
+        )}
+        aria-label="Navegação inferior móvel"
+      >
+        {children}
+      </nav>
+    </div>
   );
 }
 
@@ -43,10 +48,10 @@ export const BottomNavItem = React.forwardRef<
       onClick={onClick}
       aria-current={ativo ? "page" : undefined}
       className={cn(
-        "relative flex flex-1 flex-col items-center justify-center gap-1 py-1 px-1 min-h-[48px] min-w-[48px] rounded-lg transition-colors select-none",
+        "relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 px-2 min-h-[52px] min-w-[52px] rounded-2xl transition-colors select-none",
         ativo
-          ? "text-[#B45A2B] font-semibold"
-          : "text-neutral-500 hover:text-black dark:text-neutral-400 dark:hover:text-white",
+          ? "text-[#E8734A]"
+          : "text-neutral-400 hover:text-white",
         className
       )}
     >

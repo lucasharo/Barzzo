@@ -1,8 +1,6 @@
-"use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
   Home,
@@ -24,8 +22,8 @@ import {
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 
 export function NavegacaoCliente() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [drawerAberto, setDrawerAberto] = React.useState(false);
   const [usuario, setUsuario] = React.useState<any>(null);
 
@@ -54,12 +52,8 @@ export function NavegacaoCliente() {
     await supabase.auth.signOut();
     setUsuario(null);
     setDrawerAberto(false);
-    router.push("/");
+    navigate("/");
   };
-
-  const itensPublicos = [
-    { href: "/barbearias", rotulo: "Barbearias", icone: Scissors },
-  ];
 
   const itensAutenticados = [
     { href: "/agendamentos", rotulo: "Agendamentos", icone: Calendar },
@@ -68,10 +62,7 @@ export function NavegacaoCliente() {
     { href: "/perfil", rotulo: "Perfil", icone: User },
   ];
 
-  // Somente exibe itens privados se o cliente estiver autenticado
-  const itensNav = usuario
-    ? [...itensPublicos, ...itensAutenticados]
-    : itensPublicos;
+  const itensNav = usuario ? itensAutenticados : [];
 
   return (
     <>
@@ -80,7 +71,7 @@ export function NavegacaoCliente() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link
-            href="/"
+            to="/"
             className="text-2xl font-bold tracking-wider text-[#B45A2B] hover:opacity-90 transition-opacity flex items-center gap-2"
           >
             BARZZO
@@ -95,7 +86,7 @@ export function NavegacaoCliente() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`px-3 py-1.5 rounded-lg transition-colors ${
                       ativo
                         ? "text-[#B45A2B] font-semibold bg-[#B45A2B]/10"
@@ -117,7 +108,7 @@ export function NavegacaoCliente() {
                   Sair
                 </Button>
               ) : (
-                <Link href="/entrar">
+                <Link to="/entrar">
                   <Button variante="principal" tamanho="sm">
                     Entrar
                   </Button>
@@ -161,7 +152,7 @@ export function NavegacaoCliente() {
                 Sair da Conta
               </Button>
             ) : (
-              <Link href="/entrar" className="w-full">
+              <Link to="/entrar" className="w-full">
                 <Button
                   variante="principal"
                   tamanho="md"
@@ -177,7 +168,7 @@ export function NavegacaoCliente() {
       >
         <div className="flex flex-col gap-1 py-2">
           <Link
-            href="/"
+            to="/"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
               pathname === "/"
                 ? "bg-[#B45A2B]/10 text-[#B45A2B] font-semibold"
@@ -194,7 +185,7 @@ export function NavegacaoCliente() {
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                to={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   ativo
                     ? "bg-[#B45A2B]/10 text-[#B45A2B] font-semibold"
@@ -214,14 +205,8 @@ export function NavegacaoCliente() {
         <BottomNavItem
           icone={Home}
           rotulo="Início"
-          ativo={pathname === "/"}
-          onClick={() => router.push("/")}
-        />
-        <BottomNavItem
-          icone={Scissors}
-          rotulo="Barbearias"
-          ativo={pathname === "/barbearias" || pathname.startsWith("/barbearias/")}
-          onClick={() => router.push("/barbearias")}
+          ativo={pathname === "/" || pathname === "/barbearias"}
+          onClick={() => navigate("/")}
         />
         {usuario ? (
           <>
@@ -229,19 +214,19 @@ export function NavegacaoCliente() {
               icone={Calendar}
               rotulo="Agenda"
               ativo={pathname === "/agendamentos" || pathname.startsWith("/agendamentos/")}
-              onClick={() => router.push("/agendamentos")}
+              onClick={() => navigate("/agendamentos")}
             />
             <BottomNavItem
               icone={Heart}
               rotulo="Favoritos"
               ativo={pathname === "/favoritos"}
-              onClick={() => router.push("/favoritos")}
+              onClick={() => navigate("/favoritos")}
             />
             <BottomNavItem
               icone={User}
               rotulo="Perfil"
               ativo={pathname === "/perfil"}
-              onClick={() => router.push("/perfil")}
+              onClick={() => navigate("/perfil")}
             />
           </>
         ) : (
@@ -249,7 +234,7 @@ export function NavegacaoCliente() {
             icone={LogIn}
             rotulo="Entrar"
             ativo={pathname === "/entrar"}
-            onClick={() => router.push("/entrar")}
+            onClick={() => navigate("/entrar")}
           />
         )}
       </BottomNav>

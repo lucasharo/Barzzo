@@ -1,8 +1,6 @@
-"use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Menu,
   LayoutDashboard,
@@ -33,8 +31,8 @@ import {
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 
 export function NavegacaoParceiro() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [drawerAberto, setDrawerAberto] = React.useState(false);
 
   // Fechar drawer ao mudar de rota
@@ -46,7 +44,7 @@ export function NavegacaoParceiro() {
     const supabase = criarClienteSupabaseBrowser();
     await supabase.auth.signOut();
     setDrawerAberto(false);
-    router.push("/");
+    navigate("/");
   };
 
   const secoesMenu = [
@@ -104,7 +102,7 @@ export function NavegacaoParceiro() {
       <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 lg:gap-6">
-            <Link href="/painel" className="flex items-center gap-2">
+            <Link to="/painel" className="flex items-center gap-2">
               <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
                 BARZZO
               </span>
@@ -120,7 +118,7 @@ export function NavegacaoParceiro() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`px-3 py-1.5 rounded-md transition-colors ${
                       ativo
                         ? "bg-[#B45A2B]/10 text-[#B45A2B] font-semibold"
@@ -195,7 +193,7 @@ export function NavegacaoParceiro() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    to={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       ativo
                         ? "bg-[#B45A2B]/15 text-[#B45A2B] font-semibold"
@@ -218,25 +216,25 @@ export function NavegacaoParceiro() {
           icone={LayoutDashboard}
           rotulo="Painel"
           ativo={pathname === "/painel"}
-          onClick={() => router.push("/painel")}
+          onClick={() => navigate("/painel")}
         />
         <BottomNavItem
           icone={Calendar}
           rotulo="Agenda"
           ativo={pathname === "/agenda" || pathname.startsWith("/agenda/")}
-          onClick={() => router.push("/agenda")}
+          onClick={() => navigate("/agenda")}
         />
         <BottomNavItem
           icone={Users}
           rotulo="Clientes"
           ativo={pathname === "/clientes" || pathname.startsWith("/clientes/")}
-          onClick={() => router.push("/clientes")}
+          onClick={() => navigate("/clientes")}
         />
         <BottomNavItem
           icone={BarChart3}
           rotulo="Relatórios"
           ativo={pathname === "/relatorios"}
-          onClick={() => router.push("/relatorios")}
+          onClick={() => navigate("/relatorios")}
         />
         <BottomNavItem
           icone={Menu}

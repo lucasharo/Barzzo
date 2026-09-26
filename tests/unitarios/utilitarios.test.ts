@@ -105,4 +105,12 @@ describe("Utilitários e Formatadores", () => {
       expect(traduzirErro(msgPt)).toBe(msgPt);
     });
   });
+
+  describe("geocodificarEndereco", () => {
+    it("deve retornar null para strings vazias ou com espaços em branco", async () => {
+      const { geocodificarEndereco } = await import("@barzzo/utilitarios");
+      expect(await geocodificarEndereco("")).toBeNull();
+      expect(await geocodificarEndereco("   ")).toBeNull();
+    });
+  });
 });

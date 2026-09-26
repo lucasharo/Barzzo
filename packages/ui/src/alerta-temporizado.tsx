@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { cn } from "@barzzo/utilitarios";
@@ -39,11 +39,16 @@ export const AlertaTemporizado = React.forwardRef<
     const [tempoRestanteMs, setTempoRestanteMs] = React.useState(duracaoMs);
     const [emPausa, setEmPausa] = React.useState(false);
     const aoExpirarRef = React.useRef(aoExpirar);
-    aoExpirarRef.current = aoExpirar;
+    const jaDisparouRef = React.useRef(false);
+
+    React.useEffect(() => {
+      aoExpirarRef.current = aoExpirar;
+    }, [aoExpirar]);
 
     // Reinicia o tempo se duracaoMs mudar
     React.useEffect(() => {
       setTempoRestanteMs(duracaoMs);
+      jaDisparouRef.current = false;
     }, [duracaoMs]);
 
     // Loop de contagem regressiva suave
@@ -57,18 +62,21 @@ export const AlertaTemporizado = React.forwardRef<
         ultimoTimestamp = agora;
 
         setTempoRestanteMs((prev) => {
-          const proximo = Math.max(0, prev - delta);
-          if (proximo <= 0) {
-            clearInterval(intervalo);
-            aoExpirarRef.current?.();
-            return 0;
-          }
-          return proximo;
+          if (prev <= 0) return 0;
+          return Math.max(0, prev - delta);
         });
       }, 50);
 
       return () => clearInterval(intervalo);
     }, [emPausa]);
+
+    // Dispara aoExpirar de forma limpa e assíncrona após o render quando o tempo esgota
+    React.useEffect(() => {
+      if (tempoRestanteMs <= 0 && !jaDisparouRef.current) {
+        jaDisparouRef.current = true;
+        aoExpirarRef.current?.();
+      }
+    }, [tempoRestanteMs]);
 
     const icones = {
       info: <Info className="h-5 w-5 text-[#2563EB] shrink-0" />,
