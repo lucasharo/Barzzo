@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardDescription,
   Alert,
+  AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
@@ -298,17 +299,15 @@ export default function PaginaFichaClienteCRM() {
       </div>
 
       {erro && (
-        <Alert variante="erro">
-          <AlertCircle className="w-4 h-4 mr-2" />
+        <AlertaTemporizado variante="erro" duracaoMs={6000} aoExpirar={() => setErro(null)}>
           <AlertDescription>{erro}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {sucesso && (
-        <Alert variante="sucesso">
-          <CheckCircle2 className="w-4 h-4 mr-2" />
+        <AlertaTemporizado variante="sucesso" duracaoMs={5000} aoExpirar={() => setSucesso(null)}>
           <AlertDescription>{sucesso}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {/* Header do Cliente */}

@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardDescription,
   Alert,
+  AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
@@ -184,17 +185,15 @@ export default function PaginaAssinaturaParceiro() {
   return (
     <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto">
       {erro && (
-        <Alert variante="erro">
-          <AlertCircle className="h-4 w-4" />
+        <AlertaTemporizado variante="erro" duracaoMs={6000} aoExpirar={() => setErro(null)}>
           <AlertDescription>{erro}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {sucesso && (
-        <Alert variante="sucesso" className="border-[#16A34A]/30 bg-[#16A34A]/10 text-[#16A34A]">
-          <CheckCircle2 className="h-4 w-4 text-[#16A34A]" />
+        <AlertaTemporizado variante="sucesso" duracaoMs={5000} aoExpirar={() => setSucesso(null)}>
           <AlertDescription>{sucesso}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {/* Cabeçalho */}

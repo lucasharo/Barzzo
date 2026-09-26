@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardDescription,
   Alert,
+  AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
@@ -56,7 +57,7 @@ export default function PaginaProdutosParceiro() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_equipe") as any)
+      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
         .select("barbearia_id")
         .eq("usuario_id", session.user.id)
         .eq("ativo", true)
@@ -166,17 +167,15 @@ export default function PaginaProdutosParceiro() {
       </div>
 
       {erro && (
-        <Alert variante="erro">
-          <AlertCircle className="w-4 h-4 mr-2" />
+        <AlertaTemporizado variante="erro" duracaoMs={6000} aoExpirar={() => setErro(null)}>
           <AlertDescription>{erro}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {sucesso && (
-        <Alert variante="sucesso">
-          <CheckCircle2 className="w-4 h-4 mr-2" />
+        <AlertaTemporizado variante="sucesso" duracaoMs={5000} aoExpirar={() => setSucesso(null)}>
           <AlertDescription>{sucesso}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {/* Busca */}

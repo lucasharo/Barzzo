@@ -1,15 +1,17 @@
 import { createBrowserClient } from "@supabase/ssr";
-import type { Database } from "@barzzo/tipos";
 
 export function criarClienteSupabaseBrowser() {
+  const envVite = typeof globalThis !== "undefined" ? (globalThis as any).import?.meta?.env : undefined;
+
   const url =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) ||
-    (typeof import.meta !== "undefined" && (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_URL) ||
+    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+    envVite?.NEXT_PUBLIC_SUPABASE_URL ||
     "https://gdgeokfwkbusemayqucb.supabase.co";
 
   const chave =
-    (typeof process !== "undefined" && (process.env.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
-    (typeof import.meta !== "undefined" && ((import.meta as any).env?.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
+    (typeof process !== "undefined" && (process.env?.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
+    envVite?.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA ||
+    envVite?.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "sb_publishable_NiZkUufBW9bn3y1V2NWt2w_IuRdQUjd";
 
   return createBrowserClient<any>(url, chave);
