@@ -1,41 +1,16 @@
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Carregar configuração unificada de .env.local ou local.env na raiz do monorepo
-function carregarEnvRaiz() {
-  const caminhos = [
-    path.resolve(__dirname, "../../.env.local"),
-    path.resolve(__dirname, "../../local.env"),
-    path.resolve(__dirname, "../../.env"),
-  ];
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  "https://gdgeokfwkbusemayqucb.supabase.co";
 
-  for (const caminho of caminhos) {
-    if (fs.existsSync(caminho)) {
-      const linhas = fs.readFileSync(caminho, "utf-8").split("\n");
-      for (const linha of linhas) {
-        const l = linha.trim();
-        if (l && !l.startsWith("#")) {
-          const sep = l.indexOf("=");
-          if (sep > -1) {
-            const k = l.slice(0, sep).trim();
-            let v = l.slice(sep + 1).trim();
-            if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
-              v = v.slice(1, -1);
-            }
-            if (k && v && !process.env[k]) {
-              process.env[k] = v;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-carregarEnvRaiz();
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "sb_publishable_NiZkUufBW9bn3y1V2NWt2w_IuRdQUjd";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -49,6 +24,25 @@ const nextConfig = {
     "@barzzo/tipos",
     "@barzzo/dominio",
   ],
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
+    NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA: supabaseKey,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseKey,
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": path.resolve(__dirname, "./src"),
+      "@barzzo/ui": path.resolve(__dirname, "../../packages/ui/src"),
+      "@barzzo/utilitarios": path.resolve(__dirname, "../../packages/utilitarios/src"),
+      "@barzzo/validacoes": path.resolve(__dirname, "../../packages/validacoes/src"),
+      "@barzzo/imagens": path.resolve(__dirname, "../../packages/imagens/src"),
+      "@barzzo/supabase": path.resolve(__dirname, "../../packages/supabase/src"),
+      "@barzzo/tipos": path.resolve(__dirname, "../../packages/tipos/src"),
+      "@barzzo/dominio": path.resolve(__dirname, "../../packages/dominio/src"),
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

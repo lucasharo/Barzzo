@@ -7,7 +7,14 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@barzzo/ui": ["../../packages/ui/src"],
+      "@barzzo/utilitarios": ["../../packages/utilitarios/src"],
+      "@barzzo/validacoes": ["../../packages/validacoes/src"],
+      "@barzzo/imagens": ["../../packages/imagens/src"],
+      "@barzzo/supabase": ["../../packages/supabase/src"],
+      "@barzzo/tipos": ["../../packages/tipos/src"],
+      "@barzzo/dominio": ["../../packages/dominio/src"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

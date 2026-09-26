@@ -3,14 +3,14 @@ import type { Database } from "@barzzo/tipos";
 
 export function criarClienteSupabaseBrowser() {
   const url =
-    (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SUPABASE_URL) ||
     (typeof import.meta !== "undefined" && (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_URL) ||
-    "https://exemplo-barzzo.supabase.co";
+    "https://gdgeokfwkbusemayqucb.supabase.co";
 
   const chave =
-    (typeof process !== "undefined" && (process.env?.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
+    (typeof process !== "undefined" && (process.env.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
     (typeof import.meta !== "undefined" && ((import.meta as any).env?.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA || (import.meta as any).env?.NEXT_PUBLIC_SUPABASE_ANON_KEY)) ||
-    "exemplo-chave-publica-barzzo";
+    "sb_publishable_NiZkUufBW9bn3y1V2NWt2w_IuRdQUjd";
 
   return createBrowserClient<any>(url, chave);
 }
