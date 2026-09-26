@@ -1,5 +1,5 @@
 {
-  "ignoreCommand": "bash -c 'if [[ \"$VERCEL_GIT_COMMIT_REF\" =~ ^release/ || \"$VERCEL_GIT_COMMIT_REF\" == \"main\" ]]; then exit 1; else exit 0; fi'",
+  "ignoreCommand": "node -e \"const ref=process.env.VERCEL_GIT_COMMIT_REF||''; process.exit(/^release\\//.test(ref)||ref==='main'?1:0)\"",
   "rewrites": [
     {
       "source": "/(.*)",
