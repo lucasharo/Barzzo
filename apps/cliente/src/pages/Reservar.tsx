@@ -767,9 +767,7 @@ function ConteudoWizardReservaCliente() {
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
-                  <Sparkles className="h-6 w-6" />
-                </div>
+                <Sparkles className="h-7 w-7 text-[#B45A2B] shrink-0" />
                 <div>
                   <span className="font-bold text-base block">Qualquer Profissional Disponível</span>
                   <span className="text-xs opacity-70">

@@ -413,9 +413,7 @@ function ConteudoPerfilPublicoBarbearia() {
                 >
                   <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B] shrink-0">
-                        <Scissors className="h-5 w-5" />
-                      </div>
+                      <Scissors className="h-6 w-6 text-[#B45A2B] shrink-0 mt-0.5" />
                       <div className="flex flex-col">
                         <h3 className="font-bold text-base">{servico.nome}</h3>
                         {servico.descricao && (

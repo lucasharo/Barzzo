@@ -220,30 +220,30 @@ export default function PaginaInicialCliente() {
       {/* Como Funciona o Barzzo */}
       <section className="py-8 border-t border-neutral-200 dark:border-neutral-800 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="flex flex-col gap-2 p-4 rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-lg bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B] font-bold">
-            1
-          </div>
-          <h4 className="font-bold text-base mt-2">Escolha o serviço e horário</h4>
+          <span className="text-2xl font-black text-[#B45A2B]">
+            01
+          </span>
+          <h4 className="font-bold text-base mt-1">Escolha o serviço e horário</h4>
           <p className="text-xs opacity-70">
             Navegue pelos serviços, preços e selecione o horário disponível que melhor se encaixa no seu dia.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 p-4 rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-lg bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B] font-bold">
-            2
-          </div>
-          <h4 className="font-bold text-base mt-2">Identificação apenas no final</h4>
+          <span className="text-2xl font-black text-[#B45A2B]">
+            02
+          </span>
+          <h4 className="font-bold text-base mt-1">Identificação apenas no final</h4>
           <p className="text-xs opacity-70">
             Nenhuma barreira de login prévio. Você monta seu agendamento e só precisa se identificar no resumo.
           </p>
         </div>
 
         <div className="flex flex-col gap-2 p-4 rounded-xl bg-neutral-50/50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800">
-          <div className="h-10 w-10 rounded-lg bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B] font-bold">
-            3
-          </div>
-          <h4 className="font-bold text-base mt-2">Chegue e seja atendido</h4>
+          <span className="text-2xl font-black text-[#B45A2B]">
+            03
+          </span>
+          <h4 className="font-bold text-base mt-1">Chegue e seja atendido</h4>
           <p className="text-xs opacity-70">
             Sem filas ou espera demorada. A barbearia recebe seu agendamento na hora com confirmação instantânea.
           </p>

@@ -354,9 +354,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
   if (concluido) {
     return (
       <div className="max-w-xl mx-auto py-12 flex flex-col items-center text-center gap-6">
-        <div className="h-16 w-16 rounded-full bg-[#16A34A]/10 text-[#16A34A] flex items-center justify-center border border-[#16A34A]/20">
-          <CheckCircle className="h-8 w-8" />
-        </div>
+        <CheckCircle className="h-16 w-16 text-[#16A34A]" />
 
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#16A34A]">

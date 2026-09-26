@@ -996,9 +996,7 @@ function ConteudoListagemBarbearias() {
       ) : barbearias.length === 0 ? (
         <Card camada="primaria" className="text-center py-16">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
-              <Scissors className="h-6 w-6" />
-            </div>
+            <Scissors className="h-12 w-12 text-[#B45A2B]" />
             <div className="flex flex-col gap-1">
               <h3 className="font-semibold text-lg">Nenhuma barbearia encontrada</h3>
               <p className="text-sm opacity-70 max-w-sm">

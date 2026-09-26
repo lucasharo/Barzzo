@@ -125,9 +125,7 @@ export default function PaginaFavoritosCliente() {
     return (
       <div className="container mx-auto px-4 py-16 max-w-md">
         <Card className="text-center p-8 border-neutral-200 dark:border-neutral-800">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-4">
-            <Heart className="w-8 h-8 fill-current" />
-          </div>
+          <Heart className="w-12 h-12 text-red-500 fill-current mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Suas Barbearias Favoritas</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">
             Faça login para salvar suas barbearias preferidas e agendar com rapidez a qualquer momento.
@@ -184,9 +182,7 @@ export default function PaginaFavoritosCliente() {
       {/* Lista de Favoritos */}
       {favoritos.length === 0 ? (
         <Card className="text-center py-16 px-4 border-dashed border-2 border-neutral-200 dark:border-neutral-800">
-          <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto mb-3">
-            <Heart className="w-7 h-7" />
-          </div>
+          <Heart className="w-10 h-10 text-red-500 mx-auto mb-3" />
           <h3 className="text-lg font-semibold mb-1">Nenhuma barbearia favoritada ainda</h3>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto mb-6">
             Ao visitar o perfil de uma barbearia que você gosta, clique no ícone de coração para salvá-la aqui.

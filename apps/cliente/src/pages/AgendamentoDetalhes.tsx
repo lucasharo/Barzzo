@@ -348,9 +348,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
           <Card className="border-neutral-200 dark:border-neutral-800">
             <CardContent className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-5 h-5" />
-                </div>
+                <Calendar className="w-6 h-6 text-copper-600 dark:text-copper-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs font-medium text-neutral-400 block">Data</span>
                   <span className="font-semibold capitalize text-neutral-800 dark:text-neutral-200">
@@ -360,9 +358,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
+                <Clock className="w-6 h-6 text-copper-600 dark:text-copper-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs font-medium text-neutral-400 block">Horário</span>
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200">
@@ -380,9 +376,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
           {agendamento.profissionais && (
             <Card className="border-neutral-200 dark:border-neutral-800">
               <CardContent className="p-5 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5" />
-                </div>
+                <User className="w-6 h-6 text-copper-600 dark:text-copper-400 flex-shrink-0" />
                 <div>
                   <span className="text-xs font-medium text-neutral-400 block">Profissional Responsável</span>
                   <span className="font-semibold text-neutral-800 dark:text-neutral-200">

@@ -47,8 +47,9 @@ export const BottomNavItem = React.forwardRef<
       type="button"
       onClick={onClick}
       aria-current={ativo ? "page" : undefined}
+      style={{ WebkitTapHighlightColor: "transparent" }}
       className={cn(
-        "relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 px-2 min-h-[52px] min-w-[52px] rounded-2xl transition-colors select-none",
+        "relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 px-2 min-h-[52px] min-w-[52px] rounded-2xl transition-colors select-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 active:outline-none border-0 ring-0",
         ativo
           ? "text-[#E8734A]"
           : "text-neutral-400 hover:text-white",

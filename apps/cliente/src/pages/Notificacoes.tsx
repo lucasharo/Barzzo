@@ -182,9 +182,7 @@ export default function PaginaNotificacoesCliente() {
   if (!usuarioAutenticado) {
     return (
       <div className="flex-1 max-w-md mx-auto py-16 flex flex-col items-center text-center gap-6">
-        <div className="h-16 w-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center opacity-60">
-          <Bell className="h-8 w-8" />
-        </div>
+        <Bell className="h-14 w-14 opacity-60" />
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold">Central de Notificações</h1>
           <p className="text-sm opacity-70">
@@ -266,9 +264,7 @@ export default function PaginaNotificacoesCliente() {
           {notificacoes.length === 0 ? (
             <Card className="border border-neutral-200/80 dark:border-neutral-800 text-center py-16">
               <CardContent className="flex flex-col items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center opacity-50">
-                  <Bell className="h-6 w-6" />
-                </div>
+                <Bell className="h-10 w-10 opacity-50" />
                 <p className="font-semibold text-base">Tudo limpo por aqui!</p>
                 <p className="text-xs opacity-60 max-w-sm">
                   Você não possui notificações pendentes no momento.
@@ -288,7 +284,7 @@ export default function PaginaNotificacoesCliente() {
                   }`}
                 >
                   <CardContent className="p-4 sm:p-5 flex items-start gap-4">
-                    <div className="p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 shrink-0 mt-0.5">
+                    <div className="shrink-0 mt-0.5">
                       {obterIconeTipo(n.tipo)}
                     </div>
 

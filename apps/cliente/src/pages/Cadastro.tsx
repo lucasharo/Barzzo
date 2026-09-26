@@ -110,9 +110,7 @@ export default function PaginaCadastro() {
         <CardContent>
           {draft && (
             <div className="mb-4 p-3.5 rounded-xl border border-[#B45A2B]/20 bg-[#B45A2B]/5 flex items-start gap-3">
-              <div className="p-1 rounded-full bg-[#B45A2B]/10 text-[#B45A2B] shrink-0 mt-0.5">
-                <Sparkles className="h-4 w-4" />
-              </div>
+              <Sparkles className="h-5 w-5 text-[#B45A2B] shrink-0 mt-0.5" />
               <div className="text-xs">
                 <span className="font-bold text-sm block text-[#B45A2B]">
                   Conclua seu agendamento

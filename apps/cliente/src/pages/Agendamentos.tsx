@@ -205,9 +205,7 @@ export default function PaginaMeusAgendamentos() {
     return (
       <div className="container mx-auto px-4 py-16 max-w-lg">
         <Card className="text-center p-8 border-neutral-200 dark:border-neutral-800">
-          <div className="w-16 h-16 rounded-full bg-copper-500/10 text-copper-600 dark:text-copper-400 flex items-center justify-center mx-auto mb-4">
-            <Calendar className="w-8 h-8" />
-          </div>
+          <Calendar className="w-12 h-12 text-[#B45A2B] mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Acesse seus agendamentos</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">
             Faça login na sua conta do Barzzo para visualizar seus horários reservados, histórico de cortes e detalhes de contato.
@@ -296,9 +294,7 @@ export default function PaginaMeusAgendamentos() {
       {/* Lista de Agendamentos */}
       {listaAtual.length === 0 ? (
         <Card className="text-center py-12 px-4 border-dashed border-2 border-neutral-200 dark:border-neutral-800">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-400 flex items-center justify-center mx-auto mb-3">
-            <Calendar className="w-6 h-6" />
-          </div>
+          <Calendar className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
           <h3 className="text-base font-semibold mb-1">
             {abaAtiva === "proximos"
               ? "Nenhum agendamento futuro"
@@ -384,9 +380,7 @@ export default function PaginaMeusAgendamentos() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 py-3 border-y border-neutral-100 dark:border-neutral-800 text-sm">
                     {/* Data e Horário */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-4 h-4" />
-                      </div>
+                      <Clock className="w-5 h-5 text-copper-600 dark:text-copper-400 flex-shrink-0" />
                       <div>
                         <span className="text-xs text-neutral-400 block font-medium">Quando</span>
                         <span className="font-medium capitalize text-neutral-800 dark:text-neutral-200">
@@ -400,9 +394,7 @@ export default function PaginaMeusAgendamentos() {
 
                     {/* Serviços */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                        <Scissors className="w-4 h-4" />
-                      </div>
+                      <Scissors className="w-5 h-5 text-copper-600 dark:text-copper-400 flex-shrink-0" />
                       <div className="truncate">
                         <span className="text-xs text-neutral-400 block font-medium">Serviços</span>
                         <span className="font-medium text-neutral-800 dark:text-neutral-200 block truncate">
@@ -420,9 +412,7 @@ export default function PaginaMeusAgendamentos() {
 
                     {/* Profissional */}
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-lg bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4" />
-                      </div>
+                      <User className="w-5 h-5 text-copper-600 dark:text-copper-400 flex-shrink-0" />
                       <div>
                         <span className="text-xs text-neutral-400 block font-medium">Profissional</span>
                         <span className="font-medium text-neutral-800 dark:text-neutral-200">

@@ -232,9 +232,7 @@ export default function PaginaAvaliacaoAtendimento() {
       {/* Cartão de Resumo do Atendimento */}
       <Card className="p-5 mb-6 border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-copper-50 dark:bg-copper-950/40 text-copper-600 dark:text-copper-400 flex items-center justify-center font-bold">
-            <Building2 className="w-5 h-5" />
-          </div>
+          <Building2 className="w-6 h-6 text-copper-600 dark:text-copper-400 shrink-0" />
           <div>
             <h2 className="font-bold text-base">{agendamento.barbearias?.nome}</h2>
             <p className="text-xs text-neutral-500 flex items-center gap-2 mt-0.5">
@@ -249,9 +247,7 @@ export default function PaginaAvaliacaoAtendimento() {
       {/* Caso 1: Atendimento não elegível para avaliação */}
       {!checagemElegibilidade.elegivel ? (
         <Card className="text-center p-8 border-neutral-200 dark:border-neutral-800">
-          <div className="w-12 h-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mx-auto mb-3">
-            <AlertCircle className="w-6 h-6" />
-          </div>
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-3" />
           <h3 className="text-lg font-bold mb-1">Avaliação Indisponível</h3>
           <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6">
             {checagemElegibilidade.motivo}
