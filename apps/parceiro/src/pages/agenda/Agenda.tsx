@@ -285,39 +285,39 @@ export default function PaginaAgendaParceiro() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 p-1">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 p-1 shrink-0">
             <button
               onClick={() => navegarData(-1)}
-              className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+              className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
               title="Dia anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <button
               onClick={irParaHoje}
-              className="px-2.5 py-1 text-xs font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded transition-colors"
+              className="px-2.5 py-1 text-xs font-semibold hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded transition-colors min-h-[36px]"
             >
               Hoje
             </button>
             <button
               onClick={() => navegarData(1)}
-              className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+              className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
               title="Próximo dia"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          <div className="w-64 sm:w-72">
+          <div className="flex-1 min-w-[200px] sm:w-64">
             <SeletorData
               valor={dataSelecionada}
               aoMudar={(d) => setDataSelecionada(d)}
             />
           </div>
 
-          <Link to="/agendamentos/novo">
-            <Button variante="principal" tamanho="sm">
+          <Link to="/agendamentos/novo" className="w-full sm:w-auto">
+            <Button variante="principal" tamanho="sm" className="w-full min-h-[44px]">
               <Plus className="h-4 w-4 mr-1.5" /> Novo Agendamento
             </Button>
           </Link>

@@ -367,7 +367,7 @@ export default function PaginaRelatoriosParceiro() {
       </Card>
 
       {/* Navegação por Abas */}
-      <div className="flex items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
         <button
           type="button"
           onClick={() => setAbaAtiva("geral")}

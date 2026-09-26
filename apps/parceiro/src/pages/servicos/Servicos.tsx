@@ -209,14 +209,14 @@ export default function PaginaServicosParceiro() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link to="/horarios">
-            <Button variante="secundario" tamanho="sm">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link to="/horarios" className="flex-1 sm:flex-initial">
+            <Button variante="secundario" tamanho="sm" className="w-full min-h-[44px]">
               <Clock className="h-4 w-4 mr-1.5" /> Grade de Horários
             </Button>
           </Link>
-          <Link to="/servicos/novo">
-            <Button variante="principal" tamanho="sm">
+          <Link to="/servicos/novo" className="flex-1 sm:flex-initial">
+            <Button variante="principal" tamanho="sm" className="w-full min-h-[44px]">
               <Plus className="h-4 w-4 mr-1.5" /> Novo Serviço
             </Button>
           </Link>

@@ -156,9 +156,9 @@ export default function PaginaEquipe() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link to="/convites">
-            <Button variante="secundario" tamanho="sm">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link to="/convites" className="flex-1 sm:flex-initial">
+            <Button variante="secundario" tamanho="sm" className="w-full min-h-[44px]">
               <Mail className="h-4 w-4 mr-1.5" /> Convidar por E-mail
             </Button>
           </Link>
@@ -166,6 +166,7 @@ export default function PaginaEquipe() {
             variante="principal"
             tamanho="sm"
             onClick={() => setMostrarFormulario(!mostrarFormulario)}
+            className="flex-1 sm:flex-initial min-h-[44px]"
           >
             <UserPlus className="h-4 w-4 mr-1.5" />
             {mostrarFormulario ? "Fechar Formulário" : "Novo Profissional"}

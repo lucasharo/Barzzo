@@ -250,13 +250,13 @@ export default function PaginaHorariosFuncionamento() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={copiarSegundaParaDiasUteis}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] flex items-center gap-1.5 transition-colors"
+            className="w-full sm:w-auto min-h-[44px] text-xs font-semibold px-4.5 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] flex items-center justify-center gap-1.5 transition-colors"
           >
-            <Copy className="h-3.5 w-3.5 text-[#B45A2B]" /> Copiar Segunda p/ Ter-Sex
+            <Copy className="h-4 w-4 text-[#B45A2B]" /> Copiar Segunda p/ Ter-Sex
           </button>
         </div>
       </div>

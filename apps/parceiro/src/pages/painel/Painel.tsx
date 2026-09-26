@@ -298,14 +298,14 @@ export default function PaginaPainelParceiro() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link to="/agenda">
-            <Button variante="principal" tamanho="sm" className="min-h-[44px]">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link to="/agenda" className="flex-1 sm:flex-initial">
+            <Button variante="principal" tamanho="sm" className="w-full min-h-[44px]">
               <Calendar className="mr-2 h-4 w-4" /> Ver Agenda Completa
             </Button>
           </Link>
-          <Link to="/relatorios">
-            <Button variante="secundario" tamanho="sm" className="min-h-[44px]">
+          <Link to="/relatorios" className="flex-1 sm:flex-initial">
+            <Button variante="secundario" tamanho="sm" className="w-full min-h-[44px]">
               <BarChart3 className="mr-2 h-4 w-4" /> Relatórios
             </Button>
           </Link>

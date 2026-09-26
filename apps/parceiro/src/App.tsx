@@ -37,7 +37,7 @@ export default function App() {
   return (
     <>
       <NavegacaoParceiro />
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 pb-24 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10">
         <Routes>
           <Route path="/agenda/bloqueios" element={<PaginaBloqueios />} />
           <Route path="/agenda" element={<PaginaAgenda />} />

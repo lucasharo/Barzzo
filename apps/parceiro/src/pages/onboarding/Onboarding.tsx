@@ -360,8 +360,8 @@ export default function PaginaOnboarding() {
                 <Label htmlFor="slug" obrigatorio>
                   Identificador / URL Amigável
                 </Label>
-                <div className="flex items-center gap-1 text-sm">
-                  <span className="opacity-60">barzzo.com/</span>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 text-sm">
+                  <span className="opacity-60 font-medium">barzzo.com/</span>
                   <Input
                     id="slug"
                     type="text"
@@ -369,6 +369,7 @@ export default function PaginaOnboarding() {
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     required
+                    className="flex-1"
                   />
                 </div>
                 <span className="text-xs opacity-60">
