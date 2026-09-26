@@ -16,6 +16,7 @@ import {
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
 import { calcularEconomiaSemestral } from "@barzzo/dominio";
+import { traduzirErro } from "@barzzo/utilitarios";
 import {
   CreditCard,
   Check,
@@ -137,8 +138,8 @@ export default function PaginaAssinaturaParceiro() {
         `Assinatura do ${plano.nome} (${ciclo === "semestral" ? "Semestral" : "Mensal"}) confirmada com sucesso via Mercado Pago!`
       );
       await carregarDados();
-    } catch {
-      setErro("Não foi possível processar o pagamento da assinatura.");
+    } catch (err: any) {
+      setErro(traduzirErro(err, "Não foi possível processar o pagamento da assinatura."));
     } finally {
       setProcessandoCheckout(false);
     }

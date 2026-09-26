@@ -238,7 +238,7 @@ BEGIN
 
     -- Atualizar status da barbearia
     UPDATE public.barbearias
-    SET status_assinatura = 'ativa',
+    SET status_assinatura = 'ativo',
         atualizado_em = timezone('utc'::text, now())
     WHERE id = p_barbearia_id;
 
