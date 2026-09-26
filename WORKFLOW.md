@@ -42,6 +42,9 @@ Enquanto houver task não concluída:
 ## Bloqueios legítimos
 Credencial indispensável ausente, decisão funcional ausente, risco de perda de dados, serviço essencial indisponível ou mudança arquitetural que invalide decisão aprovada. Bugs normais entram no loop.
 
-## Git
-Base inicial: feature/init.
-Commits pequenos: feat:, fix:, test:, refactor:, docs:, chore:.
+## Git e Ambientes de Deploy
+- `feature/*`: apenas repositório (desenvolvimento local / localhost).
+- `release/*`: deploy no ambiente de Desenvolvimento (Dev).
+- `main`: deploy no ambiente de Produção (PRD).
+- Commits pequenos: feat:, fix:, test:, refactor:, docs:, chore:.
+
