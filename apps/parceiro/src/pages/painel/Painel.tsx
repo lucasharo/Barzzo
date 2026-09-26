@@ -33,6 +33,7 @@ import {
 
 export default function PaginaPainelParceiro() {
   const [carregando, setCarregando] = React.useState(true);
+  const [usuario, setUsuario] = React.useState<any>(null);
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
   const [usuarioPapel, setUsuarioPapel] = React.useState<string>("dono");
   const [profissionalId, setProfissionalId] = React.useState<string | null>(null);
@@ -60,7 +61,12 @@ export default function PaginaPainelParceiro() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) return;
+      if (!session) {
+        setUsuario(null);
+        setBarbearia(null);
+        return;
+      }
+      setUsuario(session.user);
 
       // 1. Obter vínculo do membro com a barbearia
       const { data: membro } = await supabase
@@ -225,20 +231,38 @@ export default function PaginaPainelParceiro() {
   if (!barbearia) {
     return (
       <div className="flex-1 max-w-xl mx-auto py-12 flex flex-col items-center text-center gap-6">
-        <div className="h-16 w-16 rounded-full bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
-          <Store className="h-8 w-8" />
-        </div>
+        <Store className="h-14 w-14 text-[#B45A2B]" />
         <div className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">Bem-vindo ao Barzzo Parceiro</h1>
-          <p className="text-sm opacity-70">
-            Você ainda não possui uma barbearia vinculada. Conclua o onboarding para desbloquear o dashboard operacional.
+          <h1 className="text-2xl font-bold">
+            {usuario ? "Cadastre sua Barbearia" : "Bem-vindo ao Barzzo Parceiro"}
+          </h1>
+          <p className="text-sm opacity-70 max-w-md mx-auto">
+            {usuario
+              ? "Sua conta ainda não possui uma barbearia vinculada. Conclua o onboarding para desbloquear o dashboard operacional."
+              : "Conecte-se à sua conta ou cadastre sua barbearia para gerenciar agendamentos, equipe e faturamento."}
           </p>
         </div>
-        <Link to="/onboarding">
-          <Button variante="principal" tamanho="lg">
-            Iniciar Onboarding <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </Link>
+
+        {usuario ? (
+          <Link to="/onboarding">
+            <Button variante="principal" tamanho="lg" className="min-h-[48px]">
+              Iniciar Onboarding <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        ) : (
+          <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+            <Link to="/entrar" className="w-full sm:w-auto">
+              <Button variante="principal" tamanho="lg" className="w-full min-h-[48px]">
+                Entrar na Minha Conta
+              </Button>
+            </Link>
+            <Link to="/onboarding" className="w-full sm:w-auto">
+              <Button variante="secundario" tamanho="lg" className="w-full min-h-[48px]">
+                Cadastrar Barbearia
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
     );
   }

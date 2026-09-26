@@ -29,6 +29,9 @@ import PaginaProdutos from "./pages/produtos/Produtos";
 import PaginaRelatorios from "./pages/relatorios/Relatorios";
 import PaginaDetalhesServico from "./pages/servicos/Detalhes";
 import PaginaServicos from "./pages/servicos/Servicos";
+import PaginaEntrarParceiro from "./pages/auth/Entrar";
+import PaginaCadastroParceiro from "./pages/auth/Cadastro";
+import PaginaRecuperarSenhaParceiro from "./pages/auth/RecuperarSenha";
 
 export default function App() {
   return (
@@ -58,6 +61,9 @@ export default function App() {
           <Route path="/influenciadores" element={<PaginaInfluenciadores />} />
           <Route path="/notificacoes" element={<PaginaNotificacoes />} />
           <Route path="/onboarding" element={<PaginaOnboarding />} />
+          <Route path="/entrar" element={<PaginaEntrarParceiro />} />
+          <Route path="/cadastro" element={<PaginaCadastroParceiro />} />
+          <Route path="/recuperar-senha" element={<PaginaRecuperarSenhaParceiro />} />
           <Route path="/" element={<PaginaInicialParceiro />} />
           <Route path="/painel" element={<PaginaPainel />} />
           <Route path="/produtos/:id" element={<PaginaDetalhesProduto />} />

@@ -1,6 +1,5 @@
-
 import * as React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -12,14 +11,19 @@ import {
   Label,
   Alert,
   AlertDescription,
+  LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaCriarBarbearia } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { CheckCircle2, Store, MapPin, Users, ArrowRight } from "lucide-react";
+import { CheckCircle2, Store, MapPin, Users, ArrowRight, LogIn, UserPlus } from "lucide-react";
 
 export default function PaginaOnboarding() {
   const navigate = useNavigate();
+  const [carregandoSessao, setCarregandoSessao] = React.useState(true);
+  const [usuario, setUsuario] = React.useState<any>(null);
+  const [barbeariaExistente, setBarbeariaExistente] = React.useState<any>(null);
+
   const [etapa, setEtapa] = React.useState<1 | 2 | 3>(1);
   const [carregando, setCarregando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -40,6 +44,45 @@ export default function PaginaOnboarding() {
 
   // Dados Etapa 3 (Primeiro membro / profissional)
   const [primeiroProfissional, setPrimeiroProfissional] = React.useState("");
+
+  React.useEffect(() => {
+    async function verificarSessao() {
+      try {
+        setCarregandoSessao(true);
+        const supabase = criarClienteSupabaseBrowser();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          setUsuario(session.user);
+          if (session.user.email && !email) {
+            setEmail(session.user.email);
+          }
+
+          // Verificar se já possui barbearia vinculada
+          const { data: membro } = await supabase
+            .from("membros_barbearia")
+            .select("barbearia_id, barbearias (id, nome, slug)")
+            .eq("usuario_id", session.user.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (membro?.barbearias) {
+            setBarbeariaExistente(membro.barbearias);
+          }
+        } else {
+          setUsuario(null);
+        }
+      } catch {
+        // Silencioso
+      } finally {
+        setCarregandoSessao(false);
+      }
+    }
+
+    verificarSessao();
+  }, []);
 
   const gerarSlugAutomatico = (valorNome: string) => {
     setNome(valorNome);
@@ -154,16 +197,113 @@ export default function PaginaOnboarding() {
     }
   };
 
+  if (carregandoSessao) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-20 gap-3">
+        <LoadingSpinner tamanho="lg" className="text-[#B45A2B]" />
+        <p className="text-sm opacity-70">Verificando credenciais de parceiro...</p>
+      </div>
+    );
+  }
+
+  // Se o usuário NÃO está logado, orienta para login ou cadastro antes de preencher o formulário
+  if (!usuario) {
+    return (
+      <div className="flex-1 max-w-xl mx-auto w-full py-12 flex flex-col items-center text-center gap-6">
+        <Store className="h-16 w-16 text-[#B45A2B]" />
+
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            Cadastre sua Barbearia no Barzzo
+          </h1>
+          <p className="text-sm opacity-75 max-w-md mx-auto">
+            Para ativar seu <strong>trial gratuito de 30 dias</strong> e vincular sua barbearia com segurança, você precisa estar conectado à sua conta de parceiro.
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Link to="/entrar?retorno=/onboarding" className="w-full sm:w-auto">
+            <Button variante="principal" tamanho="lg" className="w-full gap-2 min-h-[48px]">
+              <LogIn className="h-5 w-5" /> Já tenho conta (Entrar)
+            </Button>
+          </Link>
+          <Link to="/cadastro?retorno=/onboarding" className="w-full sm:w-auto">
+            <Button variante="secundario" tamanho="lg" className="w-full gap-2 min-h-[48px]">
+              <UserPlus className="h-5 w-5" /> Criar conta grátis
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mt-4 text-left">
+          <div className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+            <span className="font-bold text-xs text-[#B45A2B] block">30 Dias Grátis</span>
+            <span className="text-[11px] opacity-70">Acesso completo sem necessidade de cartão de crédito.</span>
+          </div>
+          <div className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+            <span className="font-bold text-xs text-[#B45A2B] block">Gestão da Equipe</span>
+            <span className="text-[11px] opacity-70">Agendas individuais, serviços e comissões automáticas.</span>
+          </div>
+          <div className="p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50">
+            <span className="font-bold text-xs text-[#B45A2B] block">Sem Complicação</span>
+            <span className="text-[11px] opacity-70">Seus clientes agendam direto pelo app sem login inicial.</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Se o usuário já possui uma barbearia cadastrada
+  if (barbeariaExistente && etapa === 1 && !nome) {
+    return (
+      <div className="flex-1 max-w-lg mx-auto w-full py-12 flex flex-col items-center text-center gap-6">
+        <Store className="h-14 w-14 text-[#B45A2B]" />
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold">Barbearia já cadastrada</h1>
+          <p className="text-sm opacity-70">
+            Sua conta já é proprietária da barbearia <strong>{barbeariaExistente.nome}</strong>.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+          <Link to="/painel" className="w-full sm:w-auto">
+            <Button variante="principal" tamanho="lg" className="w-full">
+              Ir para o Painel Geral
+            </Button>
+          </Link>
+          <Button
+            variante="secundario"
+            tamanho="lg"
+            className="w-full sm:w-auto"
+            onClick={() => setBarbeariaExistente(null)}
+          >
+            Cadastrar outra unidade
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 max-w-2xl mx-auto w-full py-4 flex flex-col gap-8">
       {/* Indicador de progresso */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-2xl md:text-3xl font-bold">Onboarding da sua Barbearia</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-bold">Onboarding da sua Barbearia</h1>
+          <span className="text-xs px-2.5 py-1 rounded bg-[#B45A2B]/10 text-[#B45A2B] font-semibold">
+            Passo {etapa} de 3
+          </span>
+        </div>
         <p className="text-sm opacity-70">
           Configure a sua barbearia para começar a gerenciar sua equipe e receber agendamentos.
         </p>
 
-        <div className="grid grid-cols-3 gap-2 mt-4">
+        {usuario && (
+          <div className="text-xs opacity-75 mt-1">
+            Conectado como: <strong>{usuario.email}</strong>
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-2 mt-2">
           <div
             className={`h-2 rounded-full transition-all ${
               etapa >= 1 ? "bg-[#B45A2B]" : "bg-neutral-200 dark:bg-neutral-800"
