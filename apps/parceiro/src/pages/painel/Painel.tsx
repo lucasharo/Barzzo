@@ -129,8 +129,8 @@ export default function PaginaPainelParceiro() {
         .from("agendamentos")
         .select(`
           id,
-          data_hora_inicio,
-          data_hora_fim,
+          inicio_previsto,
+          fim_previsto,
           status,
           preco_total,
           duracao_total_minutos,
@@ -138,12 +138,12 @@ export default function PaginaPainelParceiro() {
           cliente_telefone,
           observacoes,
           profissionais (id, nome),
-          agendamento_servicos (nome_servico, duracao_minutos, preco)
+          agendamentos_servicos (nome_servico, duracao_minutos, preco)
         `)
         .eq("barbearia_id", membro.barbearia_id)
-        .gte("data_hora_inicio", `${hojeStr}T00:00:00.000Z`)
-        .lte("data_hora_inicio", `${hojeStr}T23:59:59.999Z`)
-        .order("data_hora_inicio", { ascending: true });
+        .gte("inicio_previsto", `${hojeStr}T00:00:00.000Z`)
+        .lte("inicio_previsto", `${hojeStr}T23:59:59.999Z`)
+        .order("inicio_previsto", { ascending: true });
 
       if (profFiltroId) {
         queryAg = queryAg.eq("profissional_id", profFiltroId);
@@ -442,7 +442,7 @@ export default function PaginaPainelParceiro() {
                     <div className="flex items-start sm:items-center gap-4">
                       <div className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-neutral-100 dark:bg-neutral-800 min-w-[70px]">
                         <span className="text-base font-extrabold text-[#B45A2B]">
-                          {formatarHora(ag.data_hora_inicio)}
+                          {formatarHora(ag.inicio_previsto)}
                         </span>
                         <span className="text-[10px] opacity-60">
                           {ag.duracao_total_minutos} min
@@ -474,7 +474,7 @@ export default function PaginaPainelParceiro() {
                         <div className="text-xs opacity-75 flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span>
                             <strong>Serviço:</strong>{" "}
-                            {ag.agendamento_servicos?.map((s: any) => s.nome_servico).join(", ") || "Serviço"}
+                            {ag.agendamentos_servicos?.map((s: any) => s.nome_servico).join(", ") || "Serviço"}
                           </span>
                           <span>•</span>
                           <span>

@@ -10,6 +10,7 @@ import {
   Input,
   Label,
   Alert,
+  AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
@@ -117,8 +118,8 @@ export default function PaginaRelatoriosParceiro() {
         .from("agendamentos")
         .select(`
           id,
-          data_hora_inicio,
-          data_hora_fim,
+          inicio_previsto,
+          fim_previsto,
           inicio_real,
           fim_real,
           status,
@@ -126,11 +127,11 @@ export default function PaginaRelatoriosParceiro() {
           duracao_total_minutos,
           profissional_id,
           profissionais (id, nome, foto_url),
-          agendamento_servicos (nome_servico, duracao_minutos, preco)
+          agendamentos_servicos (nome_servico, duracao_minutos, preco)
         `)
         .eq("barbearia_id", membro.barbearia_id)
-        .gte("data_hora_inicio", `${dataInicio}T00:00:00.000Z`)
-        .lte("data_hora_inicio", `${dataFim}T23:59:59.999Z`);
+        .gte("inicio_previsto", `${dataInicio}T00:00:00.000Z`)
+        .lte("inicio_previsto", `${dataFim}T23:59:59.999Z`);
 
       if (profIdQuery) {
         queryAg = queryAg.eq("profissional_id", profIdQuery);
@@ -278,10 +279,9 @@ export default function PaginaRelatoriosParceiro() {
   return (
     <div className="flex flex-col gap-8 pb-12">
       {erro && (
-        <Alert variante="erro">
-          <AlertCircle className="h-4 w-4" />
+        <AlertaTemporizado variante="erro" duracaoMs={6000} aoExpirar={() => setErro(null)}>
           <AlertDescription>{erro}</AlertDescription>
-        </Alert>
+        </AlertaTemporizado>
       )}
 
       {/* Cabeçalho */}
