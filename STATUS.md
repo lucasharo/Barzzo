@@ -18,5 +18,6 @@
 | 08 | #8 | Campanhas, cupons e influenciadores | CONCLUIDA |
 | 09 | #9 | Notificações, dashboard e relatórios | CONCLUIDA |
 | 10 | #10 | Assinaturas, Admin e produção | CONCLUIDA |
+| HOTFIX-01 | #11 | Mercado Pago nas assinaturas | CONCLUIDA |
 
 Atualizar em toda troca de gate. Nunca iniciar task posterior antes da anterior estar CONCLUIDA.
