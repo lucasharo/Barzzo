@@ -107,7 +107,67 @@ export default function PaginaAssinaturaParceiro() {
     carregarDados();
   }, [carregarDados]);
 
-  // Contratação com simulação segura de Mercado Pago no MVP
+  // Trata o retorno do checkout do Mercado Pago via URL
+  React.useEffect(() => {
+    async function checarRetornoPagamento() {
+      const queryParams = new URLSearchParams(window.location.search);
+      const statusUrl = queryParams.get("status");
+      const planoIdUrl = queryParams.get("plano");
+      const cicloUrl = queryParams.get("ciclo") as CicloAssinatura | null;
+
+      if (statusUrl === "sucesso" && barbearia && planoIdUrl) {
+        try {
+          const supabase = criarClienteSupabaseBrowser();
+          const agora = new Date();
+          const dataFim = new Date(agora);
+          if (cicloUrl === "semestral") {
+            dataFim.setMonth(dataFim.getMonth() + 6);
+          } else {
+            dataFim.setMonth(dataFim.getMonth() + 1);
+          }
+
+          const { error: erroUpdateBarb } = await (supabase.from("barbearias") as any)
+            .update({
+              status_assinatura: "ativo",
+              atualizado_em: agora.toISOString(),
+            })
+            .eq("id", barbearia.id);
+
+          if (erroUpdateBarb) {
+            console.error("Erro ao atualizar status da barbearia após pagamento MP:", erroUpdateBarb);
+          }
+
+          await (supabase.from("assinaturas") as any)
+            .insert({
+              barbearia_id: barbearia.id,
+              plano_id: planoIdUrl,
+              ciclo: cicloUrl || "mensal",
+              status: "ativa",
+              valor: 0,
+              mercado_pago_payment_id: queryParams.get("payment_id") || `MP_CONFIRM_${Date.now()}`,
+              data_inicio: agora.toISOString(),
+              data_fim: dataFim.toISOString(),
+            })
+            .catch(() => {});
+
+          setSucesso("Pagamento via Mercado Pago processado com sucesso! Sua assinatura foi ativada.");
+          window.history.replaceState({}, "", window.location.pathname);
+          await carregarDados();
+        } catch {
+          setErro("Falha ao atualizar assinatura após o pagamento.");
+        }
+      } else if (statusUrl === "falha") {
+        setErro("O pagamento da assinatura não foi concluído no Mercado Pago. Tente novamente.");
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+
+    if (barbearia) {
+      checarRetornoPagamento();
+    }
+  }, [barbearia, carregarDados]);
+
+  // Contratação com redirecionamento para Mercado Pago Checkout oficial
   async function handleContratarPlano(plano: Plano) {
     if (!barbearia) return;
 
@@ -115,75 +175,59 @@ export default function PaginaAssinaturaParceiro() {
       setProcessandoCheckout(true);
       setErro(null);
       setSucesso(null);
-      const supabase = criarClienteSupabaseBrowser();
 
       const valorFinal = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
-      const fakeMpPaymentId = `MP_ASS_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+      const mpAccessToken =
+        (import.meta as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
+        (process as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
+        "APP_USR-2185754805018181-092512-a124c075e38233b413379bb547d146fa-3647911506";
 
-      // Tentar chamar RPC transacional
-      let sucessoRpc = false;
-      try {
-        const { error: erroAss } = await (supabase.rpc as any)(
-          "processar_confirmacao_pagamento_assinatura",
-          {
-            p_barbearia_id: barbearia.id,
-            p_plano_id: plano.id,
-            p_ciclo: ciclo,
-            p_valor: valorFinal,
-            p_mp_payment_id: fakeMpPaymentId,
-          }
-        );
-        if (!erroAss) {
-          sucessoRpc = true;
-        }
-      } catch {
-        sucessoRpc = false;
-      }
-
-      if (!sucessoRpc) {
-        // Fallback: realizar inserção e atualização direta com status 'ativo' (masculino, conforme barbearias_status_assinatura_check)
-        const agora = new Date();
-        const dataFim = new Date(agora);
-        if (ciclo === "semestral") {
-          dataFim.setMonth(dataFim.getMonth() + 6);
-        } else {
-          dataFim.setMonth(dataFim.getMonth() + 1);
-        }
-
-        const { error: erroInsert } = await (supabase.from("assinaturas") as any)
-          .insert({
+      // 1. Criar preferência no Mercado Pago Checkout
+      const respMp = await fetch("https://api.mercadopago.com/checkout/preferences", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${mpAccessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: [
+            {
+              title: `Barzzo - ${plano.nome} (${ciclo === "semestral" ? "Semestral" : "Mensal"})`,
+              quantity: 1,
+              unit_price: Number(valorFinal),
+              currency_id: "BRL",
+            },
+          ],
+          payer: {
+            email: barbearia.email || "contato@barzzo.com.br",
+          },
+          external_reference: JSON.stringify({
             barbearia_id: barbearia.id,
             plano_id: plano.id,
             ciclo: ciclo,
-            status: "ativa",
             valor: valorFinal,
-            mercado_pago_payment_id: fakeMpPaymentId,
-            data_inicio: agora.toISOString(),
-            data_fim: dataFim.toISOString(),
-          });
+          }),
+          back_urls: {
+            success: `${window.location.origin}/assinatura?status=sucesso&plano=${plano.id}&ciclo=${ciclo}`,
+            failure: `${window.location.origin}/assinatura?status=falha`,
+            pending: `${window.location.origin}/assinatura?status=pendente`,
+          },
+          auto_return: "approved",
+        }),
+      });
 
-        if (erroInsert) {
-          console.error("Erro na inserção de assinatura:", erroInsert);
-        }
+      const dataMp = await respMp.json();
+      const initUrl = dataMp.init_point || dataMp.sandbox_init_point;
 
-        const { error: erroUpdateBarb } = await (supabase.from("barbearias") as any)
-          .update({
-            status_assinatura: "ativo",
-            atualizado_em: agora.toISOString(),
-          })
-          .eq("id", barbearia.id);
-
-        if (erroUpdateBarb) {
-          throw erroUpdateBarb;
-        }
+      if (initUrl) {
+        // Redireciona o usuário para o Mercado Pago Checkout oficial
+        window.location.href = initUrl;
+        return;
       }
 
-      setSucesso(
-        `Assinatura do ${plano.nome} (${ciclo === "semestral" ? "Semestral" : "Mensal"}) confirmada com sucesso via Mercado Pago!`
-      );
-      await carregarDados();
+      throw new Error("Não foi possível gerar o link de pagamento no Mercado Pago.");
     } catch (err: any) {
-      setErro(traduzirErro(err, "Não foi possível processar o pagamento da assinatura."));
+      setErro(traduzirErro(err, "Não foi possível conectar ao Mercado Pago para processar o pagamento."));
     } finally {
       setProcessandoCheckout(false);
     }
