@@ -179,7 +179,14 @@ export default function PaginaPainelParceiro() {
         // Fallback de update direto caso a RPC transacional não tenha sido acionada
         const camposUpdate: any = { status: novoStatus };
         if (novoStatus === "em_atendimento") {
-          camposUpdate.inicio_real = new Date().toISOString();
+          const agora = new Date();
+          camposUpdate.inicio_real = agora.toISOString();
+          camposUpdate.inicio_previsto = agora.toISOString();
+          const agTarget = agendamentosHoje.find((a) => a.id === agendamentoId);
+          if (agTarget?.duracao_total_minutos) {
+            const fim = new Date(agora.getTime() + agTarget.duracao_total_minutos * 60000);
+            camposUpdate.fim_previsto = fim.toISOString();
+          }
         } else if (novoStatus === "concluido") {
           camposUpdate.fim_real = new Date().toISOString();
         }

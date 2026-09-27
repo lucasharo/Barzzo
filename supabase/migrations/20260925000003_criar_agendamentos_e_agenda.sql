@@ -188,11 +188,13 @@ BEGIN
         RAISE EXCEPTION 'Transição inválida de em_atendimento para %.', p_novo_status;
     END IF;
 
-    -- Aplicar marcas de tempo reais
-    IF p_novo_status = 'em_atendimento' AND v_agendamento.inicio_real IS NULL THEN
+    -- Aplicar marcas de tempo reais e ajustar inicio_previsto/fim_previsto se o atendimento for antecipado
+    IF p_novo_status = 'em_atendimento' THEN
         UPDATE public.agendamentos
         SET status = p_novo_status,
-            inicio_real = timezone('utc'::text, now()),
+            inicio_previsto = timezone('utc'::text, now()),
+            fim_previsto = timezone('utc'::text, now()) + (v_agendamento.duracao_total_minutos || ' minutes')::interval,
+            inicio_real = COALESCE(v_agendamento.inicio_real, timezone('utc'::text, now())),
             atualizado_em = timezone('utc'::text, now())
         WHERE id = p_agendamento_id
         RETURNING * INTO v_agendamento;
