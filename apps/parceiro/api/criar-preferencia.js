@@ -49,9 +49,7 @@ export default async function handler(req, res) {
     });
 
     const dataMp = await respMp.json();
-    const initUrl = mpAccessToken.startsWith('TEST-')
-      ? (dataMp.sandbox_init_point || dataMp.init_point)
-      : (dataMp.init_point || dataMp.sandbox_init_point);
+    const initUrl = dataMp.sandbox_init_point || dataMp.init_point;
 
     if (initUrl) {
       return res.status(200).json({ init_url: initUrl });
