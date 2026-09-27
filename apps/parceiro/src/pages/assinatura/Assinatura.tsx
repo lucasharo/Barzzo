@@ -177,57 +177,32 @@ export default function PaginaAssinaturaParceiro() {
       setSucesso(null);
 
       const valorFinal = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
-      const mpAccessToken =
-        (import.meta as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
-        (process as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
-        "APP_USR-2185754805018181-092512-a124c075e38233b413379bb547d146fa-3647911506";
 
-      const origin = window.location.origin;
-
-      // 1. Criar preferência de pagamento no Mercado Pago
-      const respMp = await fetch("https://api.mercadopago.com/checkout/preferences", {
+      // 1. Chamar rota backend serverless para criar a preferência no Mercado Pago sem bloqueio CORS
+      const resp = await fetch("/api/criar-preferencia", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${mpAccessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          items: [
-            {
-              title: `Barzzo - ${plano.nome} (${ciclo === "semestral" ? "Semestral" : "Mensal"})`,
-              quantity: 1,
-              unit_price: Number(valorFinal),
-              currency_id: "BRL",
-            },
-          ],
-          payer: {
-            email: barbearia.email || "contato@barzzo.com.br",
-          },
-          external_reference: JSON.stringify({
-            barbearia_id: barbearia.id,
-            plano_id: plano.id,
-            ciclo: ciclo,
-            valor: valorFinal,
-          }),
-          back_urls: {
-            success: `${origin}/assinatura?status=sucesso&plano=${plano.id}&ciclo=${ciclo}`,
-            failure: `${origin}/assinatura?status=falha`,
-            pending: `${origin}/assinatura?status=pendente`,
-          },
-          auto_return: "approved",
+          plano_nome: plano.nome,
+          valor: valorFinal,
+          barbearia_id: barbearia.id,
+          plano_id: plano.id,
+          ciclo: ciclo,
+          email: barbearia.email,
         }),
       });
 
-      const dataMp = await respMp.json();
-      const initUrl = dataMp.init_point || dataMp.sandbox_init_point;
+      const data = await resp.json();
 
-      if (initUrl) {
-        // Redireciona para o checkout do Mercado Pago
-        window.location.href = initUrl;
+      if (data.init_url) {
+        // Redireciona o navegador do usuário diretamente para a tela de checkout do Mercado Pago
+        window.location.href = data.init_url;
         return;
       }
 
-      throw new Error(dataMp.message || "Não foi possível conectar ao Mercado Pago.");
+      throw new Error(data.error || "Não foi possível gerar a preferência de pagamento no Mercado Pago.");
     } catch (err: any) {
       setErro(traduzirErro(err, "Não foi possível abrir o checkout do Mercado Pago. Tente novamente."));
     } finally {
