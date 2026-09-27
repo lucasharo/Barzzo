@@ -250,7 +250,7 @@ export default function PaginaAssinaturaParceiro() {
         });
 
         const dataMp = await respMp.json();
-        initUrl = dataMp.init_point || dataMp.sandbox_init_point;
+        initUrl = dataMp.sandbox_init_point || dataMp.init_point;
       }
 
       if (initUrl) {
