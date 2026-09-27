@@ -26,6 +26,7 @@ import {
   XCircle,
   Star,
   CheckCircle2,
+  Tag,
 } from "lucide-react";
 
 interface AgendamentoDetalhe {
@@ -73,6 +74,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [solicitandoCancelamento, setSolicitandoCancelamento] = React.useState(false);
+  const [codigoCupom, setCodigoCupom] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (id) carregarDetalhes();
@@ -129,6 +131,20 @@ export default function PaginaDetalhesAgendamentoCliente() {
       }
 
       setAgendamento(data as AgendamentoDetalhe);
+
+      // Buscar cupom associado ao agendamento
+      const { data: indDb } = await (supabase.from("indicacoes") as any)
+        .select("codigo_ref_usado")
+        .eq("agendamento_id", id)
+        .limit(1)
+        .maybeSingle();
+
+      let cod = indDb?.codigo_ref_usado || null;
+      if (!cod && data.observacoes) {
+        const match = data.observacoes.match(/\[Cupom:\s*([^\]]+)\]/i);
+        if (match) cod = match[1].trim();
+      }
+      setCodigoCupom(cod);
     } catch {
       setErro("Falha ao comunicar com os servidores.");
     } finally {
@@ -254,10 +270,13 @@ export default function PaginaDetalhesAgendamentoCliente() {
     minute: "2-digit",
   });
 
+  const subtotal = agendamento.agendamentos_servicos.reduce((acc, s) => acc + (Number(s.preco) || 0), 0);
   const totalPreco =
     agendamento.preco_total != null
       ? Number(agendamento.preco_total)
-      : agendamento.agendamentos_servicos.reduce((acc, s) => acc + (Number(s.preco) || 0), 0);
+      : subtotal;
+  const valorDesconto = Math.max(0, subtotal - totalPreco);
+  const temDesconto = valorDesconto > 0.01;
 
   const podeCancelar =
     ["confirmado", "pendente"].includes(agendamento.status) &&
@@ -412,6 +431,27 @@ export default function PaginaDetalhesAgendamentoCliente() {
                     </span>
                   </div>
                 ))}
+
+                {/* Subtotal e Desconto de Cupom se houver */}
+                {temDesconto && (
+                  <>
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-800 text-xs text-neutral-500 dark:text-neutral-400">
+                      <span>Subtotal</span>
+                      <span className="font-semibold">
+                        {subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-[#16A34A] dark:text-green-400 font-semibold">
+                      <span className="flex items-center gap-1">
+                        <Tag className="w-3.5 h-3.5" />
+                        Desconto {codigoCupom ? `(Cupom ${codigoCupom})` : "Cupom"}
+                      </span>
+                      <span>
+                        - {valorDesconto.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      </span>
+                    </div>
+                  </>
+                )}
 
                 {/* Total */}
                 <div className="flex items-center justify-between pt-2 mt-1 border-t border-neutral-200 dark:border-neutral-800">

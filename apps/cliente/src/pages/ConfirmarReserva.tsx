@@ -233,6 +233,13 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       const precoFinal = draft.preco_final ?? draft.preco;
 
       // Inserir agendamento definitivo
+      const codigoCupomLimpo = draft.codigo_cupom?.trim().toUpperCase();
+      const obsFinal = codigoCupomLimpo
+        ? draft.observacoes
+          ? `${draft.observacoes} [Cupom: ${codigoCupomLimpo}]`
+          : `[Cupom: ${codigoCupomLimpo}]`
+        : draft.observacoes;
+
       const { data: novoAgendamento, error: erroAg } = await (supabase.from("agendamentos") as any)
         .insert({
           barbearia_id: draft.barbearia_id,
@@ -244,7 +251,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           fim_previsto: fimIso,
           status: "confirmado",
           origem: "marketplace",
-          observacoes: draft.observacoes,
+          observacoes: obsFinal,
           preco_total: precoFinal,
           duracao_total_minutos: draft.duracao_minutos,
         })
@@ -271,7 +278,6 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       });
 
       // Se houver cupom utilizado, incrementar uso
-      const codigoCupomLimpo = draft.codigo_cupom?.trim().toUpperCase();
       let cupomId: string | null = null;
 
       if (codigoCupomLimpo) {

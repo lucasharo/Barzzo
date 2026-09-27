@@ -35,6 +35,7 @@ import {
   RotateCcw,
   Sparkles,
   Timer,
+  Tag,
 } from "lucide-react";
 
 export default function PaginaDetalhesAgendamento() {
@@ -236,6 +237,19 @@ export default function PaginaDetalhesAgendamento() {
     ? new Date(agendamento.fim_real).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : null;
 
+  const subtotal = agendamento.servicos
+    ? agendamento.servicos.reduce((acc, s) => acc + (Number(s.preco) || 0), 0)
+    : Number(agendamento.preco_total || 0);
+  const totalPreco = Number(agendamento.preco_total || subtotal);
+  const valorDesconto = Math.max(0, subtotal - totalPreco);
+  const temDesconto = valorDesconto > 0.01;
+
+  let codigoCupom: string | null = null;
+  if (agendamento.observacoes) {
+    const match = agendamento.observacoes.match(/\[Cupom:\s*([^\]]+)\]/i);
+    if (match) codigoCupom = match[1].trim();
+  }
+
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -321,10 +335,30 @@ export default function PaginaDetalhesAgendamento() {
               <div className="text-sm opacity-60">Nenhum snapshot de serviço registrado.</div>
             )}
 
+            {temDesconto && (
+              <>
+                <div className="flex items-center justify-between pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60 text-xs opacity-70">
+                  <span>Subtotal:</span>
+                  <span className="font-semibold">
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subtotal)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-[#16A34A] font-semibold">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3.5 w-3.5" />
+                    Desconto {codigoCupom ? `(Cupom ${codigoCupom})` : "Cupom"}:
+                  </span>
+                  <span>
+                    - {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorDesconto)}
+                  </span>
+                </div>
+              </>
+            )}
+
             <div className="flex items-center justify-between pt-2 border-t border-neutral-200 dark:border-neutral-800 font-bold text-sm">
               <span>Total:</span>
               <span className="text-base text-[#B45A2B]">
-                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(agendamento.preco_total))}
+                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalPreco)}
               </span>
             </div>
           </div>
