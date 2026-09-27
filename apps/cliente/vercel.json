@@ -1,7 +1,7 @@
 {
   "framework": "vite",
   "outputDirectory": "dist",
-  "alias": ["barzzo-cliente.vercel.app"],
+  "alias": ["barzzo-cliente.vercel.app", "barzzo-cliente-dev.vercel.app"],
   "rewrites": [
     {
       "source": "/(.*)",
