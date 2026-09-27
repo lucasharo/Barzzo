@@ -211,7 +211,10 @@ export default function PaginaAssinaturaParceiro() {
           (process as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
           "APP_USR-2185754805018181-092512-a124c075e38233b413379bb547d146fa-3647911506";
 
-        const origin = window.location.origin;
+        const rawOrigin = window.location.origin;
+        const origin = (rawOrigin.includes("localhost") || rawOrigin.includes("192.168.") || !rawOrigin)
+          ? "https://barzzo-parceiro.vercel.app"
+          : rawOrigin;
 
         const respMp = await fetch("https://api.mercadopago.com/checkout/preferences", {
           method: "POST",
