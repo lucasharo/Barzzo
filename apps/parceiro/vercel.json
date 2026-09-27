@@ -1,4 +1,6 @@
 {
+  "framework": "vite",
+  "outputDirectory": "dist",
   "alias": ["barzzo-parceiro.vercel.app"],
   "rewrites": [
     {
