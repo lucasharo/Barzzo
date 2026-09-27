@@ -21,6 +21,8 @@ Se houver reprovação, corrija e repita o ciclo. Só avance quando a task anter
 
 Nunca invente regra de negócio. Se uma decisão necessária não estiver documentada, marque BLOQUEADA_POR_DECISAO em STATUS.md.
 
+Nunca invente soluções de contorno, botões extras de simulação ou recursos não solicitados quando algo falhar ou estiver faltando. Se houver erro, credencial inválida/pendente ou configuração incorreta, apenas avise o usuário de forma clara e peça para ele fornecer os dados ou realizar a correção necessária.
+
 ## Arquitetura das aplicações
 
 É obrigatório respeitar `docs/arquitetura/separacao_aplicacoes.md`.

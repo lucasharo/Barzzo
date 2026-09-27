@@ -41,7 +41,6 @@ export default function PaginaAssinaturaParceiro() {
   const [processandoCheckout, setProcessandoCheckout] = React.useState(false);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
-  const [modoTeste, setModoTeste] = React.useState(true);
 
   const carregarDados = React.useCallback(async () => {
     try {
@@ -168,56 +167,7 @@ export default function PaginaAssinaturaParceiro() {
     }
   }, [barbearia, carregarDados]);
 
-  // Permite ativar a assinatura instantaneamente em modo de teste para desenvolvimento
-  async function handleSimularPagamento(plano: Plano) {
-    if (!barbearia) return;
-
-    try {
-      setProcessandoCheckout(true);
-      setErro(null);
-      setSucesso(null);
-
-      const supabase = criarClienteSupabaseBrowser();
-      const agora = new Date();
-      const dataFim = new Date(agora);
-      if (ciclo === "semestral") {
-        dataFim.setMonth(dataFim.getMonth() + 6);
-      } else {
-        dataFim.setMonth(dataFim.getMonth() + 1);
-      }
-
-      const { error: erroUpdateBarb } = await (supabase.from("barbearias") as any)
-        .update({
-          status_assinatura: "ativo",
-          atualizado_em: agora.toISOString(),
-        })
-        .eq("id", barbearia.id);
-
-      if (erroUpdateBarb) throw erroUpdateBarb;
-
-      await (supabase.from("assinaturas") as any)
-        .insert({
-          barbearia_id: barbearia.id,
-          plano_id: plano.id,
-          ciclo: ciclo,
-          status: "ativa",
-          valor: ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal,
-          mercado_pago_payment_id: `SIMULACAO_TESTE_${Date.now()}`,
-          data_inicio: agora.toISOString(),
-          data_fim: dataFim.toISOString(),
-        })
-        .catch(() => {});
-
-      setSucesso(`Assinatura do plano ${plano.nome} (${ciclo}) ativada com sucesso em modo de teste!`);
-      await carregarDados();
-    } catch (err: any) {
-      setErro(traduzirErro(err, "Falha ao simular ativação da assinatura."));
-    } finally {
-      setProcessandoCheckout(false);
-    }
-  }
-
-  // Redireciona o usuário para a página de checkout do Mercado Pago para pagamento
+  // Redireciona o usuário para a página de checkout oficial do Mercado Pago para pagamento
   async function handleContratarPlano(plano: Plano) {
     if (!barbearia) return;
 
@@ -243,7 +193,6 @@ export default function PaginaAssinaturaParceiro() {
             plano_id: plano.id,
             ciclo: ciclo,
             email: barbearia.email,
-            sandbox: modoTeste,
           }),
         });
 
@@ -301,7 +250,7 @@ export default function PaginaAssinaturaParceiro() {
         });
 
         const dataMp = await respMp.json();
-        initUrl = (modoTeste || mpAccessToken.startsWith("TEST-"))
+        initUrl = mpAccessToken.startsWith("TEST-")
           ? (dataMp.sandbox_init_point || dataMp.init_point)
           : (dataMp.init_point || dataMp.sandbox_init_point);
       }
@@ -424,31 +373,6 @@ export default function PaginaAssinaturaParceiro() {
         </div>
       </div>
 
-      {/* Banner de Modo de Teste / Sandbox */}
-      <div className="p-4 rounded-xl border border-[#B45A2B]/30 bg-[#B45A2B]/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-[#B45A2B] shrink-0" />
-          <div>
-            <strong className="block font-bold text-sm text-[#B45A2B]">
-              {modoTeste ? "Modo de Teste / Sandbox Ativo" : "Modo de Produção Ativo"}
-            </strong>
-            <span className="opacity-80">
-              {modoTeste
-                ? "Você pode simular a ativação instantânea para testar o sistema ou testar via Mercado Pago Sandbox Web (sem abrir o aplicativo no celular)."
-                : "Os links de checkout redirecionarão para a plataforma oficial do Mercado Pago."}
-            </span>
-          </div>
-        </div>
-        <Button
-          variante="secundario"
-          tamanho="sm"
-          onClick={() => setModoTeste(!modoTeste)}
-          className="text-xs border-[#B45A2B]/40 text-[#B45A2B] hover:bg-[#B45A2B]/10 shrink-0 font-bold"
-        >
-          {modoTeste ? "Alternar p/ Produção" : "Alternar p/ Teste (Sandbox)"}
-        </Button>
-      </div>
-
       {/* Alternador de Ciclo: Mensal vs Semestral */}
       <div className="flex flex-col items-center justify-center gap-3 py-2">
         <div className="p-1 rounded-xl bg-neutral-200 dark:bg-neutral-800 flex items-center gap-1">
@@ -494,7 +418,6 @@ export default function PaginaAssinaturaParceiro() {
           const preco = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
           const precoMesEquivalente =
             ciclo === "semestral" ? Number((plano.preco_semestral / 6).toFixed(2)) : plano.preco_mensal;
-          const economia = calcularEconomiaSemestral(plano.preco_mensal, plano.preco_semestral);
 
           return (
             <Card
@@ -552,40 +475,19 @@ export default function PaginaAssinaturaParceiro() {
                   ))}
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variante={ehPlanoAtual ? "secundario" : "principal"}
-                    disabled={processandoCheckout}
-                    carregando={processandoCheckout && planoSelecionadoId === plano.id}
-                    onClick={() => {
-                      setPlanoSelecionadoId(plano.id);
-                      handleContratarPlano(plano);
-                    }}
-                    className="w-full font-bold text-xs min-h-[44px]"
-                  >
-                    <CreditCard className="mr-1.5 h-4 w-4" />
-                    {ehPlanoAtual
-                      ? "Renovar / Atualizar"
-                      : modoTeste
-                      ? "Testar Checkout MP (Sandbox Web)"
-                      : "Assinar com Mercado Pago"}
-                  </Button>
-
-                  {modoTeste && (
-                    <Button
-                      variante="secundario"
-                      disabled={processandoCheckout}
-                      onClick={() => {
-                        setPlanoSelecionadoId(plano.id);
-                        handleSimularPagamento(plano);
-                      }}
-                      className="w-full font-bold text-xs border-[#B45A2B]/40 text-[#B45A2B] hover:bg-[#B45A2B]/10 min-h-[40px]"
-                    >
-                      <Zap className="mr-1.5 h-3.5 w-3.5 text-[#B45A2B]" />
-                      Simular Ativação (Teste)
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  variante={ehPlanoAtual ? "secundario" : "principal"}
+                  disabled={processandoCheckout}
+                  carregando={processandoCheckout && planoSelecionadoId === plano.id}
+                  onClick={() => {
+                    setPlanoSelecionadoId(plano.id);
+                    handleContratarPlano(plano);
+                  }}
+                  className="w-full font-bold text-xs min-h-[44px]"
+                >
+                  <CreditCard className="mr-1.5 h-4 w-4" />
+                  {ehPlanoAtual ? "Renovar / Atualizar" : "Assinar com Mercado Pago"}
+                </Button>
               </CardContent>
             </Card>
           );

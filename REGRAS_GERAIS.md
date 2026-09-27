@@ -12,6 +12,7 @@
 - Trial padrão: 30 dias.
 - Retenção: +30 dias pode ser concedido ao contratar plano semestral, como benefício auditável.
 - Comissão de influenciador é registrada, mas paga pela barbearia fora da plataforma.
+- Nunca inventar botões extras, soluções de contorno ou recursos não solicitados quando algo falhar ou faltar. Se houver erro ou pendência (ex: credencial inválida/ausente), apenas avisar o usuário e solicitar a correção ou o dado necessário.
 
 ## Agendamento
 - Visitante navega e chega ao resumo sem login.

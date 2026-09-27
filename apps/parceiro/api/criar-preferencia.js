@@ -4,7 +4,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { plano_nome, valor, barbearia_id, plano_id, ciclo, email, sandbox } = req.body || {};
+    const { plano_nome, valor, barbearia_id, plano_id, ciclo, email } = req.body || {};
 
     const mpAccessToken =
       process.env.MERCADO_PAGO_ACCESS_TOKEN ||
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     });
 
     const dataMp = await respMp.json();
-    const initUrl = (sandbox || mpAccessToken.startsWith('TEST-'))
+    const initUrl = mpAccessToken.startsWith('TEST-')
       ? (dataMp.sandbox_init_point || dataMp.init_point)
       : (dataMp.init_point || dataMp.sandbox_init_point);
 
