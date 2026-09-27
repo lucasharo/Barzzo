@@ -20,5 +20,8 @@
     "supabase": "^2.118.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
   }
 }
