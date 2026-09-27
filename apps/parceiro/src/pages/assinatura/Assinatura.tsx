@@ -117,44 +117,17 @@ export default function PaginaAssinaturaParceiro() {
 
       if (statusUrl === "sucesso" && barbearia && planoIdUrl) {
         try {
-          const supabase = criarClienteSupabaseBrowser();
-          const agora = new Date();
-          const dataFim = new Date(agora);
-          if (cicloUrl === "semestral") {
-            dataFim.setMonth(dataFim.getMonth() + 6);
+          // Reconciliação segura server-side
+          const resp = await fetch(`/api/verificar-assinatura?barbearia_id=${barbearia.id}&plano_id=${planoIdUrl}&ciclo=${cicloUrl || "mensal"}`);
+          if (resp.ok) {
+            setSucesso("Pagamento via Mercado Pago processado com sucesso! Sua assinatura foi ativada.");
           } else {
-            dataFim.setMonth(dataFim.getMonth() + 1);
+            setSucesso("Solicitação de assinatura recebida! Aguardando confirmação final do Mercado Pago.");
           }
-
-          const { error: erroUpdateBarb } = await (supabase.from("barbearias") as any)
-            .update({
-              status_assinatura: "ativo",
-              atualizado_em: agora.toISOString(),
-            })
-            .eq("id", barbearia.id);
-
-          if (erroUpdateBarb) {
-            console.error("Erro ao atualizar status da barbearia após pagamento MP:", erroUpdateBarb);
-          }
-
-          await (supabase.from("assinaturas") as any)
-            .insert({
-              barbearia_id: barbearia.id,
-              plano_id: planoIdUrl,
-              ciclo: cicloUrl || "mensal",
-              status: "ativa",
-              valor: 0,
-              mercado_pago_payment_id: queryParams.get("payment_id") || `MP_CONFIRM_${Date.now()}`,
-              data_inicio: agora.toISOString(),
-              data_fim: dataFim.toISOString(),
-            })
-            .catch(() => {});
-
-          setSucesso("Pagamento via Mercado Pago processado com sucesso! Sua assinatura foi ativada.");
           window.history.replaceState({}, "", window.location.pathname);
           await carregarDados();
         } catch {
-          setErro("Falha ao atualizar assinatura após o pagamento.");
+          setErro("Falha ao sincronizar assinatura após o pagamento.");
         }
       } else if (statusUrl === "falha") {
         setErro("O pagamento da assinatura não foi concluído no Mercado Pago. Tente novamente.");
@@ -167,7 +140,7 @@ export default function PaginaAssinaturaParceiro() {
     }
   }, [barbearia, carregarDados]);
 
-  // Redireciona o usuário para a página de checkout oficial do Mercado Pago para pagamento
+  // Redireciona o usuário para a página de checkout oficial do Mercado Pago para pagamento de assinatura
   async function handleContratarPlano(plano: Plano) {
     if (!barbearia) return;
 
@@ -177,89 +150,35 @@ export default function PaginaAssinaturaParceiro() {
       setSucesso(null);
 
       const valorFinal = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
-      let initUrl: string | null = null;
 
-      // 1. Tentar rota backend serverless /api/criar-preferencia primeiro
-      try {
-        const resp = await fetch("/api/criar-preferencia", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            plano_nome: plano.nome,
-            valor: valorFinal,
-            barbearia_id: barbearia.id,
-            plano_id: plano.id,
-            ciclo: ciclo,
-            email: barbearia.email,
-          }),
-        });
+      // 1. Chamada obrigatória à rota backend serverless /api/criar-preferencia
+      const resp = await fetch("/api/criar-preferencia", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plano_nome: plano.nome,
+          valor: valorFinal,
+          barbearia_id: barbearia.id,
+          plano_id: plano.id,
+          ciclo: ciclo,
+          email: barbearia.email,
+        }),
+      });
 
-        if (resp.ok) {
-          const data = await resp.json();
-          initUrl = data.init_url || null;
-        }
-      } catch {
-        initUrl = null;
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Erro ao conectar com o serviço de pagamentos do Mercado Pago.");
       }
 
-      // 2. Se a rota /api/criar-preferencia não existir (ex: dev local no Vite), chama a API do Mercado Pago diretamente
-      if (!initUrl) {
-        const mpAccessToken =
-          (import.meta as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
-          (process as any).env?.MERCADO_PAGO_ACCESS_TOKEN ||
-          "APP_USR-2185754805018181-092512-a124c075e38233b413379bb547d146fa-3647911506";
-
-        const rawOrigin = window.location.origin;
-        const origin = (rawOrigin.includes("localhost") || rawOrigin.includes("192.168.") || !rawOrigin)
-          ? "https://barzzo-parceiro.vercel.app"
-          : rawOrigin;
-
-        const respMp = await fetch("https://api.mercadopago.com/checkout/preferences", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${mpAccessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            items: [
-              {
-                title: `Barzzo - ${plano.nome} (${ciclo === "semestral" ? "Semestral" : "Mensal"})`,
-                quantity: 1,
-                unit_price: Number(valorFinal),
-                currency_id: "BRL",
-              },
-            ],
-            payer: {
-              email: barbearia.email || "contato@barzzo.com.br",
-            },
-            external_reference: JSON.stringify({
-              barbearia_id: barbearia.id,
-              plano_id: plano.id,
-              ciclo: ciclo,
-              valor: valorFinal,
-            }),
-            back_urls: {
-              success: `${origin}/assinatura?status=sucesso&plano=${plano.id}&ciclo=${ciclo}`,
-              failure: `${origin}/assinatura?status=falha`,
-              pending: `${origin}/assinatura?status=pendente`,
-            },
-            auto_return: "approved",
-          }),
-        });
-
-        const dataMp = await respMp.json();
-        initUrl = dataMp.sandbox_init_point || dataMp.init_point;
-      }
-
-      if (initUrl) {
-        // Redireciona o navegador do usuário para a tela de checkout do Mercado Pago
-        window.location.href = initUrl;
+      const data = await resp.json();
+      if (data.init_url) {
+        window.location.href = data.init_url;
         return;
       }
 
-      throw new Error("Não foi possível gerar a preferência de pagamento no Mercado Pago.");
+      throw new Error("Não foi possível obter o link de checkout do Mercado Pago.");
     } catch (err: any) {
       setErro(traduzirErro(err, "Não foi possível abrir o checkout do Mercado Pago. Tente novamente."));
     } finally {
