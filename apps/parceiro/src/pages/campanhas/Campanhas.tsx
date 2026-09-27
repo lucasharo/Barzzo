@@ -242,7 +242,7 @@ export default function PaginaCampanhasParceiro() {
       {/* Listagem */}
       {todosOsCupons.length === 0 && campanhas.length === 0 ? (
         <Card className="text-center py-16 px-4 border-dashed border-2 border-neutral-200 dark:border-neutral-800">
-          <div className="w-12 h-12 rounded-full bg-[#B45A2B]/10 text-[#B45A2B] flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 text-[#B45A2B] flex items-center justify-center mx-auto mb-3">
             <Percent className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold mb-1">Nenhuma campanha cadastrada</h3>

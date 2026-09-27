@@ -333,7 +333,7 @@ export default function PaginaPainelParceiro() {
                 {metricas.concluidos} concluídos
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
+            <div className="h-12 w-12 flex items-center justify-center text-[#B45A2B]">
               <Scissors className="h-6 w-6" />
             </div>
           </CardContent>
@@ -351,7 +351,7 @@ export default function PaginaPainelParceiro() {
                 {metricas.em_atendimento > 0 ? `${metricas.em_atendimento} na cadeira agora` : "Nenhum em atendimento"}
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#D97706]/10 flex items-center justify-center text-[#D97706]">
+            <div className="h-12 w-12 flex items-center justify-center text-[#D97706]">
               <Clock className="h-6 w-6" />
             </div>
           </CardContent>
@@ -371,7 +371,7 @@ export default function PaginaPainelParceiro() {
                 + {formatarMoeda(metricas.faturamento_estimado)} a receber
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#16A34A]/10 flex items-center justify-center text-[#16A34A]">
+            <div className="h-12 w-12 flex items-center justify-center text-[#16A34A]">
               <DollarSign className="h-6 w-6" />
             </div>
           </CardContent>
@@ -391,7 +391,7 @@ export default function PaginaPainelParceiro() {
                 {metricas.cancelados_no_show} faltas/cancelamentos
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+            <div className="h-12 w-12 flex items-center justify-center text-blue-500">
               <UserCheck className="h-6 w-6" />
             </div>
           </CardContent>
@@ -412,7 +412,7 @@ export default function PaginaPainelParceiro() {
         {agendamentosHoje.length === 0 ? (
           <Card className="border border-neutral-200/80 dark:border-neutral-800 text-center py-12">
             <CardContent className="flex flex-col items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center opacity-60">
+              <div className="h-12 w-12 flex items-center justify-center opacity-60">
                 <Calendar className="h-6 w-6" />
               </div>
               <p className="font-semibold text-base">Nenhum atendimento agendado para hoje.</p>

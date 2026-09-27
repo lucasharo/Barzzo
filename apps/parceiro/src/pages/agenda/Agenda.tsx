@@ -388,7 +388,7 @@ export default function PaginaAgendaParceiro() {
       {agendamentosFiltrados.length === 0 ? (
         <Card camada="primaria" className="text-center py-16">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
+            <div className="h-12 w-12 flex items-center justify-center text-[#B45A2B]">
               <CalendarIcon className="h-6 w-6" />
             </div>
             <div className="flex flex-col gap-1">

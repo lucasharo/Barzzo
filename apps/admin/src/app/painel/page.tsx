@@ -143,7 +143,7 @@ export default function PaginaPainelAdmin() {
                 {metricas.total_assinantes} assinantes ativos
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#16A34A]/10 text-[#16A34A] flex items-center justify-center">
+            <div className="h-12 w-12 text-[#16A34A] flex items-center justify-center">
               <DollarSign className="h-6 w-6" />
             </div>
           </CardContent>
@@ -163,7 +163,7 @@ export default function PaginaPainelAdmin() {
                 {metricas.barbearias_ativas} ativas • {metricas.barbearias_trial} em trial
               </span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-[#B45A2B]/10 text-[#B45A2B] flex items-center justify-center">
+            <div className="h-12 w-12 text-[#B45A2B] flex items-center justify-center">
               <Building2 className="h-6 w-6" />
             </div>
           </CardContent>
@@ -181,7 +181,7 @@ export default function PaginaPainelAdmin() {
               </span>
               <span className="text-xs opacity-60">realizados na plataforma</span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <div className="h-12 w-12 text-blue-500 flex items-center justify-center">
               <Calendar className="h-6 w-6" />
             </div>
           </CardContent>
@@ -199,7 +199,7 @@ export default function PaginaPainelAdmin() {
               </span>
               <span className="text-xs opacity-60">clientes e profissionais</span>
             </div>
-            <div className="h-12 w-12 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
+            <div className="h-12 w-12 text-purple-500 flex items-center justify-center">
               <Users className="h-6 w-6" />
             </div>
           </CardContent>

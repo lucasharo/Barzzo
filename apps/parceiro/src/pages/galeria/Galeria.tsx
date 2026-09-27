@@ -405,7 +405,7 @@ export default function PaginaGaleriaParceiro() {
       {/* Grade de Fotos */}
       {fotos.length === 0 ? (
         <Card className="text-center py-16 px-4 border-dashed border-2 border-neutral-200 dark:border-neutral-800">
-          <div className="w-12 h-12 rounded-full bg-[#B45A2B]/10 text-[#B45A2B] flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 text-[#B45A2B] flex items-center justify-center mx-auto mb-3">
             <Camera className="w-6 h-6" />
           </div>
           <h3 className="text-base font-bold mb-1">Sua galeria ainda está vazia</h3>
@@ -632,7 +632,7 @@ export default function PaginaGaleriaParceiro() {
       {fotoParaExcluir && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <Card className="w-full max-w-sm bg-white dark:bg-[#111113] p-6 shadow-2xl border-neutral-200 dark:border-neutral-800 text-center">
-            <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 text-red-600 flex items-center justify-center mx-auto mb-3">
               <Trash2 className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold mb-1">Excluir esta foto?</h3>

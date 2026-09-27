@@ -51,7 +51,7 @@ export default function PaginaInicial() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Passo 1 */}
             <div className="flex flex-col items-center text-center p-8 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-200/60 dark:border-neutral-800/60">
-              <div className="w-16 h-16 rounded-full bg-[#B45A2B]/10 flex items-center justify-center mb-6">
+              <div className="w-16 h-16 flex items-center justify-center mb-6">
                 <Scissors className="w-8 h-8 text-[#B45A2B]" />
               </div>
               <span className="text-xs font-bold text-[#B45A2B] uppercase tracking-widest mb-2">
@@ -68,7 +68,7 @@ export default function PaginaInicial() {
 
             {/* Passo 2 */}
             <div className="flex flex-col items-center text-center p-8 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-200/60 dark:border-neutral-800/60">
-              <div className="w-16 h-16 rounded-full bg-[#B45A2B]/10 flex items-center justify-center mb-6">
+              <div className="w-16 h-16 flex items-center justify-center mb-6">
                 <CalendarCheck className="w-8 h-8 text-[#B45A2B]" />
               </div>
               <span className="text-xs font-bold text-[#B45A2B] uppercase tracking-widest mb-2">
@@ -85,7 +85,7 @@ export default function PaginaInicial() {
 
             {/* Passo 3 */}
             <div className="flex flex-col items-center text-center p-8 rounded-2xl bg-[#F6F6F7] dark:bg-[#141416] border border-neutral-200/60 dark:border-neutral-800/60">
-              <div className="w-16 h-16 rounded-full bg-[#B45A2B]/10 flex items-center justify-center mb-6">
+              <div className="w-16 h-16 flex items-center justify-center mb-6">
                 <Star className="w-8 h-8 text-[#B45A2B]" />
               </div>
               <span className="text-xs font-bold text-[#B45A2B] uppercase tracking-widest mb-2">

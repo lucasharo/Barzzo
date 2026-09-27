@@ -314,7 +314,7 @@ export default function PaginaEdicaoServico() {
       <Card camada="primaria">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
+            <div className="h-10 w-10 flex items-center justify-center text-[#B45A2B]">
               <Scissors className="h-5 w-5" />
             </div>
             <div>

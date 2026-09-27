@@ -422,7 +422,7 @@ export default function PaginaBloqueiosAgenda() {
       {bloqueiosFiltrados.length === 0 ? (
         <Card camada="primaria" className="text-center py-12">
           <CardContent className="flex flex-col items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B]">
+            <div className="h-12 w-12 flex items-center justify-center text-[#B45A2B]">
               <CalendarX2 className="h-6 w-6" />
             </div>
             <div className="flex flex-col gap-1">
@@ -470,10 +470,10 @@ export default function PaginaBloqueiosAgenda() {
                 <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div
-                      className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      className={`h-10 w-10 flex items-center justify-center shrink-0 ${
                         bloq.profissional_id
-                          ? "bg-blue-500/10 text-blue-500"
-                          : "bg-[#B45A2B]/10 text-[#B45A2B]"
+                          ? "text-blue-500"
+                          : "text-[#B45A2B]"
                       }`}
                     >
                       {bloq.profissional_id ? (

@@ -227,7 +227,7 @@ export function SeletorData({
         )}
       >
         <div className="flex items-center gap-3 truncate min-w-0 pr-2">
-          <div className="w-8 h-8 rounded-lg bg-[#B45A2B]/10 flex items-center justify-center text-[#B45A2B] shrink-0">
+          <div className="w-8 h-8 flex items-center justify-center text-[#B45A2B] shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
           <span className="font-semibold text-sm sm:text-base truncate">

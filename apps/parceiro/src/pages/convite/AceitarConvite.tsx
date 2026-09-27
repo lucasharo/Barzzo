@@ -115,7 +115,7 @@ export default function PaginaAceitarConvite() {
     <div className="flex-1 max-w-lg mx-auto w-full py-12 px-4 flex flex-col items-center">
       <Card camada="primaria" className="w-full">
         <CardHeader className="text-center">
-          <div className="h-14 w-14 rounded-full bg-[#B45A2B]/10 mx-auto flex items-center justify-center text-[#B45A2B] mb-2">
+          <div className="h-14 w-14 mx-auto flex items-center justify-center text-[#B45A2B] mb-2">
             <Users className="h-7 w-7" />
           </div>
           <CardTitle className="text-2xl">Convite de Equipe</CardTitle>
