@@ -1,4 +1,3 @@
 {
-  "alias": ["barzzo-admin.vercel.app"],
-  "ignoreCommand": "exit 1"
+  "alias": ["barzzo-admin.vercel.app"]
 }

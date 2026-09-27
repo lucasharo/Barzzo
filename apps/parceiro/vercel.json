@@ -1,6 +1,5 @@
 {
   "alias": ["barzzo-parceiro.vercel.app"],
-  "ignoreCommand": "exit 1",
   "rewrites": [
     {
       "source": "/((?!api/).*)",
