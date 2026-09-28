@@ -111,14 +111,29 @@ export default function PaginaAssinaturaParceiro() {
   React.useEffect(() => {
     async function checarRetornoPagamento() {
       const queryParams = new URLSearchParams(window.location.search);
-      const statusUrl = queryParams.get("status");
-      const planoIdUrl = queryParams.get("plano");
-      const cicloUrl = queryParams.get("ciclo") as CicloAssinatura | null;
+      const statusUrl = queryParams.get("status") || queryParams.get("collection_status");
+      const paymentIdUrl = queryParams.get("payment_id") || queryParams.get("collection_id");
+      const extRefStr = queryParams.get("external_reference");
 
-      if (statusUrl === "sucesso" && barbearia && planoIdUrl) {
+      let planoIdUrl = queryParams.get("plano");
+      let cicloUrl = (queryParams.get("ciclo") as CicloAssinatura | null) || "mensal";
+
+      if (extRefStr) {
+        try {
+          const parsed = JSON.parse(extRefStr);
+          if (parsed.plano_id) planoIdUrl = parsed.plano_id;
+          if (parsed.ciclo) cicloUrl = parsed.ciclo;
+        } catch {
+          // Mantém valores da query
+        }
+      }
+
+      if ((statusUrl === "sucesso" || statusUrl === "approved") && barbearia && planoIdUrl) {
         try {
           // Reconciliação segura server-side
-          const resp = await fetch(`/api/verificar-assinatura?barbearia_id=${barbearia.id}&plano_id=${planoIdUrl}&ciclo=${cicloUrl || "mensal"}`);
+          const resp = await fetch(
+            `/api/verificar-assinatura?barbearia_id=${barbearia.id}&plano_id=${planoIdUrl}&ciclo=${cicloUrl}&payment_id=${paymentIdUrl || ""}`
+          );
           if (resp.ok) {
             setSucesso("Pagamento via Mercado Pago processado com sucesso! Sua assinatura foi ativada.");
           } else {
@@ -129,9 +144,13 @@ export default function PaginaAssinaturaParceiro() {
         } catch {
           setErro("Falha ao sincronizar assinatura após o pagamento.");
         }
-      } else if (statusUrl === "falha") {
+      } else if (statusUrl === "falha" || statusUrl === "rejected" || statusUrl === "cancelled") {
         setErro("O pagamento da assinatura não foi concluído no Mercado Pago. Tente novamente.");
         window.history.replaceState({}, "", window.location.pathname);
+      } else if (statusUrl === "pending" || statusUrl === "in_process") {
+        setSucesso("Pagamento em processamento pelo Mercado Pago. A assinatura será ativada assim que for confirmado.");
+        window.history.replaceState({}, "", window.location.pathname);
+        await carregarDados();
       }
     }
 

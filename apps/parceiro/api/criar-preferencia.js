@@ -38,7 +38,7 @@ export default async function handler(req, res) {
           },
         ],
         payer: {
-          email: email || 'contato@barzzo.com.br',
+          email: (email && !email.includes('2184637000548450977')) ? email : 'test_user_725354777609085442@testuser.com',
         },
         external_reference: JSON.stringify({
           barbearia_id,
@@ -47,9 +47,9 @@ export default async function handler(req, res) {
           valor,
         }),
         back_urls: {
-          success: `${origin}/assinatura?status=sucesso&plano=${plano_id}&ciclo=${ciclo}`,
-          failure: `${origin}/assinatura?status=falha`,
-          pending: `${origin}/assinatura?status=pendente`,
+          success: `${origin}/assinatura`,
+          failure: `${origin}/assinatura`,
+          pending: `${origin}/assinatura`,
         },
         auto_return: 'approved',
         statement_descriptor: 'BARZZO',

@@ -9,6 +9,7 @@ export default async function handler(req, res) {
     const barbearia_id = req.query.barbearia_id || req.body?.barbearia_id;
     const plano_id = req.query.plano_id || req.body?.plano_id;
     const ciclo = req.query.ciclo || req.body?.ciclo || 'mensal';
+    const payment_id = req.query.payment_id || req.body?.payment_id;
 
     if (!barbearia_id) {
       return res.status(400).json({ error: 'barbearia_id é obrigatório' });
@@ -52,7 +53,7 @@ export default async function handler(req, res) {
         p_plano_id: plano_id,
         p_ciclo: ciclo,
         p_valor: valorFinal,
-        p_mp_payment_id: `MP_SYNC_RETURN_${Date.now()}`,
+        p_mp_payment_id: payment_id || `MP_SYNC_RETURN_${Date.now()}`,
       });
 
       return res.status(200).json({ ativada: true, status: 'ativo', sincronizado: true, plano_id });
