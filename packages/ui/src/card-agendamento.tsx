@@ -156,7 +156,7 @@ export function CardAgendamento({
       <Button
         variante="fantasma"
         tamanho="sm"
-        className="min-h-[40px] text-xs px-3"
+        className="h-8 min-h-[32px] sm:min-h-[36px] text-xs px-2.5 text-neutral-700 dark:text-neutral-300 hover:text-[#B45A2B] dark:hover:text-[#B45A2B]"
         onClick={onDetalhes}
       >
         Detalhes <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -183,7 +183,7 @@ export function CardAgendamento({
 
   const renderizarTituloCliente = () => {
     const classes =
-      "font-bold text-base sm:text-lg hover:underline hover:text-[#B45A2B] text-neutral-900 dark:text-neutral-100 transition-colors truncate";
+      "font-bold text-sm sm:text-base hover:underline hover:text-[#B45A2B] text-neutral-900 dark:text-neutral-100 transition-colors truncate";
 
     if (renderLink) {
       return renderLink({
@@ -215,9 +215,9 @@ export function CardAgendamento({
       } ${className}`}
     >
       {/* Badge no Canto Superior Direito */}
-      <div className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-10">
+      <div className="absolute top-2.5 right-2.5 sm:top-3 sm:right-3.5 z-10">
         <span
-          className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-0.5 rounded-full font-semibold border shadow-sm ${badge.classe}`}
+          className={`inline-flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full font-semibold border shadow-sm ${badge.classe}`}
         >
           {emExecucao && (
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping inline-block" />
@@ -226,23 +226,23 @@ export function CardAgendamento({
         </span>
       </div>
 
-      <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <CardContent className="p-3 sm:p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Horário e Dados do Cliente */}
-        <div className="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0 pr-24 md:pr-0">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-3.5 flex-1 min-w-0 pr-20 md:pr-0">
           {/* Bloco de Horário */}
-          <div className="flex flex-col items-center justify-center min-w-[76px] py-2 px-2.5 rounded-xl bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/60 dark:border-neutral-700/60 shrink-0">
-            <span className="text-base font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100">
+          <div className="flex flex-col items-center justify-center min-w-[68px] sm:min-w-[72px] py-1 px-2 rounded-lg bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/60 dark:border-neutral-700/60 shrink-0">
+            <span className="text-sm sm:text-base font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100">
               {horaInicio}
             </span>
-            <span className="text-[11px] font-medium opacity-60">
+            <span className="text-[10px] sm:text-[11px] font-medium opacity-60">
               até {horaFim}
             </span>
           </div>
 
           {/* Informações */}
-          <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
             {/* Linha 1: Cliente e Telefone */}
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
               {renderizarTituloCliente()}
 
               {clienteTelefone && (
@@ -254,8 +254,8 @@ export function CardAgendamento({
             </div>
 
             {/* Linha 2: Serviços, Preço e Duração */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm mt-0.5">
-              <span className="inline-flex items-center gap-1.5 font-medium text-neutral-800 dark:text-neutral-200">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+              <span className="inline-flex items-center gap-1 font-medium text-neutral-800 dark:text-neutral-200">
                 <Scissors className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
                 {servicosTexto || "Serviço"}
               </span>
@@ -266,7 +266,7 @@ export function CardAgendamento({
               {duracaoMinutos ? (
                 <>
                   <span className="opacity-30">•</span>
-                  <span className="inline-flex items-center gap-1 opacity-70 text-xs">
+                  <span className="inline-flex items-center gap-1 opacity-70">
                     <Clock className="h-3 w-3 shrink-0" />
                     {duracaoMinutos} min
                   </span>
@@ -276,7 +276,7 @@ export function CardAgendamento({
 
             {/* Linha 3: Profissional */}
             {profissionalNome && (
-              <div className="flex items-center gap-1.5 text-xs opacity-75 mt-0.5">
+              <div className="flex items-center gap-1 text-xs opacity-75">
                 <User className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                 <span>
                   Profissional:{" "}
@@ -289,13 +289,13 @@ export function CardAgendamento({
           </div>
         </div>
 
-        {/* Ações Operacionais de Transição */}
-        <div className="flex items-center justify-end gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-neutral-200/60 dark:border-neutral-800/60 shrink-0 md:mt-5">
+        {/* Ações Operacionais / Detalhes alinhados horizontalmente */}
+        <div className="flex items-center justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-neutral-200/60 dark:border-neutral-800/60 shrink-0 self-end md:self-end">
           {status === "confirmado" && onIniciar && (
             <Button
               variante="principal"
               tamanho="sm"
-              className="min-h-[40px] text-xs font-semibold px-3.5"
+              className="h-8 min-h-[32px] sm:min-h-[36px] text-xs font-semibold px-3"
               disabled={carregandoAcao}
               onClick={onIniciar}
             >
@@ -307,7 +307,7 @@ export function CardAgendamento({
             <Button
               variante="cancelar-destrutivo"
               tamanho="sm"
-              className="min-h-[40px] text-xs font-semibold px-3"
+              className="h-8 min-h-[32px] sm:min-h-[36px] text-xs font-semibold px-2.5"
               disabled={carregandoAcao}
               onClick={onCancelar}
             >
@@ -319,11 +319,11 @@ export function CardAgendamento({
             <Button
               variante="principal"
               tamanho="sm"
-              className="min-h-[40px] text-xs font-semibold px-4 bg-[#16A34A] hover:bg-[#15803D] text-white"
+              className="h-8 min-h-[32px] sm:min-h-[36px] text-xs font-semibold px-3.5 bg-[#16A34A] hover:bg-[#15803D] text-white"
               disabled={carregandoAcao}
               onClick={onConcluir}
             >
-              <Check className="h-3.5 w-3.5 mr-1.5" /> Concluir Atendimento
+              <Check className="h-3.5 w-3.5 mr-1" /> Concluir Atendimento
             </Button>
           )}
 
