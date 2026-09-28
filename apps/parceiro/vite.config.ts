@@ -38,6 +38,13 @@ export default defineConfig(({ mode }) => {
   const localApiPlugin = {
     name: "local-api-middleware",
     configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+        next();
+      });
+
       server.middlewares.use(async (req: any, res: any, next: any) => {
         const endpoints = [
           { route: "/api/assinar-com-cartao", file: "./api/assinar-com-cartao.js" },
@@ -91,7 +98,6 @@ export default defineConfig(({ mode }) => {
           await handler(req, res);
           return;
         }
-        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         next();
       });
     },
