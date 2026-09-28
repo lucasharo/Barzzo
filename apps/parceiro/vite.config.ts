@@ -91,6 +91,7 @@ export default defineConfig(({ mode }) => {
           await handler(req, res);
           return;
         }
+        res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         next();
       });
     },
