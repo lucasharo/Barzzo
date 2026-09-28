@@ -527,19 +527,29 @@ export default function PaginaOnboarding() {
               </div>
             </div>
 
+            <div className="p-4 rounded-lg bg-[#B45A2B]/10 border border-[#B45A2B]/30 flex items-start gap-3">
+              <Users className="h-5 w-5 text-[#B45A2B] shrink-0 mt-0.5" />
+              <div className="flex flex-col text-sm">
+                <span className="font-semibold text-[#B45A2B]">Você foi cadastrado automaticamente como profissional</span>
+                <span className="opacity-80">
+                  Como proprietário, seus dados já foram utilizados para criar seu perfil profissional. Para que sua barbearia fique visível nas buscas dos clientes, será necessário apenas cadastrar seus horários de atendimento no painel.
+                </span>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="primeiroProfissional">
-                Primeiro Barbeiro / Profissional (opcional)
+                Adicionar outro barbeiro / profissional (opcional)
               </Label>
               <Input
                 id="primeiroProfissional"
                 type="text"
-                placeholder="Ex: Barbeiro Marcos (ou você mesmo)"
+                placeholder="Ex: Barbeiro Marcos"
                 value={primeiroProfissional}
                 onChange={(e) => setPrimeiroProfissional(e.target.value)}
               />
               <span className="text-xs opacity-60">
-                Pode ser cadastrado antes mesmo de ter uma conta no Barzzo.
+                Você também pode cadastrar novos membros e gerenciar a equipe a qualquer momento pelo menu Equipe.
               </span>
             </div>
 

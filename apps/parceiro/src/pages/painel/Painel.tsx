@@ -48,6 +48,7 @@ export default function PaginaPainelParceiro() {
     novos_clientes_hoje: 0,
   });
   const [agendamentosHoje, setAgendamentosHoje] = React.useState<any[]>([]);
+  const [possuiHorariosAtivos, setPossuiHorariosAtivos] = React.useState(true);
   const [atualizandoStatusId, setAtualizandoStatusId] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
@@ -110,7 +111,20 @@ export default function PaginaPainelParceiro() {
         setBarbearia(bDb as Barbearia);
       }
 
-      // 3. Buscar métricas do dia via RPC ou agregação direta
+      // 3. Buscar status de horários ativos da equipe
+      try {
+        const { data: possuiHorarios } = await (supabase.rpc as any)(
+          "barbearia_possui_horarios_ativos",
+          { p_barbearia_id: membro.barbearia_id }
+        );
+        if (possuiHorarios !== null && possuiHorarios !== undefined) {
+          setPossuiHorariosAtivos(Boolean(possuiHorarios));
+        }
+      } catch {
+        // Fallback silencioso
+      }
+
+      // 4. Buscar métricas do dia via RPC ou agregação direta
       const { data: metricasRpc, error: erroRpc } = await (supabase.rpc as any)(
         "obter_metricas_dashboard_hoje",
         {
@@ -289,6 +303,29 @@ export default function PaginaPainelParceiro() {
           <CheckCircle2 className="h-4 w-4 text-[#16A34A]" />
           <AlertDescription>{sucesso}</AlertDescription>
         </Alert>
+      )}
+
+      {/* Banner de Visibilidade e Horários Pendentes */}
+      {!possuiHorariosAtivos && (
+        <div className="p-4 sm:p-5 rounded-xl border border-[#EAB308]/40 bg-[#EAB308]/10 text-neutral-900 dark:text-neutral-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-6 w-6 text-[#EAB308] shrink-0 mt-0.5" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-bold text-base text-[#CA8A04] dark:text-[#EAB308]">
+                Sua barbearia está invisível na busca dos clientes
+              </span>
+              <p className="text-xs sm:text-sm opacity-80 max-w-2xl">
+                Nenhum profissional da sua barbearia possui horário de trabalho semanal ativo cadastrado. Enquanto os horários não forem definidos, a barbearia não será exibida no marketplace nem na busca pública de clientes.
+              </p>
+            </div>
+          </div>
+          <Link to="/equipe" className="shrink-0 w-full sm:w-auto">
+            <Button variante="principal" tamanho="sm" className="w-full sm:w-auto flex items-center justify-center gap-1.5 whitespace-nowrap min-h-[40px]">
+              <Clock className="h-4 w-4" />
+              Configurar Horários da Equipe
+            </Button>
+          </Link>
+        </div>
       )}
 
       {/* Cabeçalho do Dashboard */}

@@ -18,7 +18,7 @@ import {
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Profissional } from "@barzzo/tipos";
-import { ArrowLeft, UserCheck } from "lucide-react";
+import { ArrowLeft, UserCheck, Clock } from "lucide-react";
 
 export default function PaginaDetalhesProfissional() {
   const params = useParams();
@@ -167,7 +167,25 @@ export default function PaginaDetalhesProfissional() {
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="flex flex-col gap-6">
+          <div className="p-3.5 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <Clock className="h-5 w-5 text-[#B45A2B] shrink-0" />
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold">Jornada Semanal de Atendimento</span>
+                <span className="text-xs opacity-70">
+                  Configure os dias e horários em que este profissional realiza agendamentos.
+                </span>
+              </div>
+            </div>
+            <Link to={`/equipe/${id}/jornada`} className="shrink-0 w-full sm:w-auto">
+              <Button type="button" variante="secundario" tamanho="sm" className="w-full sm:w-auto flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <Clock className="h-4 w-4" />
+                Configurar Horários
+              </Button>
+            </Link>
+          </div>
+
           <form onSubmit={salvarAlteracoes} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="nome" obrigatorio>

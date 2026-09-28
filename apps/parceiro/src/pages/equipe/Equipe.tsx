@@ -19,7 +19,7 @@ import { esquemaCriarProfissional } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Profissional, MembroBarbearia } from "@barzzo/tipos";
-import { Users, UserPlus, Mail, Shield, UserCheck, Phone } from "lucide-react";
+import { Users, UserPlus, Mail, Shield, UserCheck, Phone, Clock, AlertCircle } from "lucide-react";
 
 export default function PaginaEquipe() {
   const [carregando, setCarregando] = React.useState(true);
@@ -27,6 +27,7 @@ export default function PaginaEquipe() {
   const [barbeariaId, setBarbeariaId] = React.useState<string | null>(null);
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
   const [membros, setMembros] = React.useState<MembroBarbearia[]>([]);
+  const [profissionaisComHorarioAtivo, setProfissionaisComHorarioAtivo] = React.useState<Set<string>>(new Set());
   const [mostrarFormulario, setMostrarFormulario] = React.useState(false);
 
   // Form novo profissional
@@ -71,8 +72,27 @@ export default function PaginaEquipe() {
           .select("*, usuario:usuarios(*)")
           .eq("barbearia_id", membro.barbearia_id);
 
-        setProfissionais((profsDb as Profissional[]) || []);
+        const profs = (profsDb as Profissional[]) || [];
+        setProfissionais(profs);
         setMembros((membrosDb as unknown as MembroBarbearia[]) || []);
+
+        // Buscar jornadas ativas dos profissionais desta barbearia
+        if (profs.length > 0) {
+          const profIds = profs.map((p) => p.id);
+          const { data: jornadasDb } = await supabase
+            .from("jornadas_profissionais")
+            .select("profissional_id, ativo")
+            .in("profissional_id", profIds)
+            .eq("ativo", true);
+
+          if (jornadasDb) {
+            const idsComHorario = new Set<string>();
+            jornadasDb.forEach((j: any) => {
+              if (j.profissional_id) idsComHorario.add(j.profissional_id);
+            });
+            setProfissionaisComHorarioAtivo(idsComHorario);
+          }
+        }
       }
     } catch {
       setErro("Falha ao carregar lista da equipe.");
@@ -278,6 +298,21 @@ export default function PaginaEquipe() {
           Profissionais Atendentes ({profissionais.length})
         </h2>
 
+        {/* Alerta de Visibilidade da Barbearia */}
+        {profissionais.length > 0 && !profissionais.some((p) => profissionaisComHorarioAtivo.has(p.id)) && (
+          <div className="p-4 rounded-xl border border-[#EAB308]/40 bg-[#EAB308]/10 text-neutral-900 dark:text-neutral-100 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-[#EAB308] shrink-0 mt-0.5" />
+            <div className="flex flex-col text-sm">
+              <span className="font-bold text-[#CA8A04] dark:text-[#EAB308]">
+                Atenção: Nenhum profissional com horário de trabalho ativo
+              </span>
+              <span className="opacity-80 text-xs sm:text-sm mt-0.5">
+                Sua barbearia <strong>não aparecerá na busca do cliente</strong> até que pelo menos um profissional tenha horários semanais ativos configurados. Clique em <strong>&quot;Definir Horários&quot;</strong> no perfil desejado para cadastrar a jornada.
+              </span>
+            </div>
+          </div>
+        )}
+
         {profissionais.length === 0 ? (
           <Card camada="primaria" className="p-8 text-center">
             <p className="opacity-70 text-sm">
@@ -286,55 +321,81 @@ export default function PaginaEquipe() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {profissionais.map((prof) => (
-              <Card
-                key={prof.id}
-                camada="primaria"
-                className="hover:border-[#B45A2B]/40 transition-colors"
-              >
-                <CardContent className="p-5 flex items-start gap-4">
-                  <Avatar
-                    src={prof.foto_url}
-                    nome={prof.nome}
-                    tamanho="lg"
-                    className="shrink-0"
-                  />
-                  <div className="flex-1 flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-base truncate">{prof.nome}</h3>
-                      {prof.usuario_id ? (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20 flex items-center gap-1">
-                          <UserCheck className="h-3 w-3" /> Conta ativa
-                        </span>
-                      ) : (
-                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#EAB308]/10 text-[#EAB308] font-semibold border border-[#EAB308]/20">
-                          Sem conta
-                        </span>
+            {profissionais.map((prof) => {
+              const temHorarioAtivo = profissionaisComHorarioAtivo.has(prof.id);
+
+              return (
+                <Card
+                  key={prof.id}
+                  camada="primaria"
+                  className={`transition-colors ${
+                    !temHorarioAtivo
+                      ? "border-[#EAB308]/40 dark:border-[#EAB308]/30"
+                      : "hover:border-[#B45A2B]/40"
+                  }`}
+                >
+                  <CardContent className="p-5 flex items-start gap-4">
+                    <Avatar
+                      src={prof.foto_url}
+                      nome={prof.nome}
+                      tamanho="lg"
+                      className="shrink-0"
+                    />
+                    <div className="flex-1 flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1 flex-wrap">
+                        <h3 className="font-bold text-base truncate">{prof.nome}</h3>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {temHorarioAtivo ? (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20 flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> Horário ativo
+                            </span>
+                          ) : (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#EAB308]/15 text-[#CA8A04] dark:text-[#EAB308] font-semibold border border-[#EAB308]/30 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" /> Horário pendente
+                            </span>
+                          )}
+                          {prof.usuario_id && (
+                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-[#2563EB]/10 text-[#2563EB] font-semibold border border-[#2563EB]/20 flex items-center gap-1">
+                              <UserCheck className="h-3 w-3" /> Conta
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {prof.bio && (
+                        <p className="text-xs opacity-75 line-clamp-2">{prof.bio}</p>
                       )}
+
+                      {prof.telefone && (
+                        <p className="text-xs opacity-60 flex items-center gap-1 mt-1">
+                          <Phone className="h-3 w-3" /> {formatarTelefone(prof.telefone)}
+                        </p>
+                      )}
+
+                      <div className="pt-3 mt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-2">
+                        <Link
+                          to={`/equipe/${prof.id}`}
+                          className="text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:underline"
+                        >
+                          Ver detalhes
+                        </Link>
+                        <Link
+                          to={`/equipe/${prof.id}/jornada`}
+                          className={`text-xs font-semibold flex items-center gap-1 ${
+                            temHorarioAtivo
+                              ? "text-[#B45A2B] hover:underline"
+                              : "text-[#CA8A04] dark:text-[#EAB308] font-bold hover:underline"
+                          }`}
+                        >
+                          <Clock className="h-3.5 w-3.5" />
+                          {temHorarioAtivo ? "Ajustar Horários" : "Definir Horários"}
+                        </Link>
+                      </div>
                     </div>
-
-                    {prof.bio && (
-                      <p className="text-xs opacity-75 line-clamp-2">{prof.bio}</p>
-                    )}
-
-                    {prof.telefone && (
-                      <p className="text-xs opacity-60 flex items-center gap-1 mt-1">
-                        <Phone className="h-3 w-3" /> {formatarTelefone(prof.telefone)}
-                      </p>
-                    )}
-
-                    <div className="pt-3 mt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-                      <Link
-                        to={`/equipe/${prof.id}`}
-                        className="text-xs font-semibold text-[#B45A2B] hover:underline"
-                      >
-                        Ver detalhes / Editar
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

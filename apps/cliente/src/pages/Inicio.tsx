@@ -28,14 +28,23 @@ export default function PaginaInicialCliente() {
       try {
         setCarregando(true);
         const supabase = criarClienteSupabaseBrowser();
-        const { data } = await supabase
-          .from("barbearias")
-          .select("*")
-          .eq("ativa", true)
-          .limit(6);
+        const { data } = await supabase.rpc("buscar_barbearias_com_distancia", {
+          p_latitude: null,
+          p_longitude: null,
+          p_busca_nome: null,
+          p_raio_km: null,
+        });
 
         if (data && data.length > 0) {
-          setBarbearias(data as Barbearia[]);
+          const validas = (data as any[])
+            .filter((b) => {
+              const st = b.status_assinatura;
+              if (st === "vencida" || st === "inadimplente" || st === "suspensa") return false;
+              if (st === "trial" && b.trial_fim && new Date(b.trial_fim) < new Date()) return false;
+              return true;
+            })
+            .slice(0, 6);
+          setBarbearias(validas as Barbearia[]);
         }
       } catch {
         // Fallback silencioso
