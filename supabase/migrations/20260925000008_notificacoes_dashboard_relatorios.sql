@@ -186,7 +186,7 @@ BEGIN
         v_faturamento_estimado
     FROM public.agendamentos
     WHERE barbearia_id = p_barbearia_id
-      AND (data_hora_inicio AT TIME ZONE 'UTC')::DATE = v_data_hoje
+      AND (inicio_previsto AT TIME ZONE 'UTC')::DATE = v_data_hoje
       AND (p_profissional_id IS NULL OR profissional_id = p_profissional_id);
 
     -- Novos clientes com primeiro atendimento hoje
@@ -194,7 +194,7 @@ BEGIN
     INTO v_novos_clientes_hoje
     FROM public.agendamentos a1
     WHERE a1.barbearia_id = p_barbearia_id
-      AND (a1.data_hora_inicio AT TIME ZONE 'UTC')::DATE = v_data_hoje
+      AND (a1.inicio_previsto AT TIME ZONE 'UTC')::DATE = v_data_hoje
       AND a1.status = 'concluido'
       AND (p_profissional_id IS NULL OR a1.profissional_id = p_profissional_id)
       AND NOT EXISTS (
@@ -202,7 +202,7 @@ BEGIN
           WHERE a2.barbearia_id = p_barbearia_id
             AND a2.cliente_id = a1.cliente_id
             AND a2.status = 'concluido'
-            AND (a2.data_hora_inicio AT TIME ZONE 'UTC')::DATE < v_data_hoje
+            AND (a2.inicio_previsto AT TIME ZONE 'UTC')::DATE < v_data_hoje
       );
 
     RETURN jsonb_build_object(
@@ -262,8 +262,8 @@ BEGIN
         v_duracao_real_media
     FROM public.agendamentos
     WHERE barbearia_id = p_barbearia_id
-      AND (data_hora_inicio AT TIME ZONE 'UTC')::DATE >= p_data_inicio
-      AND (data_hora_inicio AT TIME ZONE 'UTC')::DATE <= p_data_fim
+      AND (inicio_previsto AT TIME ZONE 'UTC')::DATE >= p_data_inicio
+      AND (inicio_previsto AT TIME ZONE 'UTC')::DATE <= p_data_fim
       AND (p_profissional_id IS NULL OR profissional_id = p_profissional_id);
 
     IF v_concluidos > 0 THEN

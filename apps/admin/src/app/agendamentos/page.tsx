@@ -27,8 +27,8 @@ export default function PaginaAgendamentosAdmin() {
 
         const { data: agsDb, error: erroDb } = await supabase
           .from("agendamentos")
-          .select("id, cliente_nome, preco_total, data_hora_inicio, status, barbearias(nome), profissionais(nome)")
-          .order("data_hora_inicio", { ascending: false })
+          .select("id, cliente_nome, preco_total, inicio_previsto, status, barbearias(nome), profissionais(nome)")
+          .order("inicio_previsto", { ascending: false })
           .limit(50);
 
         if (erroDb) throw erroDb;
@@ -98,7 +98,7 @@ export default function PaginaAgendamentosAdmin() {
                       <td className="p-4 opacity-80">{ag.cliente_nome || "Cliente Anônimo"}</td>
                       <td className="p-4 opacity-80">{ag.profissionais?.nome || "Qualquer"}</td>
                       <td className="p-4 opacity-75">
-                        {new Date(ag.data_hora_inicio).toLocaleDateString("pt-BR", {
+                        {new Date(ag.inicio_previsto).toLocaleDateString("pt-BR", {
                           day: "2-digit",
                           month: "short",
                           hour: "2-digit",
