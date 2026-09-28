@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     });
 
     const dataPref = await respPref.json();
-    const checkoutUrl = dataPref.sandbox_init_point || dataPref.init_point;
+    const checkoutUrl = dataPref.init_point || dataPref.sandbox_init_point;
 
     if (checkoutUrl) {
       return res.status(200).json({
