@@ -23,18 +23,21 @@ export default async function handler(req, res) {
 
     const supabase = createClient(supabaseUrl, supabaseSecretKey);
 
-    // 1. Inspecionar estado atual no Supabase
-    const { data: barbearia } = await supabase
-      .from('barbearias')
-      .select('id, status_assinatura')
-      .eq('id', barbearia_id)
-      .single();
+    // 1. Inspecionar última assinatura ativa no Supabase
+    const { data: ultimaAssinatura } = await supabase
+      .from('assinaturas')
+      .select('id, plano_id, status')
+      .eq('barbearia_id', barbearia_id)
+      .order('criado_em', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (barbearia?.status_assinatura === 'ativo') {
-      return res.status(200).json({ ativada: true, status: 'ativo' });
+    // Se já estiver com o mesmo plano ativo, retorna OK sem duplicar
+    if (plano_id && ultimaAssinatura?.plano_id === plano_id && ultimaAssinatura?.status === 'ativa') {
+      return res.status(200).json({ ativada: true, status: 'ativo', plano_id });
     }
 
-    // 2. Se o webhook ainda não tiver atualizado, ativa de forma segura via backend
+    // 2. Se for uma nova contratação/upgrade de plano, processa e ativa o novo plano
     if (plano_id) {
       const { data: plano } = await supabase
         .from('planos')
@@ -52,7 +55,7 @@ export default async function handler(req, res) {
         p_mp_payment_id: `MP_SYNC_RETURN_${Date.now()}`,
       });
 
-      return res.status(200).json({ ativada: true, status: 'ativo', sincronizado: true });
+      return res.status(200).json({ ativada: true, status: 'ativo', sincronizado: true, plano_id });
     }
 
     return res.status(200).json({ ativada: false, status: barbearia?.status_assinatura || 'pendente' });
