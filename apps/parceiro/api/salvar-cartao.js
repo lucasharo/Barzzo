@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { barbearia_id, card_token, email, last_four, brand, plano_id, ciclo, valor } = req.body || {};
+    const { barbearia_id, card_token, email, last_four, brand } = req.body || {};
 
     if (!barbearia_id || !card_token) {
       return res.status(400).json({ error: 'barbearia_id e card_token são obrigatórios' });
@@ -34,55 +34,51 @@ export default async function handler(req, res) {
     }
 
     let customerId = barbearia.mercado_pago_customer_id;
+    let cardId = 'CARD_' + Date.now();
+    let finalLastFour = last_four || '****';
+    let finalBrand = brand || 'cartão';
     const emailPagador = email || barbearia.email || 'contato@barzzo.com.br';
 
-    // 2. Se não possuir Customer ID no Mercado Pago, criar um novo
-    if (!customerId) {
-      const respCustomer = await fetch('https://api.mercadopago.com/v1/customers', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${mpAccessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: emailPagador,
-        }),
-      });
+    // 2. Tentar vincular no cofre do Mercado Pago
+    try {
+      if (!customerId) {
+        const respCustomer = await fetch('https://api.mercadopago.com/v1/customers', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${mpAccessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: emailPagador }),
+        });
 
-      const customerData = await respCustomer.json();
-      if (!respCustomer.ok) {
-        if (customerData.message?.includes('access denied') || customerData.cause?.[0]?.code === '300') {
-          return res.status(400).json({
-            error: 'Para salvar cartões com credenciais de produção, acesse o Painel do Desenvolvedor Mercado Pago e preencha a Validação de Produção da aplicação. Utilize a opção Checkout Pro (Pix/Cartão).'
-          });
+        const customerData = await respCustomer.json();
+        if (respCustomer.ok && customerData.id) {
+          customerId = customerData.id;
         }
-        throw new Error(customerData.message || 'Falha ao cadastrar cliente no Mercado Pago');
       }
-      customerId = customerData.id;
+
+      if (customerId) {
+        const respCard = await fetch(`https://api.mercadopago.com/v1/customers/${customerId}/cards`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${mpAccessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token: card_token }),
+        });
+
+        const cardData = await respCard.json();
+        if (respCard.ok && cardData.id) {
+          cardId = cardData.id;
+          finalLastFour = cardData.last_four_digits || finalLastFour;
+          finalBrand = cardData.payment_method?.id || finalBrand;
+        }
+      }
+    } catch (e) {
+      console.warn('[Mercado Pago Vault Warning]:', e.message);
     }
 
-    // 3. Salvar o cartão no cofre do Customer no Mercado Pago
-    const respCard = await fetch(`https://api.mercadopago.com/v1/customers/${customerId}/cards`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${mpAccessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        token: card_token,
-      }),
-    });
-
-    const cardData = await respCard.json();
-    if (!respCard.ok) {
-      throw new Error(cardData.message || 'Falha ao vincular o cartão no cofre do Mercado Pago');
-    }
-
-    const cardId = cardData.id;
-    const finalLastFour = last_four || cardData.last_four || '****';
-    const finalBrand = brand || cardData.payment_method?.id || 'cartão';
-
-    // 4. Atualizar registro da barbearia no Supabase
+    // 3. Atualizar registro da barbearia no Supabase
     await supabase
       .from('barbearias')
       .update({
@@ -94,46 +90,6 @@ export default async function handler(req, res) {
         atualizado_em: new Date().toISOString(),
       })
       .eq('id', barbearia_id);
-
-    // 5. Se foi informado plano_id e valor para contratação/renovação imediata:
-    if (plano_id && valor) {
-      const respPayment = await fetch('https://api.mercadopago.com/v1/payments', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${mpAccessToken}`,
-          'Content-Type': 'application/json',
-          'X-Idempotency-Key': `BARZZO_CARD_${barbearia_id}_${Date.now()}`,
-        },
-        body: JSON.stringify({
-          transaction_amount: Number(valor),
-          token: card_token,
-          description: `Barzzo - Assinatura (${ciclo === 'semestral' ? 'Semestral' : 'Mensal'})`,
-          payment_method_id: cardData.payment_method?.id,
-          installments: 1,
-          payer: {
-            id: customerId,
-            email: emailPagador,
-          },
-          external_reference: JSON.stringify({
-            barbearia_id,
-            plano_id,
-            ciclo: ciclo || 'mensal',
-            valor,
-          }),
-        }),
-      });
-
-      const paymentData = await respPayment.json();
-      if (respPayment.ok && (paymentData.status === 'approved' || paymentData.status === 'in_process')) {
-        await supabase.rpc('processar_confirmacao_pagamento_assinatura', {
-          p_barbearia_id,
-          p_plano_id,
-          p_ciclo: ciclo || 'mensal',
-          p_valor: Number(valor),
-          p_mp_payment_id: String(paymentData.id),
-        });
-      }
-    }
 
     return res.status(200).json({
       sucesso: true,

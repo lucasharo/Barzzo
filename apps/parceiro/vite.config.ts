@@ -18,16 +18,29 @@ export default defineConfig(({ mode }) => {
     name: "local-api-middleware",
     configureServer(server: any) {
       server.middlewares.use(async (req: any, res: any, next: any) => {
-        if (req.url?.startsWith("/api/criar-preferencia")) {
+        const endpoints = [
+          { route: "/api/assinar-com-cartao", file: "./api/assinar-com-cartao.js" },
+          { route: "/api/salvar-cartao", file: "./api/salvar-cartao.js" },
+          { route: "/api/cancelar-assinatura", file: "./api/cancelar-assinatura.js" },
+          { route: "/api/remover-cartao", file: "./api/remover-cartao.js" },
+          { route: "/api/criar-preferencia", file: "./api/criar-preferencia.js" },
+        ];
+
+        const match = endpoints.find((e) => req.url?.startsWith(e.route));
+        if (match) {
           let body = "";
-          req.on("data", (chunk: any) => { body += chunk; });
+          req.on("data", (chunk: any) => {
+            body += chunk;
+          });
           req.on("end", async () => {
             try {
               req.body = body ? JSON.parse(body) : {};
-              // Injetar variáveis de ambiente para a função
               Object.assign(process.env, mergedEnv);
-              const handler = (await import("./api/criar-preferencia.js")).default;
-              res.status = (code: number) => { res.statusCode = code; return res; };
+              const handler = (await import(match.file)).default;
+              res.status = (code: number) => {
+                res.statusCode = code;
+                return res;
+              };
               res.json = (data: any) => {
                 res.setHeader("Content-Type", "application/json");
                 res.end(JSON.stringify(data));
@@ -40,12 +53,16 @@ export default defineConfig(({ mode }) => {
           });
           return;
         }
+
         if (req.url?.startsWith("/api/verificar-assinatura")) {
           const urlObj = new URL(req.url, "http://localhost:3002");
           req.query = Object.fromEntries(urlObj.searchParams.entries());
           Object.assign(process.env, mergedEnv);
           const handler = (await import("./api/verificar-assinatura.js")).default;
-          res.status = (code: number) => { res.statusCode = code; return res; };
+          res.status = (code: number) => {
+            res.statusCode = code;
+            return res;
+          };
           res.json = (data: any) => {
             res.setHeader("Content-Type", "application/json");
             res.end(JSON.stringify(data));
