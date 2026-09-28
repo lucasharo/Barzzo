@@ -256,7 +256,7 @@ export default function PaginaAssinaturaParceiro() {
             </span>
           </div>
           <p className="text-sm opacity-70 mt-1">
-            Escolha o plano ideal para a capacidade da sua equipe com pagamento seguro via Mercado Pago.
+            Escolha o plano ideal para a capacidade da sua equipe com pagamento seguro via Mercado Pago (Cartão de Crédito ou Pix, sem necessidade de ter conta).
           </p>
         </div>
 
@@ -403,7 +403,7 @@ export default function PaginaAssinaturaParceiro() {
                   className="w-full font-bold text-xs min-h-[44px]"
                 >
                   <CreditCard className="mr-1.5 h-4 w-4" />
-                  {ehPlanoAtual ? "Renovar / Atualizar" : "Assinar com Mercado Pago"}
+                  {ehPlanoAtual ? "Renovar / Atualizar" : "Assinar com Cartão ou Pix"}
                 </Button>
               </CardContent>
             </Card>
