@@ -41,8 +41,24 @@ export default defineConfig(({ mode }) => {
       "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(supabaseKey),
       "process.env": JSON.stringify(mergedEnv),
     },
+    optimizeDeps: {
+      exclude: [
+        "@barzzo/ui",
+        "@barzzo/utilitarios",
+        "@barzzo/supabase",
+        "@barzzo/tipos",
+        "@barzzo/dominio",
+        "@barzzo/validacoes",
+        "@barzzo/imagens",
+      ],
+    },
     server: {
       port: 3001,
+      host: true,
+      watch: {
+        usePolling: true,
+        interval: 100,
+      },
     },
   };
 });
