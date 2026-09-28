@@ -12,6 +12,8 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Modal,
+  Input,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
@@ -29,6 +31,10 @@ import {
   CheckCircle2,
   Users,
   Store,
+  RefreshCw,
+  Plus,
+  Trash2,
+  Lock,
 } from "lucide-react";
 
 export default function PaginaAssinaturaParceiro() {
@@ -41,6 +47,122 @@ export default function PaginaAssinaturaParceiro() {
   const [processandoCheckout, setProcessandoCheckout] = React.useState(false);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
+
+  // Estado para Tokenização de Cartão e Renovação Automática
+  const [modalCartaoAberto, setModalCartaoAberto] = React.useState(false);
+  const [titularCartao, setTitularCartao] = React.useState("");
+  const [numeroCartao, setNumeroCartao] = React.useState("");
+  const [mesVencimento, setMesVencimento] = React.useState("");
+  const [anoVencimento, setAnoVencimento] = React.useState("");
+  const [cvv, setCvv] = React.useState("");
+  const [cpfCartao, setCpfCartao] = React.useState("");
+  const [salvandoCartao, setSalvandoCartao] = React.useState(false);
+
+  async function lidarComSalvarCartao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!barbearia) return;
+
+    const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
+    const numLimpo = numeroCartao.replace(/\D/g, "");
+    const cpfLimpo = cpfCartao.replace(/\D/g, "");
+
+    if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
+      setErro("Preencha todos os campos do cartão de crédito com dados válidos.");
+      return;
+    }
+
+    try {
+      setSalvandoCartao(true);
+      setErro(null);
+      setSucesso(null);
+
+      // 1. Tokenizar dados do cartão diretamente com o cofre seguro do Mercado Pago
+      const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          card_number: numLimpo,
+          expiration_month: Number(mesVencimento),
+          expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
+          security_code: cvv,
+          cardholder: {
+            name: titularCartao.toUpperCase(),
+            identification: {
+              type: "CPF",
+              number: cpfLimpo,
+            },
+          },
+        }),
+      });
+
+      const tokenData = await respToken.json();
+
+      if (!respToken.ok) {
+        throw new Error(tokenData.message || tokenData.cause?.[0]?.description || "Falha ao validar e tokenizar o cartão no Mercado Pago.");
+      }
+
+      // 2. Chamar o backend serverless /api/salvar-cartao
+      const respSalvar = await fetch("/api/salvar-cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barbearia_id: barbearia.id,
+          card_token: tokenData.id,
+          email: barbearia.email,
+          last_four: tokenData.last_four_digits,
+          brand: tokenData.payment_method?.id || "master",
+        }),
+      });
+
+      const salvarData = await respSalvar.json();
+
+      if (!respSalvar.ok) {
+        throw new Error(salvarData.error || "Erro ao salvar cartão para renovação automática.");
+      }
+
+      setSucesso("Cartão tokenizado e salvo com sucesso! A renovação automática foi ativada.");
+      setModalCartaoAberto(false);
+      setTitularCartao("");
+      setNumeroCartao("");
+      setMesVencimento("");
+      setAnoVencimento("");
+      setCvv("");
+      setCpfCartao("");
+      await carregarDados();
+    } catch (err: any) {
+      setErro(traduzirErro(err, "Não foi possível cadastrar o cartão de renovação."));
+    } finally {
+      setSalvandoCartao(false);
+    }
+  }
+
+  async function lidarComRemoverCartao() {
+    if (!barbearia) return;
+
+    try {
+      setCarregando(true);
+      setErro(null);
+      setSucesso(null);
+
+      const resp = await fetch("/api/remover-cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barbearia_id: barbearia.id }),
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || "Erro ao desativar renovação automática.");
+      }
+
+      setSucesso("Cartão removido. A renovação automática foi desativada.");
+      await carregarDados();
+    } catch (err: any) {
+      setErro(traduzirErro(err, "Falha ao remover o cartão de renovação."));
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   const carregarDados = React.useCallback(async () => {
     try {
@@ -438,6 +560,189 @@ export default function PaginaAssinaturaParceiro() {
           O pagamento via Mercado Pago aplica-se exclusivamente à assinatura mensal/semestral do software Barzzo. O valor dos cortes e serviços prestados aos seus clientes não sofre retenções nem taxas adicionais pelo app.
         </div>
       </div>
+
+      {/* Seção de Renovação Automática com Cartão de Crédito */}
+      <Card className="border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
+        <CardHeader className="bg-neutral-50/50 dark:bg-neutral-900/30 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5 text-[#B45A2B]" />
+              <CardTitle className="text-base font-bold">Renovação Automática de Assinatura</CardTitle>
+            </div>
+            <span
+              className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
+                barbearia.recorrencia_ativa
+                  ? "bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20"
+                  : "bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
+              }`}
+            >
+              {barbearia.recorrencia_ativa ? "Ativada" : "Desativada"}
+            </span>
+          </div>
+          <CardDescription className="text-xs mt-1">
+            Cadastre seu cartão de crédito com criptografia de ponta a ponta via Mercado Pago para garantir o acesso ininterrupto do seu estabelecimento sem precisar refazer checkout manual.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four ? (
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-[#B45A2B]">
+                <CreditCard className="h-6 w-6" />
+              </div>
+              <div>
+                <strong className="block text-sm font-bold capitalize">
+                  {barbearia.mercado_pago_card_brand || "Cartão"} final {barbearia.mercado_pago_card_last_four}
+                </strong>
+                <span className="text-xs opacity-70">
+                  Cobrança automática ao término do período da assinatura atual.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400">
+                <Lock className="h-6 w-6" />
+              </div>
+              <div>
+                <strong className="block text-sm font-bold">Nenhum cartão para renovação cadastrado</strong>
+                <span className="text-xs opacity-70">
+                  Evite bloqueios no seu sistema mantendo um cartão seguro ativo.
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {barbearia.recorrencia_ativa ? (
+              <Button
+                variante="cancelar-destrutivo"
+                tamanho="sm"
+                onClick={lidarComRemoverCartao}
+                className="w-full sm:w-auto font-semibold text-xs"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Desativar Renovação
+              </Button>
+            ) : (
+              <Button
+                variante="principal"
+                tamanho="sm"
+                onClick={() => setModalCartaoAberto(true)}
+                className="w-full sm:w-auto font-bold text-xs"
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Cadastrar Cartão
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Modal para Tokenização de Cartão de Crédito */}
+      <Modal
+        aberto={modalCartaoAberto}
+        aoFechar={() => setModalCartaoAberto(false)}
+        titulo="Cadastrar Cartão para Renovação"
+        descricao="Seus dados de cartão são tokenizados diretamente no cofre seguro do Mercado Pago."
+        tamanho="md"
+      >
+        <form onSubmit={lidarComSalvarCartao} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-xs font-bold mb-1">Nome Impresso no Cartão</label>
+            <Input
+              type="text"
+              placeholder="NOME COMO ESTA NO CARTAO"
+              value={titularCartao}
+              onChange={(e) => setTitularCartao(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1">Número do Cartão</label>
+            <Input
+              type="text"
+              placeholder="0000 0000 0000 0000"
+              maxLength={19}
+              value={numeroCartao}
+              onChange={(e) => setNumeroCartao(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold mb-1">Mês (MM)</label>
+              <Input
+                type="text"
+                placeholder="12"
+                maxLength={2}
+                value={mesVencimento}
+                onChange={(e) => setMesVencimento(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1">Ano (AAAA)</label>
+              <Input
+                type="text"
+                placeholder="2030"
+                maxLength={4}
+                value={anoVencimento}
+                onChange={(e) => setAnoVencimento(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold mb-1">CVV</label>
+              <Input
+                type="text"
+                placeholder="123"
+                maxLength={4}
+                value={cvv}
+                onChange={(e) => setCvv(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1">CPF do Titular</label>
+            <Input
+              type="text"
+              placeholder="000.000.000-00"
+              maxLength={14}
+              value={cpfCartao}
+              onChange={(e) => setCpfCartao(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex items-center gap-2 p-3 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg text-xs opacity-80 mt-1">
+            <Lock className="h-4 w-4 text-[#B45A2B] shrink-0" />
+            <span>Nenhum número de cartão é armazenado em nossos servidores.</span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+            <Button
+              type="button"
+              variante="fantasma"
+              onClick={() => setModalCartaoAberto(false)}
+              disabled={salvandoCartao}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variante="principal"
+              carregando={salvandoCartao}
+              disabled={salvandoCartao}
+            >
+              Salvar Cartão Seguro
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
