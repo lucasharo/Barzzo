@@ -15,7 +15,7 @@ import {
   LoadingSpinner,
   SeletorData,
 } from "@barzzo/ui";
-import { formatarTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { esquemaCriarAgendamentoManual } from "@barzzo/validacoes";
 import {
@@ -335,7 +335,7 @@ export default function PaginaNovoAgendamentoManual() {
       barbearia_id: barbearia.id,
       profissional_id: profDefinitivoId,
       cliente_nome: clienteNome,
-      cliente_telefone: clienteTelefone ? clienteTelefone : null,
+      cliente_telefone: clienteTelefone ? (limparTelefone(clienteTelefone) || null) : null,
       cliente_email: clienteEmail ? clienteEmail : null,
       cliente_id: null,
       inicio_previsto: inicioPrevisto,

@@ -15,7 +15,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, formatarTelefone } from "@barzzo/utilitarios";
 import { calcularComparativoTempo, validarTransicaoStatus } from "@barzzo/dominio";
 import type {
   AgendamentoComDetalhes,
@@ -285,7 +285,7 @@ export default function PaginaDetalhesAgendamento() {
                 {agendamento.cliente_nome}
               </CardTitle>
               {agendamento.cliente_telefone && (
-                <CardDescription>{agendamento.cliente_telefone}</CardDescription>
+                <CardDescription>{formatarTelefone(agendamento.cliente_telefone)}</CardDescription>
               )}
             </div>
 
