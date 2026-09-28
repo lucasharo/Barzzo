@@ -10,6 +10,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  CardAgendamento,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { formatarTelefone } from "@barzzo/utilitarios";
@@ -468,130 +469,34 @@ export default function PaginaPainelParceiro() {
         ) : (
           <div className="flex flex-col gap-3">
             {agendamentosHoje.map((ag) => {
-              const emExecucao = ag.status === "em_atendimento";
-              const concluido = ag.status === "concluido";
-              const cancelado = ag.status === "cancelado" || ag.status === "nao_compareceu";
-              const confirmado = ag.status === "confirmado";
               const processando = atualizandoStatusId === ag.id;
+              const nomeServicos =
+                ag.agendamentos_servicos?.map((s: any) => s.nome_servico).join(", ") ||
+                "Serviço";
 
               return (
-                <Card
+                <CardAgendamento
                   key={ag.id}
-                  className={`relative overflow-hidden border transition-all ${
-                    emExecucao
-                      ? "border-amber-500/50 bg-amber-500/5 shadow-sm"
-                      : cancelado
-                      ? "opacity-60 border-neutral-200/80 dark:border-neutral-800"
-                      : "border-neutral-200/80 dark:border-neutral-800 hover:border-[#B45A2B]/40"
-                  }`}
-                >
-                  {/* Badge no Canto Superior Direito */}
-                  <div className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-10">
-                    {emExecucao && (
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping inline-block" />
-                        Na Cadeira
-                      </span>
-                    )}
-                    {concluido && (
-                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20 shadow-sm">
-                        Concluído
-                      </span>
-                    )}
-                    {cancelado && (
-                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20 shadow-sm">
-                        {ag.status === "nao_compareceu" ? "Não Compareceu" : "Cancelado"}
-                      </span>
-                    )}
-                    {confirmado && (
-                      <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 shadow-sm">
-                        Confirmado
-                      </span>
-                    )}
-                  </div>
-
-                  <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {/* Horário e Identificação */}
-                    <div className="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0 pr-24 md:pr-0">
-                      <div className="flex flex-col items-center justify-center min-w-[76px] py-2 px-2.5 rounded-xl bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/60 dark:border-neutral-700/60 shrink-0">
-                        <span className="text-base font-extrabold tracking-tight text-neutral-900 dark:text-neutral-100">
-                          {formatarHora(ag.inicio_previsto)}
-                        </span>
-                        <span className="text-[11px] font-medium opacity-60">
-                          {ag.duracao_total_minutos} min
-                        </span>
-                      </div>
-
-                      <div className="flex flex-col gap-1 min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5">
-                          <Link
-                            to={`/agendamentos/${ag.id}`}
-                            className="font-bold text-base sm:text-lg hover:underline hover:text-[#B45A2B] text-neutral-900 dark:text-neutral-100 transition-colors truncate"
-                          >
-                            {ag.cliente_nome || "Cliente sem nome"}
-                          </Link>
-
-                          {ag.cliente_telefone && (
-                            <span className="inline-flex items-center gap-1 text-xs opacity-65 font-medium whitespace-nowrap">
-                              <Phone className="h-3 w-3 opacity-70" />
-                              {formatarTelefone(ag.cliente_telefone)}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm mt-0.5">
-                          <span className="inline-flex items-center gap-1.5 font-medium text-neutral-800 dark:text-neutral-200">
-                            <Scissors className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
-                            {ag.agendamentos_servicos?.map((s: any) => s.nome_servico).join(", ") || "Serviço"}
-                          </span>
-                          <span className="opacity-30">•</span>
-                          <span className="font-extrabold text-[#B45A2B]">
-                            {formatarMoeda(ag.preco_total)}
-                          </span>
-                          <span className="opacity-30">•</span>
-                          <span className="opacity-75">
-                            Profissional: <strong className="font-semibold text-neutral-900 dark:text-neutral-100">{ag.profissionais?.nome || "Qualquer"}</strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Ações Rápidas */}
-                    <div className="flex items-center justify-end gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-neutral-200/60 dark:border-neutral-800/60 shrink-0 md:mt-5">
-                      {confirmado && (
-                        <Button
-                          variante="principal"
-                          tamanho="sm"
-                          disabled={processando}
-                          carregando={processando}
-                          onClick={() => handleMudarStatus(ag.id, "em_atendimento")}
-                          className="min-h-[40px] text-xs font-semibold px-3.5"
-                        >
-                          <Play className="mr-1.5 h-3.5 w-3.5 fill-current" /> Iniciar
-                        </Button>
-                      )}
-
-                      {emExecucao && (
-                        <Button
-                          variante="principal"
-                          tamanho="sm"
-                          disabled={processando}
-                          carregando={processando}
-                          onClick={() => handleMudarStatus(ag.id, "concluido")}
-                          className="min-h-[40px] text-xs font-semibold px-4 bg-[#16A34A] hover:bg-[#15803D] text-white"
-                        >
-                          <CheckCircle2 className="mr-1.5 h-4 w-4" /> Concluir Atendimento
-                        </Button>
-                      )}
-
-                      <Link to={`/agendamentos/${ag.id}`}>
-                        <Button variante="fantasma" tamanho="sm" className="min-h-[40px] text-xs px-3">
-                          Detalhes <ChevronRight className="ml-1 h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
+                  id={ag.id}
+                  inicioPrevisto={ag.inicio_previsto}
+                  fimPrevisto={ag.fim_previsto}
+                  duracaoMinutos={ag.duracao_total_minutos}
+                  clienteNome={ag.cliente_nome || "Cliente sem nome"}
+                  clienteTelefone={ag.cliente_telefone}
+                  servicosTexto={nomeServicos}
+                  precoTotal={Number(ag.preco_total)}
+                  profissionalNome={ag.profissionais?.nome || "Qualquer"}
+                  status={ag.status}
+                  usarUtc={true}
+                  carregandoAcao={processando}
+                  onIniciar={() => handleMudarStatus(ag.id, "em_atendimento")}
+                  onConcluir={() => handleMudarStatus(ag.id, "concluido")}
+                  renderLink={({ href, className, children }) => (
+                    <Link to={href} className={className}>
+                      {children}
+                    </Link>
+                  )}
+                />
               );
             })}
           </div>
