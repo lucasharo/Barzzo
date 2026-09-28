@@ -145,6 +145,7 @@ export default async function handler(req, res) {
             valor: valorACobrar,
             credito_aplicado: creditoRestante,
           }),
+          notification_url: "https://gdgeokfwkbusemayqucb.supabase.co/functions/v1/mercadopago-webhook",
         };
 
         if (customerId) {
