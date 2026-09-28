@@ -11,3 +11,4 @@ export * from "./bottom-nav";
 export * from "./seletor-data";
 export * from "./alerta-temporizado";
 export * from "./modal";
+export * from "./seletor";

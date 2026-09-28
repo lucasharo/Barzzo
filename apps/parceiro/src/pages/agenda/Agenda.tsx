@@ -12,6 +12,7 @@ import {
   AlertDescription,
   LoadingSpinner,
   SeletorData,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro } from "@barzzo/utilitarios";
@@ -346,21 +347,21 @@ export default function PaginaAgendaParceiro() {
 
       {/* Filtros por Profissional e Status */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#121214]">
-        <div className="flex items-center gap-3">
-          <Filter className="h-4 w-4 opacity-50" />
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold opacity-70">Profissional:</span>
-            <select
-              value={filtroProfissional}
-              onChange={(e) => setFiltroProfissional(e.target.value)}
-              className="text-xs rounded border border-neutral-200 dark:border-neutral-800 bg-transparent px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-[#B45A2B]"
-            >
-              <option value="todos" className="dark:bg-[#121214]">Todos os profissionais</option>
-              {profissionais.map((p) => (
-                <option key={p.id} value={p.id} className="dark:bg-[#121214]">{p.nome}</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2">
+          <Seletor
+            valor={filtroProfissional}
+            aoMudar={(v) => setFiltroProfissional(v)}
+            opcoes={[
+              { valor: "todos", rotulo: "Todos os profissionais" },
+              ...profissionais.map((p) => ({
+                valor: p.id,
+                rotulo: p.nome,
+              })),
+            ]}
+            icone={<Filter className="h-4 w-4" />}
+            tamanho="sm"
+            className="w-full sm:w-[220px]"
+          />
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto">

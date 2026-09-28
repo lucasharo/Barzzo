@@ -13,6 +13,8 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
+  type OpcaoSeletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type {
@@ -380,21 +382,20 @@ export default function PaginaRelatoriosParceiro() {
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 opacity-50 shrink-0" />
-              <select
-                value={profissionalFiltro}
-                onChange={(e) => setProfissionalFiltro(e.target.value)}
-                className="h-10 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-              >
-                <option value="todos">Todos os Profissionais</option>
-                {profissionais.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <Seletor
+              valor={profissionalFiltro}
+              aoMudar={(v) => setProfissionalFiltro(v)}
+              opcoes={[
+                { valor: "todos", rotulo: "Todos os Profissionais" },
+                ...profissionais.map((p) => ({
+                  valor: p.id,
+                  rotulo: p.nome,
+                })),
+              ]}
+              icone={<Filter className="h-4 w-4" />}
+              tamanho="sm"
+              className="w-full sm:w-[240px]"
+            />
           </div>
         </CardContent>
       </Card>
