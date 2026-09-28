@@ -277,24 +277,21 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         duracao_minutos: draft.duracao_minutos,
       });
 
-      // Se houver cupom utilizado, incrementar uso
-      let cupomId: string | null = null;
-
+      // Se houver cupom/influenciador utilizado, registrar uso atomicamente via RPC
       if (codigoCupomLimpo) {
+        let cupomId: string | null = null;
+        let infId: string | null = null;
+
         const { data: cupDb } = await (supabase.from("cupons") as any)
-          .select("id, usos_atuais")
+          .select("id")
           .eq("barbearia_id", draft.barbearia_id)
           .ilike("codigo", codigoCupomLimpo)
           .maybeSingle();
 
         if (cupDb) {
           cupomId = cupDb.id;
-          await (supabase.from("cupons") as any)
-            .update({ usos_atuais: cupDb.usos_atuais + 1 })
-            .eq("id", cupDb.id);
         }
 
-        // Se o código for de influenciador, registrar indicação
         const { data: infDb } = await (supabase.from("influenciadores") as any)
           .select("id")
           .eq("barbearia_id", draft.barbearia_id)
@@ -303,16 +300,17 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           .maybeSingle();
 
         if (infDb) {
-          await (supabase.from("indicacoes") as any).insert({
-            barbearia_id: draft.barbearia_id,
-            influenciador_id: infDb.id,
-            cupom_id: cupomId,
-            agendamento_id: novoAgendamento.id,
-            cliente_id: authUserId,
-            codigo_ref_usado: codigoCupomLimpo,
-            status: "pendente",
-          });
+          infId = infDb.id;
         }
+
+        await supabase.rpc("registrar_uso_cupom", {
+          p_barbearia_id: draft.barbearia_id,
+          p_cupom_id: cupomId,
+          p_agendamento_id: novoAgendamento.id,
+          p_cliente_id: authUserId,
+          p_codigo: codigoCupomLimpo,
+          p_influenciador_id: infId,
+        });
       }
 
       // Limpar rascunho persistido e atribuição

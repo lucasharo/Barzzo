@@ -126,6 +126,7 @@ export default function PaginaRelatoriosParceiro() {
           preco_total,
           duracao_total_minutos,
           profissional_id,
+          observacoes,
           profissionais (id, nome, foto_url),
           agendamentos_servicos (nome_servico, duracao_minutos, preco)
         `)
@@ -223,15 +224,47 @@ export default function PaginaRelatoriosParceiro() {
         .select("*, influenciadores(nome, codigo_ref)")
         .eq("barbearia_id", membro.barbearia_id);
 
+      const { data: indicacoesDb } = await (supabase.from("indicacoes") as any)
+        .select("*")
+        .eq("barbearia_id", membro.barbearia_id);
+
       const marketingItens: DesempenhoMarketingItem[] = [];
 
       (cuponsDb || []).forEach((c: any) => {
+        const codigoNorm = (c.codigo || "").toUpperCase();
+
+        const agsDoCupom = concluidos.filter((a: any) => {
+          const viaInd = (indicacoesDb || []).some(
+            (ind: any) =>
+              ind.agendamento_id === a.id &&
+              (ind.cupom_id === c.id || (ind.codigo_ref_usado || "").toUpperCase() === codigoNorm)
+          );
+          const viaObs = (a.observacoes || "").toUpperCase().includes(`[CUPOM: ${codigoNorm}]`);
+          return viaInd || viaObs;
+        });
+
+        const fatGerado = agsDoCupom.reduce(
+          (acc: number, a: any) => acc + Number(a.preco_total || 0),
+          0
+        );
+
+        const descontoTotal = agsDoCupom.reduce((acc: number, a: any) => {
+          const precoOriginal = (a.agendamentos_servicos || []).reduce(
+            (s: number, srv: any) => s + Number(srv.preco || 0),
+            0
+          );
+          const desc = Math.max(0, precoOriginal - Number(a.preco_total || 0));
+          return acc + desc;
+        }, 0);
+
+        const totalUsos = Math.max(c.usos_atuais || 0, agsDoCupom.length);
+
         marketingItens.push({
           tipo: "cupom",
           identificador: c.codigo,
-          total_utilizacoes: c.usos_atuais || 0,
-          faturamento_gerado: 0, // Estimativa agregada
-          total_descontos_concedidos: 0,
+          total_utilizacoes: totalUsos,
+          faturamento_gerado: Number(fatGerado.toFixed(2)),
+          total_descontos_concedidos: Number(descontoTotal.toFixed(2)),
         });
       });
 
@@ -620,6 +653,8 @@ export default function PaginaRelatoriosParceiro() {
                               <td className="p-4 font-medium">
                                 {m.comissoes_geradas !== undefined
                                   ? `Comissão: ${formatarMoeda(m.comissoes_geradas)}`
+                                  : m.total_descontos_concedidos && m.total_descontos_concedidos > 0
+                                  ? `Desconto: ${formatarMoeda(m.total_descontos_concedidos)}`
                                   : "Desconto Direto"}
                               </td>
                             </tr>
