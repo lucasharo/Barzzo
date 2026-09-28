@@ -344,8 +344,9 @@ export default function PaginaAssinaturaParceiro() {
           barbearia_id: barbearia.id,
           card_token: tokenData.id,
           email: barbearia.email,
-          last_four: tokenData.last_four_digits,
+          last_four: tokenData.last_four_digits || validacao.numLimpo?.slice(-4),
           brand: tokenData.payment_method?.id || infoBandeira.id,
+          expiration: validadeCartao,
         }),
       });
 
@@ -354,7 +355,7 @@ export default function PaginaAssinaturaParceiro() {
         throw new Error(errSalvar.error || "Erro ao salvar cartão.");
       }
 
-      setSucesso("Cartão de renovação atualizado com sucesso!");
+      setSucesso("Cartão de renovação cadastrado com sucesso!");
       setModalTrocarCartaoAberto(false);
       limparFormularioCartao();
       await carregarDados();

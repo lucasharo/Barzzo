@@ -1,11 +1,32 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import fs from "fs";
+
+function carregarEnvLocal(raiz: string) {
+  const caminho = path.resolve(raiz, "local.env");
+  const parsed: Record<string, string> = {};
+  if (fs.existsSync(caminho)) {
+    const lines = fs.readFileSync(caminho, "utf-8").split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const idx = trimmed.indexOf("=");
+      if (idx !== -1) {
+        const k = trimmed.slice(0, idx).trim();
+        const v = trimmed.slice(idx + 1).trim().replace(/^["']|["']$/g, "");
+        parsed[k] = v;
+      }
+    }
+  }
+  return parsed;
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname), "");
   const rootEnv = loadEnv(mode, path.resolve(__dirname, "../.."), "");
-  const mergedEnv = { ...rootEnv, ...env };
+  const localEnvVars = carregarEnvLocal(path.resolve(__dirname, "../.."));
+  const mergedEnv = { ...rootEnv, ...localEnvVars, ...env };
 
   const supabaseUrl =
     mergedEnv.NEXT_PUBLIC_SUPABASE_URL || "https://gdgeokfwkbusemayqucb.supabase.co";

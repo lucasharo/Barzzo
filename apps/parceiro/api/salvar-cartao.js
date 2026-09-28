@@ -6,15 +6,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { barbearia_id, card_token, email, last_four, brand } = req.body || {};
+    const { barbearia_id, card_token, email, last_four, brand, expiration } = req.body || {};
 
     if (!barbearia_id || !card_token) {
       return res.status(400).json({ error: 'barbearia_id e card_token são obrigatórios' });
     }
 
     const mpAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseSecretKey = process.env.SUPABASE_CHAVE_SECRETA;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseSecretKey = process.env.SUPABASE_CHAVE_SECRETA || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!mpAccessToken || !supabaseUrl || !supabaseSecretKey) {
       return res.status(500).json({ error: 'Configuração de ambiente incompleta' });
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     let finalBrand = brand || 'cartão';
     const emailPagador = email || barbearia.email || 'contato@barzzo.com.br';
 
-    // 2. Tentar vincular no cofre do Mercado Pago
+    // 2. Tentar vincular no cofre do Mercado Pago (se aplicável)
     try {
       if (!customerId) {
         const respCustomer = await fetch('https://api.mercadopago.com/v1/customers', {
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
     }
 
     // 3. Atualizar registro da barbearia no Supabase
-    await supabase
+    const { error: errUpdate } = await supabase
       .from('barbearias')
       .update({
         mercado_pago_customer_id: customerId,
@@ -90,6 +90,10 @@ export default async function handler(req, res) {
         atualizado_em: new Date().toISOString(),
       })
       .eq('id', barbearia_id);
+
+    if (errUpdate) {
+      throw new Error(`Erro ao salvar no banco: ${errUpdate.message}`);
+    }
 
     return res.status(200).json({
       sucesso: true,
