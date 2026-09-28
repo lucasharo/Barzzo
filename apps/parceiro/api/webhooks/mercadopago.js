@@ -17,8 +17,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'ignored', message: 'ID ausente no payload do webhook' });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseSecretKey = process.env.SUPABASE_CHAVE_SECRETA;
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseSecretKey = process.env.SUPABASE_CHAVE_SECRETA || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseSecretKey) {
       return res.status(500).json({ error: 'Configuração do Supabase ausente nas variáveis de ambiente' });
