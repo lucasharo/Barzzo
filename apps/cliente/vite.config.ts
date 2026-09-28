@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import fs from "fs";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname), "");
@@ -41,18 +42,37 @@ export default defineConfig(({ mode }) => {
     },
   };
 
+  const monorepoVersion = Date.now().toString(36);
+  const cacheBusterPlugin = {
+    name: "monorepo-cache-buster",
+    enforce: "pre" as const,
+    resolveId(source: string, importer?: string) {
+      if (source.startsWith("@barzzo/")) {
+        const pkgName = source.replace("@barzzo/", "");
+        const target = path.resolve(__dirname, `../../packages/${pkgName}/src/index.ts`);
+        if (fs.existsSync(target)) {
+          return `${target}?v=${monorepoVersion}`;
+        }
+      }
+      if (importer && (importer.includes("packages") || importer.includes("packages/")) && source.startsWith(".")) {
+        const cleanImporter = importer.split("?")[0];
+        const dir = path.dirname(cleanImporter);
+        const resolved = path.resolve(dir, source);
+        for (const ext of ["", ".ts", ".tsx", "/index.ts", "/index.tsx"]) {
+          const full = resolved + ext;
+          if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+            return `${full}?v=${monorepoVersion}`;
+          }
+        }
+      }
+    },
+  };
+
   return {
-    plugins: [react(), antiCachePlugin],
+    plugins: [react(), antiCachePlugin, cacheBusterPlugin],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
-        "@barzzo/ui": path.resolve(__dirname, "../../packages/ui/src"),
-        "@barzzo/utilitarios": path.resolve(__dirname, "../../packages/utilitarios/src"),
-        "@barzzo/supabase": path.resolve(__dirname, "../../packages/supabase/src"),
-        "@barzzo/tipos": path.resolve(__dirname, "../../packages/tipos/src"),
-        "@barzzo/dominio": path.resolve(__dirname, "../../packages/dominio/src"),
-        "@barzzo/validacoes": path.resolve(__dirname, "../../packages/validacoes/src"),
-        "@barzzo/imagens": path.resolve(__dirname, "../../packages/imagens/src"),
         react: path.resolve(__dirname, "../../node_modules/react"),
         "react-dom": path.resolve(__dirname, "../../node_modules/react-dom"),
       },
