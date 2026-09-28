@@ -19,9 +19,13 @@ export interface Barbearia {
   onboarding_concluido: boolean;
   mercado_pago_customer_id?: string | null;
   mercado_pago_card_id?: string | null;
+  mercado_pago_card_first_four?: string | null;
   mercado_pago_card_last_four?: string | null;
+  mercado_pago_card_expiration?: string | null;
   mercado_pago_card_brand?: string | null;
   recorrencia_ativa?: boolean;
+  cancelamento_agendado?: boolean;
+  cancelado_em?: string | null;
   criado_em: string;
   atualizado_em: string;
 }

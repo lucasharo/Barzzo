@@ -96,6 +96,17 @@ function ConteudoPerfilPublicoBarbearia() {
       }
 
       const barb = bDb as Barbearia;
+      const st = barb.status_assinatura;
+      if (
+        st === "vencida" ||
+        st === "inadimplente" ||
+        st === "suspensa" ||
+        (st === "trial" && barb.trial_fim && new Date(barb.trial_fim) < new Date())
+      ) {
+        setBarbearia(null);
+        return;
+      }
+
       setBarbearia(barb);
 
       // Rastrear clique do influenciador e persistir atribuição

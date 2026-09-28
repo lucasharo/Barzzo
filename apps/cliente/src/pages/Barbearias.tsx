@@ -282,6 +282,14 @@ function ConteudoListagemBarbearias() {
           };
         });
 
+        // Ocultar barbearias com assinatura ou período de testes expirados
+        lista = lista.filter((b) => {
+          const st = b.status_assinatura;
+          if (st === "vencida" || st === "inadimplente" || st === "suspensa") return false;
+          if (st === "trial" && b.trial_fim && new Date(b.trial_fim) < new Date()) return false;
+          return true;
+        });
+
         // Refinamento de busca textual de endereço SOMENTE se não houver coordenadas geocodificadas
         if (!coordsEfetivas && termoLoc) {
           const termoNorm = normalizarTexto(termoLoc);

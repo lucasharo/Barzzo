@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -8,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  Alert,
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
@@ -17,24 +15,23 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
-import { calcularEconomiaSemestral } from "@barzzo/dominio";
 import { traduzirErro } from "@barzzo/utilitarios";
 import {
   CreditCard,
   Check,
-  Zap,
   ShieldCheck,
   Clock,
   Sparkles,
   ArrowRight,
   AlertCircle,
-  CheckCircle2,
   Users,
   Store,
   RefreshCw,
   Plus,
   Trash2,
   Lock,
+  ArrowUpRight,
+  Ban,
 } from "lucide-react";
 
 export default function PaginaAssinaturaParceiro() {
@@ -43,126 +40,33 @@ export default function PaginaAssinaturaParceiro() {
   const [planos, setPlanos] = React.useState<Plano[]>([]);
   const [assinaturaAtual, setAssinaturaAtual] = React.useState<Assinatura | null>(null);
   const [ciclo, setCiclo] = React.useState<CicloAssinatura>("semestral");
-  const [planoSelecionadoId, setPlanoSelecionadoId] = React.useState<string | null>(null);
-  const [processandoCheckout, setProcessandoCheckout] = React.useState(false);
+  const [processando, setProcessando] = React.useState(false);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
 
-  // Estado para Tokenização de Cartão e Renovação Automática
-  const [modalCartaoAberto, setModalCartaoAberto] = React.useState(false);
+  // Modais
+  const [planoAlvo, setPlanoAlvo] = React.useState<Plano | null>(null);
+  const [modalUpgradeAberto, setModalUpgradeAberto] = React.useState(false);
+  const [modalCancelarAberto, setModalCancelarAberto] = React.useState(false);
+  const [modalTrocarCartaoAberto, setModalTrocarCartaoAberto] = React.useState(false);
+  const [usandoNovoCartaoNoUpgrade, setUsandoNovoCartaoNoUpgrade] = React.useState(false);
+
+  // Campos de Cartão
   const [titularCartao, setTitularCartao] = React.useState("");
   const [numeroCartao, setNumeroCartao] = React.useState("");
   const [mesVencimento, setMesVencimento] = React.useState("");
   const [anoVencimento, setAnoVencimento] = React.useState("");
   const [cvv, setCvv] = React.useState("");
   const [cpfCartao, setCpfCartao] = React.useState("");
-  const [salvandoCartao, setSalvandoCartao] = React.useState(false);
 
-  async function lidarComSalvarCartao(e: React.FormEvent) {
-    e.preventDefault();
-    if (!barbearia) return;
+  const formatarMoeda = (val: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
-    const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
-    const numLimpo = numeroCartao.replace(/\D/g, "");
-    const cpfLimpo = cpfCartao.replace(/\D/g, "");
-
-    if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
-      setErro("Preencha todos os campos do cartão de crédito com dados válidos.");
-      return;
-    }
-
-    try {
-      setSalvandoCartao(true);
-      setErro(null);
-      setSucesso(null);
-
-      // 1. Tokenizar dados do cartão diretamente com o cofre seguro do Mercado Pago
-      const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          card_number: numLimpo,
-          expiration_month: Number(mesVencimento),
-          expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
-          security_code: cvv,
-          cardholder: {
-            name: titularCartao.toUpperCase(),
-            identification: {
-              type: "CPF",
-              number: cpfLimpo,
-            },
-          },
-        }),
-      });
-
-      const tokenData = await respToken.json();
-
-      if (!respToken.ok) {
-        throw new Error(tokenData.message || tokenData.cause?.[0]?.description || "Falha ao validar e tokenizar o cartão no Mercado Pago.");
-      }
-
-      // 2. Chamar o backend serverless /api/salvar-cartao
-      const respSalvar = await fetch("/api/salvar-cartao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          barbearia_id: barbearia.id,
-          card_token: tokenData.id,
-          email: barbearia.email,
-          last_four: tokenData.last_four_digits,
-          brand: tokenData.payment_method?.id || "master",
-        }),
-      });
-
-      const salvarData = await respSalvar.json();
-
-      if (!respSalvar.ok) {
-        throw new Error(salvarData.error || "Erro ao salvar cartão para renovação automática.");
-      }
-
-      setSucesso("Cartão tokenizado e salvo com sucesso! A renovação automática foi ativada.");
-      setModalCartaoAberto(false);
-      setTitularCartao("");
-      setNumeroCartao("");
-      setMesVencimento("");
-      setAnoVencimento("");
-      setCvv("");
-      setCpfCartao("");
-      await carregarDados();
-    } catch (err: any) {
-      setErro(traduzirErro(err, "Não foi possível cadastrar o cartão de renovação."));
-    } finally {
-      setSalvandoCartao(false);
-    }
-  }
-
-  async function lidarComRemoverCartao() {
-    if (!barbearia) return;
-
-    try {
-      setCarregando(true);
-      setErro(null);
-      setSucesso(null);
-
-      const resp = await fetch("/api/remover-cartao", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ barbearia_id: barbearia.id }),
-      });
-
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || "Erro ao desativar renovação automática.");
-      }
-
-      setSucesso("Cartão removido. A renovação automática foi desativada.");
-      await carregarDados();
-    } catch (err: any) {
-      setErro(traduzirErro(err, "Falha ao remover o cartão de renovação."));
-    } finally {
-      setCarregando(false);
-    }
-  }
+  const calcularDiasRestantes = (dataFim?: string | null) => {
+    if (!dataFim) return 0;
+    const diff = new Date(dataFim).getTime() - new Date().getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
 
   const carregarDados = React.useCallback(async () => {
     try {
@@ -204,22 +108,24 @@ export default function PaginaAssinaturaParceiro() {
 
       if (planosDb && planosDb.length > 0) {
         setPlanos(planosDb as Plano[]);
-        setPlanoSelecionadoId(planosDb[1]?.id || planosDb[0].id); // Pro ou Solo como default
       }
 
       // 3. Carregar assinatura atual se existir
       const { data: assDb } = await (supabase.from("assinaturas") as any)
         .select("*, planos(*)")
         .eq("barbearia_id", membro.barbearia_id)
+        .eq("status", "ativa")
         .order("criado_em", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (assDb) {
         setAssinaturaAtual(assDb as Assinatura);
+      } else {
+        setAssinaturaAtual(null);
       }
     } catch {
-      setErro("Falha ao carregar opções de assinatura.");
+      setErro("Falha ao carregar planos e assinatura.");
     } finally {
       setCarregando(false);
     }
@@ -229,111 +135,211 @@ export default function PaginaAssinaturaParceiro() {
     carregarDados();
   }, [carregarDados]);
 
-  // Trata o retorno do checkout do Mercado Pago via URL
-  React.useEffect(() => {
-    async function checarRetornoPagamento() {
-      const queryParams = new URLSearchParams(window.location.search);
-      const statusUrl = queryParams.get("status") || queryParams.get("collection_status");
-      const paymentIdUrl = queryParams.get("payment_id") || queryParams.get("collection_id");
-      const extRefStr = queryParams.get("external_reference");
+  const limparFormularioCartao = () => {
+    setTitularCartao("");
+    setNumeroCartao("");
+    setMesVencimento("");
+    setAnoVencimento("");
+    setCvv("");
+    setCpfCartao("");
+    setUsandoNovoCartaoNoUpgrade(false);
+  };
 
-      let planoIdUrl = queryParams.get("plano");
-      let cicloUrl = (queryParams.get("ciclo") as CicloAssinatura | null) || "mensal";
-
-      if (extRefStr) {
-        try {
-          const parsed = JSON.parse(extRefStr);
-          if (parsed.plano_id) planoIdUrl = parsed.plano_id;
-          if (parsed.ciclo) cicloUrl = parsed.ciclo;
-        } catch {
-          // Mantém valores da query
-        }
-      }
-
-      if ((statusUrl === "sucesso" || statusUrl === "approved") && barbearia && planoIdUrl) {
-        try {
-          // Reconciliação segura server-side
-          const resp = await fetch(
-            `/api/verificar-assinatura?barbearia_id=${barbearia.id}&plano_id=${planoIdUrl}&ciclo=${cicloUrl}&payment_id=${paymentIdUrl || ""}`
-          );
-          if (resp.ok) {
-            setSucesso("Pagamento via Mercado Pago processado com sucesso! Sua assinatura foi ativada.");
-          } else {
-            setSucesso("Solicitação de assinatura recebida! Aguardando confirmação final do Mercado Pago.");
-          }
-          window.history.replaceState({}, "", window.location.pathname);
-          await carregarDados();
-        } catch {
-          setErro("Falha ao sincronizar assinatura após o pagamento.");
-        }
-      } else if (statusUrl === "falha" || statusUrl === "rejected" || statusUrl === "cancelled") {
-        setErro("O pagamento da assinatura não foi concluído no Mercado Pago. Tente novamente.");
-        window.history.replaceState({}, "", window.location.pathname);
-      } else if (statusUrl === "pending" || statusUrl === "in_process") {
-        setSucesso("Pagamento em processamento pelo Mercado Pago. A assinatura será ativada assim que for confirmado.");
-        window.history.replaceState({}, "", window.location.pathname);
-        await carregarDados();
-      }
-    }
-
-    if (barbearia) {
-      checarRetornoPagamento();
-    }
-  }, [barbearia, carregarDados]);
-
-  // Redireciona o usuário para a página de checkout oficial do Mercado Pago para pagamento de assinatura
-  async function handleContratarPlano(plano: Plano) {
-    if (!barbearia) return;
+  // 1. Ação para Assinar ou Fazer Upgrade com Cartão
+  async function lidarComConfirmarAssinaturaOuUpgrade(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+    if (!barbearia || !planoAlvo) return;
 
     try {
-      setProcessandoCheckout(true);
+      setProcessando(true);
       setErro(null);
       setSucesso(null);
 
-      const valorFinal = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
+      const temCartaoSalvo = barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four;
+      const deveUsarCartaoSalvo = temCartaoSalvo && !usandoNovoCartaoNoUpgrade;
 
-      // 1. Chamada obrigatória à rota backend serverless /api/criar-preferencia
-      const resp = await fetch("/api/criar-preferencia", {
+      let cardToken = null;
+      let lastFour = null;
+      let brand = null;
+
+      // Se precisar de novo cartão, tokenizar no Mercado Pago
+      if (!deveUsarCartaoSalvo) {
+        const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
+        const numLimpo = numeroCartao.replace(/\D/g, "");
+        const cpfLimpo = cpfCartao.replace(/\D/g, "");
+
+        if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
+          setErro("Preencha todos os campos do cartão de crédito com dados válidos.");
+          setProcessando(false);
+          return;
+        }
+
+        const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            card_number: numLimpo,
+            expiration_month: Number(mesVencimento),
+            expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
+            security_code: cvv,
+            cardholder: {
+              name: titularCartao.toUpperCase(),
+              identification: {
+                type: "CPF",
+                number: cpfLimpo,
+              },
+            },
+          }),
+        });
+
+        const tokenData = await respToken.json();
+        if (!respToken.ok) {
+          throw new Error(tokenData.message || tokenData.cause?.[0]?.description || "Falha ao validar o cartão no Mercado Pago.");
+        }
+
+        cardToken = tokenData.id;
+        lastFour = tokenData.last_four_digits;
+        brand = tokenData.payment_method?.id;
+      }
+
+      // Enviar para o backend unificado /api/assinar-com-cartao
+      const resp = await fetch("/api/assinar-com-cartao", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          plano_nome: plano.nome,
-          valor: valorFinal,
           barbearia_id: barbearia.id,
-          plano_id: plano.id,
-          ciclo: ciclo,
+          plano_id: planoAlvo.id,
+          ciclo,
+          usar_cartao_salvo: deveUsarCartaoSalvo,
+          card_token: cardToken,
           email: barbearia.email,
+          last_four: lastFour,
+          brand: brand,
         }),
       });
 
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || "Erro ao conectar com o serviço de pagamentos do Mercado Pago.");
-      }
-
       const data = await resp.json();
-      if (data.init_url) {
-        window.location.href = data.init_url;
-        return;
+      if (!resp.ok) {
+        throw new Error(data.error || "Erro ao processar a assinatura.");
       }
 
-      throw new Error("Não foi possível obter o link de checkout do Mercado Pago.");
+      setSucesso(data.mensagem || "Plano ativado com sucesso! A renovação automática está ativa.");
+      setModalUpgradeAberto(false);
+      limparFormularioCartao();
+      await carregarDados();
     } catch (err: any) {
-      setErro(traduzirErro(err, "Não foi possível abrir o checkout do Mercado Pago. Tente novamente."));
+      setErro(traduzirErro(err, "Não foi possível concluir a assinatura. Verifique os dados do cartão."));
     } finally {
-      setProcessandoCheckout(false);
+      setProcessando(false);
     }
   }
 
-  const formatarMoeda = (val: number) =>
-    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
+  // 2. Ação para Salvar/Trocar Cartão de Renovação
+  async function lidarComTrocarCartao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!barbearia) return;
 
-  const calcularDiasRestantes = (dataFim: string) => {
-    const diff = new Date(dataFim).getTime() - new Date().getTime();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
-  };
+    try {
+      setProcessando(true);
+      setErro(null);
+      setSucesso(null);
+
+      const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
+      const numLimpo = numeroCartao.replace(/\D/g, "");
+      const cpfLimpo = cpfCartao.replace(/\D/g, "");
+
+      if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
+        setErro("Preencha todos os campos do cartão com dados válidos.");
+        setProcessando(false);
+        return;
+      }
+
+      const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          card_number: numLimpo,
+          expiration_month: Number(mesVencimento),
+          expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
+          security_code: cvv,
+          cardholder: {
+            name: titularCartao.toUpperCase(),
+            identification: {
+              type: "CPF",
+              number: cpfLimpo,
+            },
+          },
+        }),
+      });
+
+      const tokenData = await respToken.json();
+      if (!respToken.ok) {
+        throw new Error(tokenData.message || "Falha ao tokenizar o cartão.");
+      }
+
+      const respSalvar = await fetch("/api/salvar-cartao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barbearia_id: barbearia.id,
+          card_token: tokenData.id,
+          email: barbearia.email,
+          last_four: tokenData.last_four_digits,
+          brand: tokenData.payment_method?.id || "master",
+        }),
+      });
+
+      if (!respSalvar.ok) {
+        const errSalvar = await respSalvar.json();
+        throw new Error(errSalvar.error || "Erro ao salvar cartão.");
+      }
+
+      setSucesso("Cartão de renovação atualizado com sucesso!");
+      setModalTrocarCartaoAberto(false);
+      limparFormularioCartao();
+      await carregarDados();
+    } catch (err: any) {
+      setErro(traduzirErro(err, "Falha ao atualizar o cartão de renovação."));
+    } finally {
+      setProcessando(false);
+    }
+  }
+
+  // 3. Ação para Cancelar Renovação Automática
+  async function lidarComCancelarAssinatura() {
+    if (!barbearia) return;
+
+    try {
+      setProcessando(true);
+      setErro(null);
+      setSucesso(null);
+
+      const resp = await fetch("/api/cancelar-assinatura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barbearia_id: barbearia.id }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        throw new Error(data.error || "Erro ao solicitar cancelamento.");
+      }
+
+      setSucesso(
+        data.data_limite
+          ? `Renovação automática desativada. Seu acesso permanecerá 100% liberado até ${new Date(
+              data.data_limite
+            ).toLocaleDateString("pt-BR")}.`
+          : "Renovação automática desativada com sucesso."
+      );
+      setModalCancelarAberto(false);
+      await carregarDados();
+    } catch (err: any) {
+      setErro(traduzirErro(err, "Falha ao cancelar a renovação da assinatura."));
+    } finally {
+      setProcessando(false);
+    }
+  }
 
   if (carregando) {
     return (
@@ -363,7 +369,28 @@ export default function PaginaAssinaturaParceiro() {
 
   const emTrial = barbearia.status_assinatura === "trial";
   const ativa = barbearia.status_assinatura === "ativa" || barbearia.status_assinatura === "ativo";
-  const diasRestantesTrial = calcularDiasRestantes(barbearia.trial_fim);
+  const diasRestantes = calcularDiasRestantes(assinaturaAtual?.data_fim || barbearia.trial_fim);
+  const planoAtualId = assinaturaAtual?.plano_id || (emTrial ? planos.find((p) => p.identificador === "pro")?.id : null);
+  const planoAtual = planos.find((p) => p.id === planoAtualId);
+  const ordemAtual = planoAtual?.ordem ?? 0;
+
+  // Cálculo de Pró-rata para o modal de Upgrade/Assinatura
+  const precoNovoPlano = planoAlvo
+    ? ciclo === "semestral"
+      ? planoAlvo.preco_semestral
+      : planoAlvo.preco_mensal
+    : 0;
+
+  let creditoRestante = 0;
+  if (assinaturaAtual && ativa && planoAlvo && planoAlvo.id !== assinaturaAtual.plano_id) {
+    const diasTotais = assinaturaAtual.ciclo === "semestral" ? 180 : 30;
+    const valorDiario = Number(assinaturaAtual.valor) / diasTotais;
+    creditoRestante = Math.min(
+      Number(assinaturaAtual.valor),
+      Math.max(0, Number((valorDiario * diasRestantes).toFixed(2)))
+    );
+  }
+  const valorFinalACobrar = Math.max(0, Number((precoNovoPlano - creditoRestante).toFixed(2)));
 
   return (
     <div className="flex flex-col gap-8 pb-12 max-w-5xl mx-auto">
@@ -374,7 +401,7 @@ export default function PaginaAssinaturaParceiro() {
       )}
 
       {sucesso && (
-        <AlertaTemporizado variante="sucesso" duracaoMs={5000} aoExpirar={() => setSucesso(null)}>
+        <AlertaTemporizado variante="sucesso" duracaoMs={6000} aoExpirar={() => setSucesso(null)}>
           <AlertDescription>{sucesso}</AlertDescription>
         </AlertaTemporizado>
       )}
@@ -393,11 +420,11 @@ export default function PaginaAssinaturaParceiro() {
                   : "bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20"
               }`}
             >
-              {ativa ? "Assinatura Ativa" : emTrial ? "Período de Testes" : "Vencida"}
+              {ativa ? "Assinatura Ativa" : emTrial ? "Período de Testes (30 dias)" : "Vencida"}
             </span>
           </div>
           <p className="text-sm opacity-70 mt-1">
-            Escolha o plano ideal para a capacidade da sua equipe com pagamento seguro via Mercado Pago (Cartão de Crédito ou Pix, sem necessidade de ter conta).
+            Gerencie seu plano com renovação automática contínua e faturamento seguro via cartão de crédito.
           </p>
         </div>
 
@@ -408,26 +435,102 @@ export default function PaginaAssinaturaParceiro() {
             {emTrial ? (
               <>
                 <strong className="block font-bold text-sm">
-                  {diasRestantesTrial} dia(s) restantes de teste
+                  {diasRestantes} dia(s) restantes de teste
                 </strong>
                 <span>Válido até {new Date(barbearia.trial_fim).toLocaleDateString("pt-BR")}</span>
               </>
             ) : ativa && assinaturaAtual ? (
               <>
                 <strong className="block font-bold text-sm">
-                  {assinaturaAtual.planos?.nome || "Plano Ativo"}
+                  {assinaturaAtual.planos?.nome || "Plano Ativo"} ({assinaturaAtual.ciclo === "semestral" ? "Semestral" : "Mensal"})
                 </strong>
-                <span>Renova em {new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")}</span>
+                <span>
+                  {barbearia.recorrencia_ativa
+                    ? `Próxima renovação automática em ${new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")}`
+                    : `Vigência até ${new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")} (Renovação desativada)`}
+                </span>
               </>
             ) : (
               <>
                 <strong className="block font-bold text-sm text-[#DC2626]">
-                  Período de Teste Expirado
+                  Assinatura Vencida
                 </strong>
-                <span>Contrate um plano abaixo para manter acesso total</span>
+                <span>Selecione um plano abaixo para reativar seu acesso e agendamentos</span>
               </>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Cartão de Crédito Cadastrado & Gestão da Renovação */}
+      <div className="p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-neutral-200/60 dark:bg-neutral-800 text-[#B45A2B]">
+            <CreditCard className="h-5 w-5" />
+          </div>
+          <div>
+            {barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <strong className="text-sm font-bold capitalize">
+                    {barbearia.mercado_pago_card_brand || "Cartão"} final {barbearia.mercado_pago_card_last_four}
+                  </strong>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-bold uppercase">
+                    Renovação Automática Ativa
+                  </span>
+                </div>
+                <p className="text-xs opacity-70 mt-0.5">
+                  Cobrança automática ao final do ciclo.
+                </p>
+              </>
+            ) : (
+              <>
+                <strong className="text-sm font-bold">Nenhum cartão cadastrado para renovação</strong>
+                <p className="text-xs opacity-70 mt-0.5">
+                  Cadastre um cartão para evitar bloqueios no encerramento do plano ou teste.
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {barbearia.recorrencia_ativa ? (
+            <>
+              <Button
+                variante="secundario"
+                tamanho="sm"
+                onClick={() => {
+                  limparFormularioCartao();
+                  setModalTrocarCartaoAberto(true);
+                }}
+                className="text-xs font-semibold"
+              >
+                Alterar Cartão
+              </Button>
+              <Button
+                variante="cancelar-destrutivo"
+                tamanho="sm"
+                onClick={() => setModalCancelarAberto(true)}
+                className="text-xs font-semibold"
+              >
+                Cancelar Assinatura
+              </Button>
+            </>
+          ) : (
+            <Button
+              variante="principal"
+              tamanho="sm"
+              onClick={() => {
+                limparFormularioCartao();
+                setModalTrocarCartaoAberto(true);
+              }}
+              className="text-xs font-bold w-full sm:w-auto"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Cadastrar Cartão Seguro
+            </Button>
+          )}
         </div>
       </div>
 
@@ -462,7 +565,7 @@ export default function PaginaAssinaturaParceiro() {
         </div>
         <span className="text-xs opacity-60">
           {ciclo === "semestral"
-            ? "Pagamento único a cada 6 meses com até 17% de desconto equivalente"
+            ? "Pagamento único a cada 6 meses com até 17% de economia"
             : "Cobrança mensal sem fidelidade"}
         </span>
       </div>
@@ -473,6 +576,10 @@ export default function PaginaAssinaturaParceiro() {
           const ehPlanoAtual =
             (ativa && assinaturaAtual?.plano_id === plano.id) ||
             (emTrial && plano.identificador === "pro");
+          const ehUpgrade = plano.ordem > ordemAtual;
+          const ehDowngrade = plano.ordem < ordemAtual;
+          const downgradeBloqueado = ehDowngrade && diasRestantes > 7 && !emTrial;
+
           const preco = ciclo === "semestral" ? plano.preco_semestral : plano.preco_mensal;
           const precoMesEquivalente =
             ciclo === "semestral" ? Number((plano.preco_semestral / 6).toFixed(2)) : plano.preco_mensal;
@@ -488,7 +595,7 @@ export default function PaginaAssinaturaParceiro() {
             >
               {ehPlanoAtual && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#B45A2B] text-white text-[10px] font-black uppercase tracking-wider shadow">
-                  Plano Atual
+                  Seu Plano Atual
                 </div>
               )}
 
@@ -533,120 +640,271 @@ export default function PaginaAssinaturaParceiro() {
                   ))}
                 </div>
 
-                <Button
-                  variante={ehPlanoAtual ? "secundario" : "principal"}
-                  disabled={processandoCheckout}
-                  carregando={processandoCheckout && planoSelecionadoId === plano.id}
-                  onClick={() => {
-                    setPlanoSelecionadoId(plano.id);
-                    handleContratarPlano(plano);
-                  }}
-                  className="w-full font-bold text-xs min-h-[44px]"
-                >
-                  <CreditCard className="mr-1.5 h-4 w-4" />
-                  {ehPlanoAtual ? "Renovar / Atualizar" : "Assinar com Cartão ou Pix"}
-                </Button>
+                <div className="flex flex-col gap-1.5 pt-2">
+                  {ehPlanoAtual ? (
+                    <div className="p-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-center text-xs font-semibold opacity-80">
+                      {barbearia.recorrencia_ativa
+                        ? "Renovação Automática Ativa"
+                        : "Vigência em Andamento"}
+                    </div>
+                  ) : ehUpgrade ? (
+                    <Button
+                      variante="principal"
+                      onClick={() => {
+                        setPlanoAlvo(plano);
+                        limparFormularioCartao();
+                        setModalUpgradeAberto(true);
+                      }}
+                      className="w-full font-bold text-xs min-h-[44px]"
+                    >
+                      <ArrowUpRight className="mr-1.5 h-4 w-4" />
+                      Fazer Upgrade
+                    </Button>
+                  ) : downgradeBloqueado ? (
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        variante="secundario"
+                        disabled
+                        className="w-full font-semibold text-xs min-h-[44px] opacity-40 cursor-not-allowed"
+                      >
+                        <Ban className="mr-1.5 h-4 w-4" />
+                        Plano Menor
+                      </Button>
+                      <span className="text-[10px] text-center text-neutral-500 leading-tight">
+                        Disponível nos últimos 7 dias da vigência atual.
+                      </span>
+                    </div>
+                  ) : (
+                    <Button
+                      variante="secundario"
+                      onClick={() => {
+                        setPlanoAlvo(plano);
+                        limparFormularioCartao();
+                        setModalUpgradeAberto(true);
+                      }}
+                      className="w-full font-bold text-xs min-h-[44px]"
+                    >
+                      Mudar para este Plano
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Selo de Garantia e Não Intermediação */}
+      {/* Selo de Segurança e Política Transparente */}
       <div className="p-4 rounded-xl border border-neutral-200/80 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 flex flex-col sm:flex-row items-center gap-4 text-xs opacity-75">
         <ShieldCheck className="h-6 w-6 text-[#16A34A] shrink-0" />
         <div className="flex-1">
-          <strong className="block font-semibold mb-0.5">Segurança & Política Transparente</strong>
-          O pagamento via Mercado Pago aplica-se exclusivamente à assinatura mensal/semestral do software Barzzo. O valor dos cortes e serviços prestados aos seus clientes não sofre retenções nem taxas adicionais pelo app.
+          <strong className="block font-semibold mb-0.5">Segurança & Pagamentos Transparentes</strong>
+          Seus dados de cartão são tokenizados diretamente no cofre seguro do Mercado Pago com criptografia bancária. O valor da assinatura é exclusivo para manutenção do software Barzzo, sem taxas sobre os atendimentos aos seus clientes.
         </div>
       </div>
 
-      {/* Seção de Renovação Automática com Cartão de Crédito */}
-      <Card className="border border-neutral-200/80 dark:border-neutral-800 overflow-hidden">
-        <CardHeader className="bg-neutral-50/50 dark:bg-neutral-900/30 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-[#B45A2B]" />
-              <CardTitle className="text-base font-bold">Renovação Automática de Assinatura</CardTitle>
-            </div>
-            <span
-              className={`text-xs px-2.5 py-0.5 rounded-full font-bold uppercase ${
-                barbearia.recorrencia_ativa
-                  ? "bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20"
-                  : "bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400"
-              }`}
-            >
-              {barbearia.recorrencia_ativa ? "Ativada" : "Desativada"}
-            </span>
-          </div>
-          <CardDescription className="text-xs mt-1">
-            Cadastre seu cartão de crédito com criptografia de ponta a ponta via Mercado Pago para garantir o acesso ininterrupto do seu estabelecimento sem precisar refazer checkout manual.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          {barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four ? (
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-[#B45A2B]">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              <div>
-                <strong className="block text-sm font-bold capitalize">
-                  {barbearia.mercado_pago_card_brand || "Cartão"} final {barbearia.mercado_pago_card_last_four}
-                </strong>
-                <span className="text-xs opacity-70">
-                  Cobrança automática ao término do período da assinatura atual.
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-400">
-                <Lock className="h-6 w-6" />
-              </div>
-              <div>
-                <strong className="block text-sm font-bold">Nenhum cartão para renovação cadastrado</strong>
-                <span className="text-xs opacity-70">
-                  Evite bloqueios no seu sistema mantendo um cartão seguro ativo.
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {barbearia.recorrencia_ativa ? (
-              <Button
-                variante="cancelar-destrutivo"
-                tamanho="sm"
-                onClick={lidarComRemoverCartao}
-                className="w-full sm:w-auto font-semibold text-xs"
-              >
-                <Trash2 className="mr-1.5 h-4 w-4" />
-                Desativar Renovação
-              </Button>
-            ) : (
-              <Button
-                variante="principal"
-                tamanho="sm"
-                onClick={() => setModalCartaoAberto(true)}
-                className="w-full sm:w-auto font-bold text-xs"
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                Cadastrar Cartão
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Modal para Tokenização de Cartão de Crédito */}
+      {/* MODAL 1: Contratação / Upgrade de Plano */}
       <Modal
-        aberto={modalCartaoAberto}
-        aoFechar={() => setModalCartaoAberto(false)}
-        titulo="Cadastrar Cartão para Renovação"
-        descricao="Seus dados de cartão são tokenizados diretamente no cofre seguro do Mercado Pago."
+        aberto={modalUpgradeAberto && !!planoAlvo}
+        aoFechar={() => setModalUpgradeAberto(false)}
+        titulo={`Assinar ${planoAlvo?.nome || "Plano"}`}
+        descricao={`Ciclo ${ciclo === "semestral" ? "Semestral" : "Mensal"} com renovação automática`}
         tamanho="md"
       >
-        <form onSubmit={lidarComSalvarCartao} className="flex flex-col gap-4">
+        {planoAlvo && (
+          <div className="flex flex-col gap-5">
+            {/* Demonstrativo Pró-rata */}
+            <div className="p-4 rounded-xl bg-neutral-100 dark:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-700 flex flex-col gap-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span>Valor do Novo Plano ({ciclo}):</span>
+                <span className="font-semibold">{formatarMoeda(precoNovoPlano)}</span>
+              </div>
+
+              {creditoRestante > 0 && (
+                <div className="flex items-center justify-between text-[#16A34A] font-medium">
+                  <span>Desconto proporcional ({diasRestantes} dias restantes):</span>
+                  <span>- {formatarMoeda(creditoRestante)}</span>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-neutral-200 dark:border-neutral-700 flex items-center justify-between text-sm">
+                <strong className="font-bold">Total a Pagar Hoje:</strong>
+                <strong className="text-base font-extrabold text-[#B45A2B]">
+                  {formatarMoeda(valorFinalACobrar)}
+                </strong>
+              </div>
+
+              <span className="text-[11px] opacity-60 text-right block">
+                Inicia novo ciclo cheio de {ciclo === "semestral" ? "180" : "30"} dias a partir de hoje.
+              </span>
+            </div>
+
+            {/* Opção de Usar Cartão Salvo */}
+            {barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four && !usandoNovoCartaoNoUpgrade ? (
+              <div className="flex flex-col gap-3">
+                <div className="p-3.5 rounded-xl border border-[#B45A2B]/40 bg-[#B45A2B]/5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <CreditCard className="h-5 w-5 text-[#B45A2B]" />
+                    <div className="text-xs">
+                      <strong className="block font-bold capitalize">
+                        {barbearia.mercado_pago_card_brand || "Cartão"} final {barbearia.mercado_pago_card_last_four}
+                      </strong>
+                      <span className="opacity-70">Cartão seguro cadastrado</span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variante="fantasma"
+                    tamanho="sm"
+                    onClick={() => setUsandoNovoCartaoNoUpgrade(true)}
+                    className="text-xs text-[#B45A2B] font-bold"
+                  >
+                    Usar Outro Cartão
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+                  <Button
+                    type="button"
+                    variante="fantasma"
+                    onClick={() => setModalUpgradeAberto(false)}
+                    disabled={processando}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variante="principal"
+                    carregando={processando}
+                    disabled={processando}
+                    onClick={() => lidarComConfirmarAssinaturaOuUpgrade()}
+                  >
+                    Confirmar e Pagar {formatarMoeda(valorFinalACobrar)}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Formulário de Novo Cartão */
+              <form onSubmit={lidarComConfirmarAssinaturaOuUpgrade} className="flex flex-col gap-4">
+                {barbearia.recorrencia_ativa && barbearia.mercado_pago_card_last_four && (
+                  <button
+                    type="button"
+                    onClick={() => setUsandoNovoCartaoNoUpgrade(false)}
+                    className="text-xs text-[#B45A2B] font-bold text-left underline"
+                  >
+                    ← Voltar para o cartão salvo (final {barbearia.mercado_pago_card_last_four})
+                  </button>
+                )}
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">Nome Impresso no Cartão</label>
+                  <Input
+                    type="text"
+                    placeholder="NOME COMO ESTA NO CARTAO"
+                    value={titularCartao}
+                    onChange={(e) => setTitularCartao(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">Número do Cartão</label>
+                  <Input
+                    type="text"
+                    placeholder="0000 0000 0000 0000"
+                    maxLength={19}
+                    value={numeroCartao}
+                    onChange={(e) => setNumeroCartao(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Mês (MM)</label>
+                    <Input
+                      type="text"
+                      placeholder="12"
+                      maxLength={2}
+                      value={mesVencimento}
+                      onChange={(e) => setMesVencimento(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Ano (AAAA)</label>
+                    <Input
+                      type="text"
+                      placeholder="2030"
+                      maxLength={4}
+                      value={anoVencimento}
+                      onChange={(e) => setAnoVencimento(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold mb-1">CVV</label>
+                    <Input
+                      type="text"
+                      placeholder="123"
+                      maxLength={4}
+                      value={cvv}
+                      onChange={(e) => setCvv(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">CPF do Titular</label>
+                  <Input
+                    type="text"
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    value={cpfCartao}
+                    onChange={(e) => setCpfCartao(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-xs opacity-75">
+                  <Lock className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                  <span>Tokenização bancária de ponta a ponta.</span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                  <Button
+                    type="button"
+                    variante="fantasma"
+                    onClick={() => setModalUpgradeAberto(false)}
+                    disabled={processando}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variante="principal"
+                    carregando={processando}
+                    disabled={processando}
+                  >
+                    Pagar e Ativar ({formatarMoeda(valorFinalACobrar)})
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* MODAL 2: Alterar Cartão de Renovação */}
+      <Modal
+        aberto={modalTrocarCartaoAberto}
+        aoFechar={() => setModalTrocarCartaoAberto(false)}
+        titulo="Cadastrar Cartão de Renovação"
+        descricao="O cartão cadastrado será utilizado para as futuras renovações automáticas"
+        tamanho="md"
+      >
+        <form onSubmit={lidarComTrocarCartao} className="flex flex-col gap-4">
           <div>
             <label className="block text-xs font-bold mb-1">Nome Impresso no Cartão</label>
             <Input
@@ -718,30 +976,88 @@ export default function PaginaAssinaturaParceiro() {
             />
           </div>
 
-          <div className="flex items-center gap-2 p-3 bg-neutral-100 dark:bg-neutral-800/60 rounded-lg text-xs opacity-80 mt-1">
+          <div className="flex items-center gap-2 p-2.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-xs opacity-75">
             <Lock className="h-4 w-4 text-[#B45A2B] shrink-0" />
-            <span>Nenhum número de cartão é armazenado em nossos servidores.</span>
+            <span>Nenhum valor será cobrado agora. O cartão fica salvo para o término do plano.</span>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <Button
               type="button"
               variante="fantasma"
-              onClick={() => setModalCartaoAberto(false)}
-              disabled={salvandoCartao}
+              onClick={() => setModalTrocarCartaoAberto(false)}
+              disabled={processando}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               variante="principal"
-              carregando={salvandoCartao}
-              disabled={salvandoCartao}
+              carregando={processando}
+              disabled={processando}
             >
-              Salvar Cartão Seguro
+              Salvar Cartão
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* MODAL 3: Confirmação de Cancelamento */}
+      <Modal
+        aberto={modalCancelarAberto}
+        aoFechar={() => setModalCancelarAberto(false)}
+        titulo="Cancelar Renovação Automática?"
+        descricao="Entenda o que acontece após o cancelamento"
+        tamanho="md"
+      >
+        <div className="flex flex-col gap-4 text-xs">
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-2.5">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <strong className="block font-bold">Acesso mantido até o final do período</strong>
+              <span>
+                Seu acesso ao sistema continuará 100% ativo até{" "}
+                <strong>
+                  {assinaturaAtual
+                    ? new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")
+                    : "o fim do período"}
+                </strong>
+                . Você pode continuar agendando e atendendo normalmente até essa data.
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700 flex flex-col gap-2">
+            <strong className="font-semibold text-neutral-800 dark:text-neutral-200">
+              O que acontece após a data de término?
+            </strong>
+            <ul className="list-disc list-inside space-y-1 opacity-80">
+              <li>Sua barbearia será ocultada da busca pública no app de clientes.</li>
+              <li>A criação de novos agendamentos manuais será bloqueada.</li>
+              <li>Sua conta e histórico de clientes continuarão salvos para reativação a qualquer momento.</li>
+            </ul>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+            <Button
+              type="button"
+              variante="fantasma"
+              onClick={() => setModalCancelarAberto(false)}
+              disabled={processando}
+            >
+              Manter Assinatura
+            </Button>
+            <Button
+              type="button"
+              variante="cancelar-destrutivo"
+              carregando={processando}
+              disabled={processando}
+              onClick={lidarComCancelarAssinatura}
+            >
+              Confirmar Cancelamento
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

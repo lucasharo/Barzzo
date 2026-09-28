@@ -255,6 +255,15 @@ export default function PaginaNovoAgendamentoManual() {
       return;
     }
 
+    const emTrial = barbearia.status_assinatura === "trial";
+    const trialVencido = emTrial && barbearia.trial_fim && new Date(barbearia.trial_fim) < new Date();
+    const assinaturaVencida = barbearia.status_assinatura === "vencida" || barbearia.status_assinatura === "inadimplente";
+
+    if (trialVencido || assinaturaVencida) {
+      setErro("Sua assinatura ou período de testes está expirado. Acesse a aba Planos & Assinatura para reativar e realizar agendamentos.");
+      return;
+    }
+
     if (!slotSelecionado) {
       setErro("Selecione um horário disponível para o agendamento.");
       return;
