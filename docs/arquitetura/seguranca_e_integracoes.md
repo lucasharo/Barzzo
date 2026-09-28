@@ -37,16 +37,24 @@ Firebase Storage não será usado.
 Mercado Pago faz parte do MVP **somente para cobrança da assinatura da barbearia**.
 
 Credenciais previstas:
-- NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY
+- NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY (ou VITE_MERCADO_PAGO_PUBLIC_KEY no parceiro)
 - MERCADO_PAGO_ACCESS_TOKEN
 - MERCADO_PAGO_CLIENT_ID
 - MERCADO_PAGO_CLIENT_SECRET
 
-Regras:
-- credenciais privadas somente no backend;
-- cobranças de cortes, serviços e produtos de clientes **não** passam pelo Barzzo no MVP;
-- integração de pagamento de serviços ao cliente fica para uma fase futura, se o produto decidir adotá-la;
-- manter domínio de assinatura separado de qualquer pagamento de atendimento.
+Regras de Segurança e Tokenização:
+- **Tokenização Segura no Frontend:** Dados sensíveis do cartão (número, código CVV/CVC) são enviados diretamente do navegador para a API do Mercado Pago via SDK (`createCardToken`), gerando um token efêmero de transação (`card_token`).
+- **Isolamento de Dados Sensíveis:** O backend do Barzzo e o banco de dados PostgreSQL **nunca** recebem, processam ou armazenam números completos de cartão ou códigos de segurança.
+- **Armazenamento de Cartões Salvos:** A tabela `public.cartoes_salvos` registra apenas dados não-sensíveis autorizados: `token_cartao` (identificador criptográfico), `ultimos_digitos`, `bandeira`, `mes_expiracao`, `ano_expiracao`, `titular_nome` e `barbearia_id`.
+- **Controle de Acesso (RLS):** Cartões salvos são protegidos por RLS para acesso exclusivo do dono/gerente da barbearia proprietária.
+- **Processamento de Assinaturas:** Credenciais privadas do Mercado Pago permanecem unicamente nas Edge Functions / backend e nunca são expostas aos clientes ou parceiros.
+- **Webhooks Idempotentes:** Confirmações de pagamento processadas via webhook atualizam as tabelas `assinaturas` e `barbearias` atomicamente, impedindo cobranças ou ativações duplicadas.
+
+Regras de Negócio de Assinaturas:
+- **Bloqueio de Regressão de Plano (Downgrade):** É terminantemente proibido o downgrade de plano durante a vigência de um ciclo ativo já faturado. Caso o parceiro deseje alterar para um plano menor ou cancelar, a mudança só se efetiva após o término do período pago. Upgrades têm cobrança imediata e aplicação instantânea.
+- **Desconto em Ciclo/Plano Maior:** Ciclos maiores (semestral e anual) contemplam descontos percentuais automáticos sobre a mensalidade equivalente, além de bônus de trial estendido (+30 dias no plano semestral), incentivando a retenção e diminuindo atrito financeiro.
+- Cobranças de cortes, serviços e produtos de clientes **não** passam pelo Barzzo no MVP;
+- Manter o domínio de assinatura completamente separado de qualquer pagamento de atendimento operacional.
 
 ## Auditoria
 Ações administrativas e sensíveis devem ser registradas em logs_auditoria.

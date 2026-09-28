@@ -9,6 +9,10 @@ membros_barbearia
 profissionais
 convites_profissionais
 
+- `criar_barbearia_com_dono`: RPC atômica que cria a barbearia, vincula o dono em `membros_barbearia` e cria automaticamente o perfil do proprietário em `profissionais` (com `ativo = true` e horários semanais pendentes).
+- `barbearia_possui_horarios_ativos(p_barbearia_id UUID)`: Função que verifica se a barbearia tem ao menos um profissional com `jornadas_profissionais.ativo = true`.
+- `buscar_barbearias_com_distancia`: RPC da busca do marketplace do cliente que exige `barbearia_possui_horarios_ativos(b.id) = true`, ocultando barbearias sem horários cadastrados.
+
 ## Agenda
 servicos
 profissionais_servicos
@@ -46,7 +50,11 @@ notificacoes
 planos
 assinaturas
 beneficios_assinatura
+cartoes_salvos
 logs_auditoria
+
+- `cartoes_salvos`: Armazena tokens de cartão de crédito tokenizados no frontend via Mercado Pago (`token_cartao`, `ultimos_digitos`, `bandeira`, `mes_expiracao`, `ano_expiracao`, `titular_nome`). Não armazena dados sensíveis (PAN ou CVV).
+- `assinaturas`: Registra a contratação de planos com suporte a ciclos (mensal, semestral, anual). Ciclos superiores aplicam desconto proporcional progressivo e bônus de trial estendido (+30 dias no semestral). Bloqueio de regressão (downgrade) garante que planos não possam ser rebaixados durante a vigência de um ciclo ativo já quitado.
 
 ## Multi-tenant
 Entidades privadas devem carregar barbearia_id quando isso fortalece isolamento e RLS.
