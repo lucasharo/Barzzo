@@ -15,7 +15,13 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
-import { traduzirErro } from "@barzzo/utilitarios";
+import {
+  traduzirErro,
+  detectarBandeiraCartao,
+  formatarNumeroCartao,
+  formatarValidadeCartao,
+  formatarCpf,
+} from "@barzzo/utilitarios";
 import {
   CreditCard,
   Check,
@@ -54,10 +60,12 @@ export default function PaginaAssinaturaParceiro() {
   // Campos de Cartão
   const [titularCartao, setTitularCartao] = React.useState("");
   const [numeroCartao, setNumeroCartao] = React.useState("");
-  const [mesVencimento, setMesVencimento] = React.useState("");
-  const [anoVencimento, setAnoVencimento] = React.useState("");
+  const [validadeCartao, setValidadeCartao] = React.useState("");
   const [cvv, setCvv] = React.useState("");
   const [cpfCartao, setCpfCartao] = React.useState("");
+
+  // Detecção dinâmica de bandeira e formato
+  const infoBandeira = React.useMemo(() => detectarBandeiraCartao(numeroCartao), [numeroCartao]);
 
   const formatarMoeda = (val: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
@@ -138,12 +146,66 @@ export default function PaginaAssinaturaParceiro() {
   const limparFormularioCartao = () => {
     setTitularCartao("");
     setNumeroCartao("");
-    setMesVencimento("");
-    setAnoVencimento("");
+    setValidadeCartao("");
     setCvv("");
     setCpfCartao("");
     setUsandoNovoCartaoNoUpgrade(false);
   };
+
+  function validarDadosCartao(): {
+    valido: boolean;
+    erroMsg?: string;
+    numLimpo?: string;
+    mes?: number;
+    ano?: number;
+    cvvLimpo?: string;
+    cpfLimpo?: string;
+  } {
+    const numLimpo = numeroCartao.replace(/\D/g, "");
+    const cvvLimpo = cvv.replace(/\D/g, "");
+    const cpfLimpo = cpfCartao.replace(/\D/g, "");
+
+    if (!titularCartao.trim() || titularCartao.trim().length < 3) {
+      return { valido: false, erroMsg: "Informe o nome impresso no cartão." };
+    }
+
+    if (numLimpo.length < 13 || numLimpo.length > 19) {
+      return {
+        valido: false,
+        erroMsg: `Número de cartão inválido. O cartão ${infoBandeira.nome} possui ${infoBandeira.tamanhoMaximo} dígitos.`,
+      };
+    }
+
+    const [mesStr, anoStr] = validadeCartao.split("/");
+    const mes = Number(mesStr);
+    const ano = Number(anoStr?.length === 2 ? `20${anoStr}` : anoStr);
+    const anoAtual = new Date().getFullYear();
+    const mesAtual = new Date().getMonth() + 1;
+
+    if (!mes || mes < 1 || mes > 12 || !ano || ano < anoAtual || (ano === anoAtual && mes < mesAtual)) {
+      return { valido: false, erroMsg: "Informe uma data de validade (MM/AA) válida e futura." };
+    }
+
+    if (cvvLimpo.length !== infoBandeira.tamanhoCvv) {
+      return {
+        valido: false,
+        erroMsg: `O código de segurança (CVV) para cartões ${infoBandeira.nome} deve ter exatamente ${infoBandeira.tamanhoCvv} dígitos.`,
+      };
+    }
+
+    if (cpfLimpo.length !== 11) {
+      return { valido: false, erroMsg: "Informe um CPF válido com 11 dígitos." };
+    }
+
+    return {
+      valido: true,
+      numLimpo,
+      mes,
+      ano,
+      cvvLimpo,
+      cpfLimpo,
+    };
+  }
 
   // 1. Ação para Assinar ou Fazer Upgrade com Cartão
   async function lidarComConfirmarAssinaturaOuUpgrade(e?: React.FormEvent) {
@@ -162,31 +224,30 @@ export default function PaginaAssinaturaParceiro() {
       let lastFour = null;
       let brand = null;
 
-      // Se precisar de novo cartão, tokenizar no Mercado Pago
+      // Se precisar de novo cartão, validar e tokenizar no Mercado Pago
       if (!deveUsarCartaoSalvo) {
-        const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
-        const numLimpo = numeroCartao.replace(/\D/g, "");
-        const cpfLimpo = cpfCartao.replace(/\D/g, "");
-
-        if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
-          setErro("Preencha todos os campos do cartão de crédito com dados válidos.");
+        const validacao = validarDadosCartao();
+        if (!validacao.valido) {
+          setErro(validacao.erroMsg || "Verifique os dados do cartão.");
           setProcessando(false);
           return;
         }
+
+        const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
 
         const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            card_number: numLimpo,
-            expiration_month: Number(mesVencimento),
-            expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
-            security_code: cvv,
+            card_number: validacao.numLimpo,
+            expiration_month: validacao.mes,
+            expiration_year: validacao.ano,
+            security_code: validacao.cvvLimpo,
             cardholder: {
-              name: titularCartao.toUpperCase(),
+              name: titularCartao.toUpperCase().trim(),
               identification: {
                 type: "CPF",
-                number: cpfLimpo,
+                number: validacao.cpfLimpo,
               },
             },
           }),
@@ -199,7 +260,7 @@ export default function PaginaAssinaturaParceiro() {
 
         cardToken = tokenData.id;
         lastFour = tokenData.last_four_digits;
-        brand = tokenData.payment_method?.id;
+        brand = tokenData.payment_method?.id || infoBandeira.id;
       }
 
       // Enviar para o backend unificado /api/assinar-com-cartao
@@ -244,29 +305,28 @@ export default function PaginaAssinaturaParceiro() {
       setErro(null);
       setSucesso(null);
 
-      const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
-      const numLimpo = numeroCartao.replace(/\D/g, "");
-      const cpfLimpo = cpfCartao.replace(/\D/g, "");
-
-      if (numLimpo.length < 13 || !mesVencimento || !anoVencimento || !cvv || cpfLimpo.length < 11) {
-        setErro("Preencha todos os campos do cartão com dados válidos.");
+      const validacao = validarDadosCartao();
+      if (!validacao.valido) {
+        setErro(validacao.erroMsg || "Verifique os dados do cartão.");
         setProcessando(false);
         return;
       }
+
+      const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
 
       const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          card_number: numLimpo,
-          expiration_month: Number(mesVencimento),
-          expiration_year: Number(anoVencimento.length === 2 ? `20${anoVencimento}` : anoVencimento),
-          security_code: cvv,
+          card_number: validacao.numLimpo,
+          expiration_month: validacao.mes,
+          expiration_year: validacao.ano,
+          security_code: validacao.cvvLimpo,
           cardholder: {
-            name: titularCartao.toUpperCase(),
+            name: titularCartao.toUpperCase().trim(),
             identification: {
               type: "CPF",
-              number: cpfLimpo,
+              number: validacao.cpfLimpo,
             },
           },
         }),
@@ -285,7 +345,7 @@ export default function PaginaAssinaturaParceiro() {
           card_token: tokenData.id,
           email: barbearia.email,
           last_four: tokenData.last_four_digits,
-          brand: tokenData.payment_method?.id || "master",
+          brand: tokenData.payment_method?.id || infoBandeira.id,
         }),
       });
 
@@ -800,7 +860,7 @@ export default function PaginaAssinaturaParceiro() {
                   <label className="block text-xs font-bold mb-1">Nome Impresso no Cartão</label>
                   <Input
                     type="text"
-                    placeholder="NOME COMO ESTA NO CARTAO"
+                    placeholder="NOME COMO ESTÁ NO CARTÃO"
                     value={titularCartao}
                     onChange={(e) => setTitularCartao(e.target.value)}
                     required
@@ -808,48 +868,52 @@ export default function PaginaAssinaturaParceiro() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-1">Número do Cartão</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold">Número do Cartão</label>
+                    {infoBandeira.id !== "outros" && (
+                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 animate-in fade-in">
+                        {infoBandeira.nome}
+                      </span>
+                    )}
+                  </div>
                   <Input
                     type="text"
-                    placeholder="0000 0000 0000 0000"
-                    maxLength={19}
+                    placeholder={
+                      infoBandeira.id === "amex"
+                        ? "0000 000000 00000"
+                        : infoBandeira.id === "diners"
+                        ? "0000 000000 0000"
+                        : "0000 0000 0000 0000"
+                    }
+                    maxLength={infoBandeira.id === "amex" ? 17 : infoBandeira.id === "diners" ? 16 : 19}
                     value={numeroCartao}
-                    onChange={(e) => setNumeroCartao(e.target.value)}
+                    onChange={(e) => setNumeroCartao(formatarNumeroCartao(e.target.value))}
                     required
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold mb-1">Mês (MM)</label>
+                    <label className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
                     <Input
                       type="text"
-                      placeholder="12"
-                      maxLength={2}
-                      value={mesVencimento}
-                      onChange={(e) => setMesVencimento(e.target.value)}
+                      placeholder="11/30"
+                      maxLength={5}
+                      value={validadeCartao}
+                      onChange={(e) => setValidadeCartao(formatarValidadeCartao(e.target.value))}
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold mb-1">Ano (AAAA)</label>
+                    <label className="block text-xs font-bold mb-1">
+                      CVV ({infoBandeira.tamanhoCvv} dígitos)
+                    </label>
                     <Input
                       type="text"
-                      placeholder="2030"
-                      maxLength={4}
-                      value={anoVencimento}
-                      onChange={(e) => setAnoVencimento(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1">CVV</label>
-                    <Input
-                      type="text"
-                      placeholder="123"
-                      maxLength={4}
+                      placeholder={infoBandeira.tamanhoCvv === 4 ? "1234" : "123"}
+                      maxLength={infoBandeira.tamanhoCvv}
                       value={cvv}
-                      onChange={(e) => setCvv(e.target.value)}
+                      onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, infoBandeira.tamanhoCvv))}
                       required
                     />
                   </div>
@@ -862,7 +926,7 @@ export default function PaginaAssinaturaParceiro() {
                     placeholder="000.000.000-00"
                     maxLength={14}
                     value={cpfCartao}
-                    onChange={(e) => setCpfCartao(e.target.value)}
+                    onChange={(e) => setCpfCartao(formatarCpf(e.target.value))}
                     required
                   />
                 </div>
@@ -909,7 +973,7 @@ export default function PaginaAssinaturaParceiro() {
             <label className="block text-xs font-bold mb-1">Nome Impresso no Cartão</label>
             <Input
               type="text"
-              placeholder="NOME COMO ESTA NO CARTAO"
+              placeholder="NOME COMO ESTÁ NO CARTÃO"
               value={titularCartao}
               onChange={(e) => setTitularCartao(e.target.value)}
               required
@@ -917,48 +981,52 @@ export default function PaginaAssinaturaParceiro() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold mb-1">Número do Cartão</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold">Número do Cartão</label>
+              {infoBandeira.id !== "outros" && (
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 animate-in fade-in">
+                  {infoBandeira.nome}
+                </span>
+              )}
+            </div>
             <Input
               type="text"
-              placeholder="0000 0000 0000 0000"
-              maxLength={19}
+              placeholder={
+                infoBandeira.id === "amex"
+                  ? "0000 000000 00000"
+                  : infoBandeira.id === "diners"
+                  ? "0000 000000 0000"
+                  : "0000 0000 0000 0000"
+              }
+              maxLength={infoBandeira.id === "amex" ? 17 : infoBandeira.id === "diners" ? 16 : 19}
               value={numeroCartao}
-              onChange={(e) => setNumeroCartao(e.target.value)}
+              onChange={(e) => setNumeroCartao(formatarNumeroCartao(e.target.value))}
               required
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold mb-1">Mês (MM)</label>
+              <label className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
               <Input
                 type="text"
-                placeholder="12"
-                maxLength={2}
-                value={mesVencimento}
-                onChange={(e) => setMesVencimento(e.target.value)}
+                placeholder="11/30"
+                maxLength={5}
+                value={validadeCartao}
+                onChange={(e) => setValidadeCartao(formatarValidadeCartao(e.target.value))}
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-bold mb-1">Ano (AAAA)</label>
+              <label className="block text-xs font-bold mb-1">
+                CVV ({infoBandeira.tamanhoCvv} dígitos)
+              </label>
               <Input
                 type="text"
-                placeholder="2030"
-                maxLength={4}
-                value={anoVencimento}
-                onChange={(e) => setAnoVencimento(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold mb-1">CVV</label>
-              <Input
-                type="text"
-                placeholder="123"
-                maxLength={4}
+                placeholder={infoBandeira.tamanhoCvv === 4 ? "1234" : "123"}
+                maxLength={infoBandeira.tamanhoCvv}
                 value={cvv}
-                onChange={(e) => setCvv(e.target.value)}
+                onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, infoBandeira.tamanhoCvv))}
                 required
               />
             </div>
@@ -971,7 +1039,7 @@ export default function PaginaAssinaturaParceiro() {
               placeholder="000.000.000-00"
               maxLength={14}
               value={cpfCartao}
-              onChange={(e) => setCpfCartao(e.target.value)}
+              onChange={(e) => setCpfCartao(formatarCpf(e.target.value))}
               required
             />
           </div>
