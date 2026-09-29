@@ -779,21 +779,6 @@ function ConteudoPerfilPublicoBarbearia() {
               </a>
             </CardContent>
           </Card>
-
-          {/* Card de Agendamento Rápido */}
-          <Card camada="primaria" className="border-l-4 border-l-[#B45A2B]">
-            <CardContent className="p-5 flex flex-col gap-3">
-              <h4 className="font-bold text-sm">Reserva sem Fricção</h4>
-              <p className="text-xs opacity-75">
-                Você pode selecionar os serviços e horários livremente. A autenticação é solicitada apenas antes da confirmação final.
-              </p>
-              <Link to={`/reservar/${barbearia.slug}`}>
-                <Button variante="principal" tamanho="sm" className="w-full mt-1">
-                  Agendar Online <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
