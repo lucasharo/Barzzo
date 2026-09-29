@@ -12,7 +12,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarData } from "@barzzo/utilitarios";
+import { formatarData, classeStatusBadge, traduzirStatus } from "@barzzo/utilitarios";
 import { CreditCard, Calendar, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
 export default function PaginaAssinaturasAdmin() {
@@ -101,8 +101,8 @@ export default function PaginaAssinaturasAdmin() {
                       <td className="p-4 uppercase text-xs font-mono">{ass.ciclo}</td>
                       <td className="p-4 font-bold text-[#16A34A]">{formatarMoeda(ass.valor)}</td>
                       <td className="p-4">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] uppercase">
-                          {ass.status}
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${classeStatusBadge(ass.status)}`}>
+                          {traduzirStatus(ass.status)}
                         </span>
                       </td>
                       <td className="p-4 opacity-75">

@@ -43,6 +43,28 @@ Código de domínio, banco, variáveis, rotas, telas e documentação em portugu
 ## Segurança
 Nunca grave segredos. Nunca exponha chave secreta no frontend. Nunca desative RLS para contornar erro.
 
+## Migrações de banco de dados
+
+**SEMPRE use o Supabase CLI para aplicar migrações ao banco remoto.** Nunca use scripts Node/pg diretos, pois a senha do banco Postgres não é a service key.
+
+### Fluxo obrigatório para migrações:
+1. Criar o arquivo SQL em `supabase/migrations/<timestamp>_<descricao>.sql`
+2. Aplicar ao banco remoto com:
+   ```bash
+   npx supabase db push --project-ref gdgeokfwkbusemayqucb
+   ```
+3. Se migrações já foram aplicadas manualmente mas não estão no histórico do CLI, repará-las primeiro:
+   ```bash
+   npx supabase migration repair --project-ref gdgeokfwkbusemayqucb --status applied <versao>
+   ```
+4. Verificar o status das migrações com:
+   ```bash
+   npx supabase migration list --project-ref gdgeokfwkbusemayqucb
+   ```
+
+O projeto está autenticado e vinculado (`linked: true`). Ref: `gdgeokfwkbusemayqucb`.
+
+
 ## Resultado
 Ao fim da Task 10, o MVP deve estar funcional, testado, responsivo, seguro e pronto para homologação.
 

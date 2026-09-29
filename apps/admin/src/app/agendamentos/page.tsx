@@ -11,7 +11,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarDataHora } from "@barzzo/utilitarios";
+import { formatarDataHora, classeStatusBadge, traduzirStatus } from "@barzzo/utilitarios";
 import { Calendar, Clock, DollarSign } from "lucide-react";
 
 export default function PaginaAgendamentosAdmin() {
@@ -103,8 +103,8 @@ export default function PaginaAgendamentosAdmin() {
                       </td>
                       <td className="p-4 font-bold text-[#B45A2B]">{formatarMoeda(ag.preco_total)}</td>
                       <td className="p-4">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 uppercase">
-                          {ag.status}
+                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${classeStatusBadge(ag.status)}`}>
+                          {traduzirStatus(ag.status)}
                         </span>
                       </td>
                     </tr>

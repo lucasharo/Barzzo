@@ -17,7 +17,7 @@ import {
   Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarData } from "@barzzo/utilitarios";
+import { formatarData, classeStatusBadge, traduzirStatus } from "@barzzo/utilitarios";
 import {
   Building2,
   Search,
@@ -214,15 +214,9 @@ export default function PaginaBarbeariasAdmin() {
                         </td>
                         <td className="p-4">
                           <span
-                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              b.status_assinatura === "ativa"
-                                ? "bg-[#16A34A]/10 text-[#16A34A]"
-                                : b.status_assinatura === "trial"
-                                ? "bg-[#B45A2B]/10 text-[#B45A2B]"
-                                : "bg-[#DC2626]/10 text-[#DC2626]"
-                            }`}
+                            className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${classeStatusBadge(b.status_assinatura)}`}
                           >
-                            {b.status_assinatura}
+                            {traduzirStatus(b.status_assinatura)}
                           </span>
                         </td>
                         <td className="p-4 opacity-75">

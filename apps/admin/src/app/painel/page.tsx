@@ -14,7 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarData } from "@barzzo/utilitarios";
+import { formatarData, classeStatusBadge, traduzirStatus } from "@barzzo/utilitarios";
 import type { MetricasAdminGlobal } from "@barzzo/tipos";
 import {
   Building2,
@@ -255,15 +255,9 @@ export default function PaginaPainelAdmin() {
                       <td className="p-4 opacity-75">{b.cidade || "Não informada"}</td>
                       <td className="p-4">
                         <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                            b.status_assinatura === "ativa"
-                              ? "bg-[#16A34A]/10 text-[#16A34A]"
-                              : b.status_assinatura === "trial"
-                              ? "bg-[#B45A2B]/10 text-[#B45A2B]"
-                              : "bg-[#DC2626]/10 text-[#DC2626]"
-                          }`}
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${classeStatusBadge(b.status_assinatura)}`}
                         >
-                          {b.status_assinatura.toUpperCase()}
+                          {traduzirStatus(b.status_assinatura).toUpperCase()}
                         </span>
                       </td>
                       <td className="p-4 opacity-75">
