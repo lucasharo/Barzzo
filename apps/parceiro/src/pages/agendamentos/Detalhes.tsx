@@ -13,6 +13,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro, formatarTelefone } from "@barzzo/utilitarios";
@@ -444,18 +445,16 @@ export default function PaginaDetalhesAgendamento() {
 
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="novoProf">Profissional</Label>
-                  <select
-                    id="novoProf"
-                    value={novoProfissionalId}
-                    onChange={(e) => setNovoProfissionalId(e.target.value)}
-                    className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#B45A2B]"
-                  >
-                    {profissionais.map((p) => (
-                      <option key={p.id} value={p.id} className="dark:bg-[#121214]">
-                        {p.nome}
-                      </option>
-                    ))}
-                  </select>
+                  <Seletor
+                    className="w-full"
+                    valor={novoProfissionalId}
+                    aoMudar={setNovoProfissionalId}
+                    placeholder="Selecione o profissional"
+                    opcoes={profissionais.map((p) => ({
+                      valor: p.id,
+                      rotulo: p.nome,
+                    }))}
+                  />
                 </div>
               </div>
 

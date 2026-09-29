@@ -14,6 +14,7 @@ import {
   AlertDescription,
   LoadingSpinner,
   SeletorData,
+  Seletor,
 } from "@barzzo/ui";
 import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
@@ -584,17 +585,16 @@ export default function PaginaNovoAgendamentoManual() {
                   </div>
 
                   {modoProfissional === "especifico" && (
-                    <select
-                      value={profissionalId}
-                      onChange={(e) => setProfissionalId(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                    >
-                      {profissionais.map((p) => (
-                        <option key={p.id} value={p.id} className="dark:bg-[#121214]">
-                          {p.nome}
-                        </option>
-                      ))}
-                    </select>
+                    <Seletor
+                      className="mt-1 w-full"
+                      valor={profissionalId}
+                      aoMudar={setProfissionalId}
+                      placeholder="Selecione o profissional"
+                      opcoes={profissionais.map((p) => ({
+                        valor: p.id,
+                        rotulo: p.nome,
+                      }))}
+                    />
                   )}
                 </div>
 

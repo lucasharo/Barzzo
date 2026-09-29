@@ -14,6 +14,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
@@ -286,16 +287,19 @@ export default function PaginaBarbeariasAdmin() {
             <CardContent className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="dias">Dias de Prorrogação</Label>
-                <select
-                  id="dias"
-                  value={diasExtensao}
-                  onChange={(e) => setDiasExtensao(Number(e.target.value))}
-                  className="h-10 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                >
-                  <option value={15}>+15 dias adicionais</option>
-                  <option value={30}>+30 dias adicionais (Condicionado a proposta semestral)</option>
-                  <option value={60}>+60 dias adicionais</option>
-                </select>
+                <Seletor
+                  className="w-full"
+                  valor={String(diasExtensao)}
+                  aoMudar={(val) => setDiasExtensao(Number(val))}
+                  opcoes={[
+                    { valor: "15", rotulo: "+15 dias adicionais" },
+                    {
+                      valor: "30",
+                      rotulo: "+30 dias adicionais (Condicionado a proposta semestral)",
+                    },
+                    { valor: "60", rotulo: "+60 dias adicionais" },
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">

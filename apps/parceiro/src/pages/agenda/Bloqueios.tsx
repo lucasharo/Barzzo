@@ -13,6 +13,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { BloqueioAgenda, Profissional, Barbearia } from "@barzzo/tipos";
@@ -313,21 +314,22 @@ export default function PaginaBloqueiosAgenda() {
               {/* Escopo do Bloqueio */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="escopo">Escopo do Bloqueio *</Label>
-                <select
-                  id="escopo"
-                  value={profissionalId}
-                  onChange={(e) => setProfissionalId(e.target.value)}
-                  className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                >
-                  <option value="geral" className="dark:bg-[#121214]">
-                    🏢 Toda a Barbearia (Geral - fecha todos os agendamentos)
-                  </option>
-                  {profissionais.map((p) => (
-                    <option key={p.id} value={p.id} className="dark:bg-[#121214]">
-                      👤 Apenas para {p.nome}
-                    </option>
-                  ))}
-                </select>
+                <Seletor
+                  className="w-full"
+                  valor={profissionalId}
+                  aoMudar={setProfissionalId}
+                  placeholder="Selecione o escopo"
+                  opcoes={[
+                    {
+                      valor: "geral",
+                      rotulo: "🏢 Toda a Barbearia (Geral - fecha todos os agendamentos)",
+                    },
+                    ...profissionais.map((p) => ({
+                      valor: p.id,
+                      rotulo: `👤 Apenas para ${p.nome}`,
+                    })),
+                  ]}
+                />
                 <span className="text-xs opacity-60">
                   Bloqueios gerais impedem agendamento com qualquer barbeiro durante o intervalo.
                 </span>

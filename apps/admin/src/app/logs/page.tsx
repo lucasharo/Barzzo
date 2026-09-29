@@ -11,6 +11,7 @@ import {
   AlertDescription,
   LoadingSpinner,
   Button,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { formatarAcaoAuditoria } from "@barzzo/dominio";
@@ -111,17 +112,18 @@ export default function PaginaLogsAdmin() {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
-          <select
-            value={filtroEntidade}
-            onChange={(e) => setFiltroEntidade(e.target.value)}
-            className="w-full sm:w-auto h-11 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-transparent px-3 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-          >
-            <option value="todas">Todas as entidades</option>
-            <option value="barbearias">Barbearias</option>
-            <option value="assinaturas">Assinaturas</option>
-            <option value="avaliacoes">Avaliações</option>
-            <option value="usuarios">Usuários</option>
-          </select>
+          <Seletor
+            className="w-full sm:w-auto min-w-[200px]"
+            valor={filtroEntidade}
+            aoMudar={setFiltroEntidade}
+            opcoes={[
+              { valor: "todas", rotulo: "Todas as entidades" },
+              { valor: "barbearias", rotulo: "Barbearias" },
+              { valor: "assinaturas", rotulo: "Assinaturas" },
+              { valor: "avaliacoes", rotulo: "Avaliações" },
+              { valor: "usuarios", rotulo: "Usuários" },
+            ]}
+          />
 
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />

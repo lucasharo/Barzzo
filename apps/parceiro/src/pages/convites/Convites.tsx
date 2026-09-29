@@ -12,6 +12,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
 } from "@barzzo/ui";
 import { esquemaCriarConvite } from "@barzzo/validacoes";
 import { traduzirErro } from "@barzzo/utilitarios";
@@ -223,17 +224,15 @@ export default function PaginaConvites() {
                 <Label htmlFor="papelConvite" obrigatorio>
                   Função / Papel
                 </Label>
-                <select
-                  id="papelConvite"
-                  value={papel}
-                  onChange={(e) =>
-                    setPapel(e.target.value as "gerente" | "profissional")
-                  }
-                  className="flex h-11 w-full rounded-lg px-3 py-2 text-sm bg-[#F6F6F7] text-black border border-[#E5E5E8] dark:bg-[#1C1C1F] dark:text-white dark:border-[#252529] focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                >
-                  <option value="profissional">Profissional (Barbeiro)</option>
-                  <option value="gerente">Gerente Operacional</option>
-                </select>
+                <Seletor
+                  className="w-full"
+                  valor={papel}
+                  aoMudar={(val) => setPapel(val as "gerente" | "profissional")}
+                  opcoes={[
+                    { valor: "profissional", rotulo: "Profissional (Barbeiro)" },
+                    { valor: "gerente", rotulo: "Gerente Operacional" },
+                  ]}
+                />
               </div>
             </div>
 
@@ -242,19 +241,19 @@ export default function PaginaConvites() {
                 <Label htmlFor="profAssociado">
                   Vincular a um profissional já cadastrado (opcional)
                 </Label>
-                <select
-                  id="profAssociado"
-                  value={profissionalId}
-                  onChange={(e) => setProfissionalId(e.target.value)}
-                  className="flex h-11 w-full rounded-lg px-3 py-2 text-sm bg-[#F6F6F7] text-black border border-[#E5E5E8] dark:bg-[#1C1C1F] dark:text-white dark:border-[#252529] focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                >
-                  <option value="">Novo profissional a partir do e-mail</option>
-                  {profissionais.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome} {p.usuario_id ? "(Conta já vinculada)" : "(Sem conta)"}
-                    </option>
-                  ))}
-                </select>
+                <Seletor
+                  className="w-full"
+                  valor={profissionalId}
+                  aoMudar={setProfissionalId}
+                  placeholder="Novo profissional a partir do e-mail"
+                  opcoes={[
+                    { valor: "", rotulo: "Novo profissional a partir do e-mail" },
+                    ...profissionais.map((p) => ({
+                      valor: p.id,
+                      rotulo: `${p.nome} ${p.usuario_id ? "(Conta já vinculada)" : "(Sem conta)"}`,
+                    })),
+                  ]}
+                />
               </div>
             )}
 

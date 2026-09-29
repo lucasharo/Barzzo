@@ -14,6 +14,7 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro } from "@barzzo/utilitarios";
@@ -618,15 +619,15 @@ export default function PaginaInfluenciadoresParceiro() {
                   <Label htmlFor="tipoCom" className="block text-sm font-semibold mb-1.5">
                     Tipo de Comissão
                   </Label>
-                  <select
-                    id="tipoCom"
-                    value={tipoComissao}
-                    onChange={(e) => setTipoComissao(e.target.value as any)}
-                    className="w-full h-11 px-3 rounded-lg border border-[#E5E5E8] dark:border-[#252529] bg-[#F6F6F7] dark:bg-[#1C1C1F] text-black dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
-                  >
-                    <option value="percentual">Percentual (%)</option>
-                    <option value="valor_fixo">Fixo por corte (R$)</option>
-                  </select>
+                  <Seletor
+                    className="w-full"
+                    valor={tipoComissao}
+                    aoMudar={(val) => setTipoComissao(val as any)}
+                    opcoes={[
+                      { valor: "percentual", rotulo: "Percentual (%)" },
+                      { valor: "valor_fixo", rotulo: "Fixo por corte (R$)" },
+                    ]}
+                  />
                 </div>
 
                 <div>
