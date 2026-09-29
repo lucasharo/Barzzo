@@ -95,8 +95,8 @@ function ConteudoListagemBarbearias() {
   const [tempRaioDistancia, setTempRaioDistancia] = React.useState<number | null>(null);
   const [tempNotaMinima, setTempNotaMinima] = React.useState<number | null>(null);
 
-  // Controle do menu popover de endereço e bairros
-  const [dropdownEnderecoAberto, setDropdownEnderecoAberto] = React.useState(false);
+  // Controle das sugestões de autocomplete de endereço
+  const [sugestoesAbertas, setSugestoesAbertas] = React.useState(false);
   const containerEnderecoRef = React.useRef<HTMLDivElement>(null);
 
   // Controle do seletor customizado de ordenação
@@ -117,7 +117,7 @@ function ConteudoListagemBarbearias() {
         containerEnderecoRef.current &&
         !containerEnderecoRef.current.contains(e.target as Node)
       ) {
-        setDropdownEnderecoAberto(false);
+        setSugestoesAbertas(false);
       }
       if (
         containerOrdenacaoRef.current &&
@@ -646,21 +646,23 @@ function ConteudoListagemBarbearias() {
 
             <div className="h-6 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-            {/* Campo de Endereço com Popover Integrado */}
+            {/* Campo de Endereço com Autocomplete Flutuante */}
             <div ref={containerEnderecoRef} className="relative flex-1 sm:flex-[1.5] min-w-0">
-              <div
-                className="flex items-center px-3 gap-2 min-h-[44px] cursor-pointer"
-                onClick={() => setDropdownEnderecoAberto(true)}
-              >
+              <div className="flex items-center px-3 gap-2 min-h-[44px]">
                 <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
                 <input
                   type="text"
-                  placeholder="Bairro, Cidade, Rua ou CEP..."
+                  placeholder="Digite rua, bairro, cidade ou CEP..."
                   value={bairroFiltro || localidade}
-                  onFocus={() => setDropdownEnderecoAberto(true)}
+                  onFocus={() => {
+                    if (sugestoesEndereco.length > 0 || (localidade && localidade.length >= 3)) {
+                      setSugestoesAbertas(true);
+                    }
+                  }}
                   onChange={(e) => {
                     setLocalidade(e.target.value);
                     setBairroFiltro("");
+                    setSugestoesAbertas(true);
                     if (localizacaoUsuario) {
                       setLocalizacaoUsuario(null);
                       setMensagemLocalizacao(null);
@@ -668,6 +670,7 @@ function ConteudoListagemBarbearias() {
                   }}
                   onKeyDown={async (e) => {
                     if (e.key === "Enter") {
+                      setSugestoesAbertas(false);
                       const termo = (bairroFiltro || localidade).trim();
                       if (termo.length >= 3) {
                         setGeocodificando(true);
@@ -684,6 +687,8 @@ function ConteudoListagemBarbearias() {
                           setGeocodificando(false);
                         }
                       }
+                    } else if (e.key === "Escape") {
+                      setSugestoesAbertas(false);
                     }
                   }}
                   className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50 text-black dark:text-white"
@@ -694,165 +699,58 @@ function ConteudoListagemBarbearias() {
                 {(localidade || bairroFiltro) && !geocodificando && (
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={() => {
                       setLocalidade("");
                       setBairroFiltro("");
                       setCoordenadasEndereco(null);
+                      setSugestoesEndereco([]);
+                      setSugestoesAbertas(false);
                     }}
                     className="text-xs opacity-50 hover:opacity-100 p-1"
-                    title="Limpar localização"
+                    title="Limpar endereço"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
-                <ChevronDown
-                  className={`h-3.5 w-3.5 opacity-50 transition-transform ${
-                    dropdownEnderecoAberto ? "rotate-180" : ""
-                  }`}
-                />
               </div>
 
-              {/* Popover / Dropdown de Endereço e Bairros */}
-              {dropdownEnderecoAberto && (
-                <div className="absolute left-0 sm:right-0 sm:left-auto top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-md p-4 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-3.5 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-black dark:text-white">
-                      <MapPin className="h-3.5 w-3.5 text-[#B45A2B]" />
-                      <span>Endereço de Busca</span>
+              {/* Lista Flutuante de Sugestões de Autocomplete */}
+              {sugestoesAbertas && (buscandoSugestoes || sugestoesEndereco.length > 0) && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 overflow-hidden divide-y divide-neutral-100 dark:divide-neutral-800 animate-in fade-in zoom-in-95 duration-150 text-left">
+                  {buscandoSugestoes && (
+                    <div className="p-3 text-xs opacity-70 flex items-center gap-2">
+                      <LoadingSpinner tamanho="sm" />
+                      <span>Buscando endereços no Brasil...</span>
                     </div>
-                    {(localidade || bairroFiltro) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLocalidade("");
-                          setBairroFiltro("");
-                          setCoordenadasEndereco(null);
-                        }}
-                        className="text-[11px] font-semibold text-[#DC2626] hover:underline"
-                      >
-                        Limpar endereço
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Sugestões de Autocomplete em Tempo Real */}
-                  {(buscandoSugestoes || sugestoesEndereco.length > 0) && (
-                    <div className="flex flex-col gap-1.5 pb-2 border-b border-neutral-200 dark:border-neutral-800">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#B45A2B]">
-                          Sugestões de Endereço
+                  )}
+                  {sugestoesEndereco.map((sug) => (
+                    <button
+                      key={sug.id}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        setLocalidade(sug.enderecoCompleto || sug.titulo);
+                        setBairroFiltro("");
+                        setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
+                        setSugestoesAbertas(false);
+                        if (localizacaoUsuario) {
+                          setLocalizacaoUsuario(null);
+                          setMensagemLocalizacao(null);
+                        }
+                      }}
+                      className="w-full flex items-start gap-3 p-3.5 hover:bg-[#B45A2B]/10 text-left transition-colors group cursor-pointer"
+                    >
+                      <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0 mt-0.5" />
+                      <div className="flex flex-col min-w-0">
+                        <strong className="text-xs font-bold text-black dark:text-white group-hover:text-[#B45A2B] transition-colors truncate">
+                          {sug.titulo}
+                        </strong>
+                        <span className="text-[11px] opacity-65 truncate">
+                          {sug.subtitulo}
                         </span>
-                        {buscandoSugestoes && <LoadingSpinner tamanho="sm" />}
                       </div>
-
-                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
-                        {sugestoesEndereco.map((sug) => (
-                          <button
-                            key={sug.id}
-                            type="button"
-                            onClick={() => {
-                              setLocalidade(sug.titulo);
-                              setBairroFiltro("");
-                              setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
-                              if (localizacaoUsuario) {
-                                setLocalizacaoUsuario(null);
-                                setMensagemLocalizacao(null);
-                              }
-                              setDropdownEnderecoAberto(false);
-                            }}
-                            className="flex items-start gap-2 p-2 rounded-lg hover:bg-[#B45A2B]/10 text-left transition-colors group"
-                          >
-                            <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0 mt-0.5" />
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-semibold text-black dark:text-white truncate group-hover:text-[#B45A2B]">
-                                {sug.titulo}
-                              </span>
-                              <span className="text-[11px] opacity-60 truncate">
-                                {sug.subtitulo}
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Ação rápida: Usar GPS */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alternarLocalizacao();
-                      setDropdownEnderecoAberto(false);
-                    }}
-                    className="flex items-center gap-2.5 p-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] bg-[#F6F6F7] dark:bg-[#0A0A0B] text-xs font-semibold text-left transition-colors text-black dark:text-white"
-                  >
-                    <Compass className="h-4 w-4 text-[#B45A2B] shrink-0" />
-                    <div className="flex flex-col">
-                      <span>Usar minha localização atual</span>
-                      <span className="text-[10px] opacity-60 font-normal">
-                        Ordenar barbearias mais próximas por GPS
-                      </span>
-                    </div>
-                  </button>
-
-                  {/* Bairros Cadastrados no Marketplace */}
-                  {bairrosDisponiveis.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[11px] font-bold uppercase tracking-wider opacity-70">
-                        Bairros com Barbearias
-                      </span>
-                      <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBairroFiltro("");
-                            setLocalidade("");
-                            setCoordenadasEndereco(null);
-                            setDropdownEnderecoAberto(false);
-                          }}
-                          className={`px-2.5 py-1 rounded-lg text-xs transition-colors border ${
-                            !bairroFiltro && !localidade
-                              ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
-                              : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
-                          }`}
-                        >
-                          Todos os bairros
-                        </button>
-                        {bairrosDisponiveis.map((bNome) => {
-                          const ativo =
-                            bairroFiltro === bNome ||
-                            normalizarTexto(localidade) === normalizarTexto(bNome);
-                          return (
-                            <button
-                              key={bNome}
-                              type="button"
-                              onClick={() => {
-                                setBairroFiltro(bNome);
-                                setLocalidade(bNome);
-                                if (localizacaoUsuario) {
-                                  setLocalizacaoUsuario(null);
-                                  setMensagemLocalizacao(null);
-                                }
-                                setDropdownEnderecoAberto(false);
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-xs transition-colors border ${
-                                ativo
-                                  ? "bg-[#B45A2B] text-white border-[#B45A2B] font-semibold"
-                                  : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B] text-black dark:text-white"
-                              }`}
-                            >
-                              {bNome}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-[11px] opacity-60 leading-relaxed border-t border-neutral-200 dark:border-neutral-800 pt-2">
-                    💡 Dica: Você pode digitar o seu <strong>Bairro</strong>, <strong>Cidade</strong>, <strong>Rua/Avenida</strong> ou <strong>CEP</strong> no campo de busca.
-                  </div>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
