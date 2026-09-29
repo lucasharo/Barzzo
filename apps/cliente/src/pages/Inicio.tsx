@@ -5,6 +5,7 @@ import { Button, Card, CardContent, LoadingSpinner } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
   buscarSugestoesEndereco,
+  geocodificarEndereco,
   salvarEnderecoBuscaSessao,
   obterEnderecoBuscaSessao,
   formatarEnderecoConta,
@@ -59,15 +60,29 @@ export default function PaginaInicialCliente() {
             setLocalidadeBusca(enderecoConta.texto);
             if (enderecoConta.lat && enderecoConta.lng) {
               setCoordenadasBusca({ lat: enderecoConta.lat, lng: enderecoConta.lng });
+              salvarEnderecoBuscaSessao({
+                texto: enderecoConta.texto,
+                lat: enderecoConta.lat,
+                lng: enderecoConta.lng,
+                bairro: enderecoConta.bairro,
+                cidade: enderecoConta.cidade,
+                origem: "conta",
+              });
+            } else {
+              geocodificarEndereco(enderecoConta.texto).then((coords) => {
+                if (coords) {
+                  setCoordenadasBusca({ lat: coords.lat, lng: coords.lng });
+                  salvarEnderecoBuscaSessao({
+                    texto: enderecoConta.texto,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    bairro: enderecoConta.bairro,
+                    cidade: enderecoConta.cidade,
+                    origem: "conta",
+                  });
+                }
+              });
             }
-            salvarEnderecoBuscaSessao({
-              texto: enderecoConta.texto,
-              lat: enderecoConta.lat,
-              lng: enderecoConta.lng,
-              bairro: enderecoConta.bairro,
-              cidade: enderecoConta.cidade,
-              origem: "conta",
-            });
           }
         }
       } catch {

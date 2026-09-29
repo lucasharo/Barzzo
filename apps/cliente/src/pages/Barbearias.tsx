@@ -130,20 +130,34 @@ function ConteudoListagemBarbearias() {
           const enderecoConta = formatarEnderecoConta(session.user.user_metadata);
           if (enderecoConta && enderecoConta.texto) {
             setLocalidade(enderecoConta.texto);
-            if (enderecoConta.lat && enderecoConta.lng) {
-              setCoordenadasEndereco({ lat: enderecoConta.lat, lng: enderecoConta.lng });
-            }
             if (enderecoConta.bairro) {
               setBairroFiltro(enderecoConta.bairro);
             }
-            salvarEnderecoBuscaSessao({
-              texto: enderecoConta.texto,
-              lat: enderecoConta.lat,
-              lng: enderecoConta.lng,
-              bairro: enderecoConta.bairro,
-              cidade: enderecoConta.cidade,
-              origem: "conta",
-            });
+            if (enderecoConta.lat && enderecoConta.lng) {
+              setCoordenadasEndereco({ lat: enderecoConta.lat, lng: enderecoConta.lng });
+              salvarEnderecoBuscaSessao({
+                texto: enderecoConta.texto,
+                lat: enderecoConta.lat,
+                lng: enderecoConta.lng,
+                bairro: enderecoConta.bairro,
+                cidade: enderecoConta.cidade,
+                origem: "conta",
+              });
+            } else {
+              geocodificarEndereco(enderecoConta.texto).then((coords) => {
+                if (coords) {
+                  setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
+                  salvarEnderecoBuscaSessao({
+                    texto: enderecoConta.texto,
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    bairro: enderecoConta.bairro,
+                    cidade: enderecoConta.cidade,
+                    origem: "conta",
+                  });
+                }
+              });
+            }
           }
         }
       } catch {

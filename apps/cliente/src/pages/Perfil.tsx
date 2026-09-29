@@ -251,9 +251,8 @@ export default function PaginaPerfil() {
       // Geocodificar endereço do cliente para coordenadas precisas de busca
       const partesEndereco = [
         logradouro ? `${logradouro}${numero ? ", " + numero : ""}` : null,
-        bairro,
-        cidade && estado ? `${cidade} - ${estado}` : (cidade || estado),
-        cep ? `CEP ${cep}` : null,
+        bairro || null,
+        cidade && estado ? `${cidade} - ${estado}` : (cidade || estado || null),
       ].filter(Boolean);
 
       const enderecoCompletoFormatado = partesEndereco.join(", ");

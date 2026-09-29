@@ -71,7 +71,8 @@ export function limparEnderecoBuscaSessao(): void {
 }
 
 /**
- * Formata os dados de endereço salvos no perfil/metadados da conta do cliente.
+ * Formata os dados de endereço salvos no perfil/metadados da conta do cliente
+ * no padrão legível: "Nome da Rua, Número, Bairro, Cidade - UF".
  */
 export function formatarEnderecoConta(meta: any): {
   texto: string;
@@ -82,29 +83,31 @@ export function formatarEnderecoConta(meta: any): {
 } | null {
   if (!meta) return null;
 
-  if (meta.endereco_completo && typeof meta.endereco_completo === "string" && meta.endereco_completo.trim()) {
-    return {
-      texto: meta.endereco_completo.trim(),
-      lat: typeof meta.latitude === "number" ? meta.latitude : null,
-      lng: typeof meta.longitude === "number" ? meta.longitude : null,
-      bairro: meta.bairro || null,
-      cidade: meta.cidade || null,
-    };
+  const rua = meta.logradouro || meta.endereco || "";
+  const num = meta.numero ? `${meta.numero}` : "";
+  const logradouroCompleto = rua ? (num ? `${rua}, ${num}` : rua) : "";
+  const bairro = meta.bairro || "";
+  const cidadeEstado = meta.cidade && meta.estado
+    ? `${meta.cidade} - ${meta.estado}`
+    : (meta.cidade || meta.estado || "");
+
+  // Formato: "Rua..., Bairro, Cidade - UF"
+  const partes = [logradouroCompleto, bairro, cidadeEstado].filter(Boolean);
+  let texto = partes.join(", ");
+
+  // Se não foi possível montar a partir dos campos estruturados, tenta endereco_completo
+  if (!texto && meta.endereco_completo && typeof meta.endereco_completo === "string") {
+    // Remove "CEP ..." caso tenha sido gravado no texto completo
+    texto = meta.endereco_completo.replace(/,?\s*CEP\s*[\d.-]+/gi, "").trim();
   }
 
-  const partes = [
-    meta.logradouro ? `${meta.logradouro}${meta.numero ? ", " + meta.numero : ""}` : (meta.endereco || null),
-    meta.bairro || null,
-    meta.cidade && meta.estado ? `${meta.cidade} - ${meta.estado}` : (meta.cidade || meta.estado || null),
-  ].filter(Boolean);
-
-  if (partes.length === 0) return null;
+  if (!texto) return null;
 
   return {
-    texto: partes.join(", "),
+    texto,
     lat: typeof meta.latitude === "number" ? meta.latitude : null,
     lng: typeof meta.longitude === "number" ? meta.longitude : null,
-    bairro: meta.bairro || null,
+    bairro: bairro || null,
     cidade: meta.cidade || null,
   };
 }
