@@ -24,6 +24,7 @@ export interface BarbeariaMarketplace {
   nome: string;
   slug: string;
   logo_url: string | null;
+  foto_capa_url?: string | null;
   endereco: string | null;
   bairro: string | null;
   cidade: string | null;

@@ -375,6 +375,35 @@ function ConteudoListagemBarbearias() {
           return a.nome.localeCompare(b.nome);
         });
 
+        // Buscar fotos de capa da galeria para enriquecer a exibição
+        if (lista.length > 0) {
+          try {
+            const ids = lista.map((item) => item.id);
+            const { data: fotosData } = await (supabase.from("galeria_fotos") as any)
+              .select("barbearia_id, foto_url, destaque_capa, ordem, created_at")
+              .in("barbearia_id", ids);
+
+            if (fotosData && fotosData.length > 0) {
+              const mapaCapa: Record<string, string> = {};
+              // Prioriza destaque_capa = true, senão primeira foto adicionada
+              fotosData.forEach((f: any) => {
+                if (f.destaque_capa) {
+                  mapaCapa[f.barbearia_id] = f.foto_url;
+                } else if (!mapaCapa[f.barbearia_id]) {
+                  mapaCapa[f.barbearia_id] = f.foto_url;
+                }
+              });
+
+              lista = lista.map((item) => ({
+                ...item,
+                foto_capa_url: mapaCapa[item.id] || item.foto_capa_url || null,
+              }));
+            }
+          } catch {
+            // Silencioso
+          }
+        }
+
         setBarbearias(lista);
       }
     } catch {
@@ -1039,8 +1068,12 @@ function ConteudoListagemBarbearias() {
               className="hover:border-[#B45A2B]/60 transition-all hover:shadow-md flex flex-col justify-between"
             >
               <div className="h-40 bg-[#EEEEF0] dark:bg-[#1C1C1F] rounded-t-xl flex items-center justify-center relative overflow-hidden">
-                {b.logo_url ? (
-                  <img src={b.logo_url} alt={b.nome} className="w-full h-full object-cover" />
+                {b.foto_capa_url || b.logo_url ? (
+                  <img
+                    src={b.foto_capa_url || b.logo_url!}
+                    alt={b.nome}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <Scissors className="h-12 w-12 opacity-30 text-[#B45A2B]" />
                 )}

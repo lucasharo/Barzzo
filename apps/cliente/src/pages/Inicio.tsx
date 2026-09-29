@@ -36,7 +36,7 @@ export default function PaginaInicialCliente() {
         });
 
         if (data && data.length > 0) {
-          const validas = (data as any[])
+          let validas = (data as any[])
             .filter((b) => {
               const st = b.status_assinatura;
               if (st === "vencida" || st === "inadimplente" || st === "suspensa") return false;
@@ -44,6 +44,34 @@ export default function PaginaInicialCliente() {
               return true;
             })
             .slice(0, 6);
+
+          if (validas.length > 0) {
+            try {
+              const ids = validas.map((item) => item.id);
+              const { data: fotosData } = await (supabase.from("galeria_fotos") as any)
+                .select("barbearia_id, foto_url, destaque_capa, ordem, created_at")
+                .in("barbearia_id", ids);
+
+              if (fotosData && fotosData.length > 0) {
+                const mapaCapa: Record<string, string> = {};
+                fotosData.forEach((f: any) => {
+                  if (f.destaque_capa) {
+                    mapaCapa[f.barbearia_id] = f.foto_url;
+                  } else if (!mapaCapa[f.barbearia_id]) {
+                    mapaCapa[f.barbearia_id] = f.foto_url;
+                  }
+                });
+
+                validas = validas.map((item) => ({
+                  ...item,
+                  foto_capa_url: mapaCapa[item.id] || item.foto_capa_url || null,
+                }));
+              }
+            } catch {
+              // Silencioso
+            }
+          }
+
           setBarbearias(validas as Barbearia[]);
         }
       } catch {
@@ -173,8 +201,12 @@ export default function PaginaInicialCliente() {
                 className="hover:border-[#B45A2B]/60 transition-all hover:shadow-md flex flex-col justify-between"
               >
                 <div className="h-36 bg-[#EEEEF0] dark:bg-[#1C1C1F] rounded-t-xl flex items-center justify-center relative overflow-hidden">
-                  {b.logo_url ? (
-                    <img src={b.logo_url} alt={b.nome} className="w-full h-full object-cover" />
+                  {b.foto_capa_url || b.logo_url ? (
+                    <img
+                      src={b.foto_capa_url || b.logo_url!}
+                      alt={b.nome}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <Scissors className="h-10 w-10 opacity-30 text-[#B45A2B]" />
                   )}
