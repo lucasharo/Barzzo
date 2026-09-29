@@ -14,7 +14,7 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { esquemaCadastro } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro, formatarData } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterRascunhoReserva, calcularDestinoAposAuth } from "@barzzo/dominio";
 import { Sparkles } from "lucide-react";
@@ -115,7 +115,7 @@ export default function PaginaCadastro() {
                 <span className="font-bold text-sm block text-[#B45A2B]">
                   Conclua seu agendamento
                 </span>
-                Crie sua conta para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {draft.data} às {draft.horario}).
+                Crie sua conta para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {formatarData(draft.data)} às {draft.horario}).
               </div>
             </div>
           )}

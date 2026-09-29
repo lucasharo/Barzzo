@@ -5,6 +5,9 @@ import {
   extrairPrimeiroNome,
   obterIniciais,
   traduzirErro,
+  formatarData,
+  formatarDataHora,
+  formatarHora,
 } from "@barzzo/utilitarios";
 
 describe("Utilitários e Formatadores", () => {
@@ -113,4 +116,44 @@ describe("Utilitários e Formatadores", () => {
       expect(await geocodificarEndereco("   ")).toBeNull();
     });
   });
+
+  describe("formatarData", () => {
+    it("deve formatar data no formato YYYY-MM-DD para dd/MM/yyyy", () => {
+      expect(formatarData("2026-09-29")).toBe("29/09/2026");
+      expect(formatarData("2026-01-05")).toBe("05/01/2026");
+    });
+
+    it("deve manter datas já no formato dd/MM/yyyy", () => {
+      expect(formatarData("29/09/2026")).toBe("29/09/2026");
+    });
+
+    it("deve formatar instâncias de Date", () => {
+      const d = new Date(2026, 8, 29);
+      expect(formatarData(d)).toBe("29/09/2026");
+    });
+
+    it("deve retornar vazio se nulo ou indefinido", () => {
+      expect(formatarData(null)).toBe("");
+      expect(formatarData(undefined)).toBe("");
+      expect(formatarData("")).toBe("");
+    });
+  });
+
+  describe("formatarDataHora", () => {
+    it("deve formatar data e hora no formato dd/MM/yyyy HH:mm", () => {
+      const d = new Date(2026, 8, 29, 14, 30);
+      expect(formatarDataHora(d)).toBe("29/09/2026 14:30");
+      expect(formatarDataHora(d, true)).toBe("29/09/2026 às 14:30");
+    });
+  });
+
+  describe("formatarHora", () => {
+    it("deve extrair e formatar apenas HH:mm", () => {
+      expect(formatarHora("14:30:00")).toBe("14:30");
+      expect(formatarHora("09:05")).toBe("09:05");
+      const d = new Date(2026, 8, 29, 9, 5);
+      expect(formatarHora(d)).toBe("09:05");
+    });
+  });
 });
+

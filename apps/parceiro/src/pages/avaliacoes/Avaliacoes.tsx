@@ -15,6 +15,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { formatarResumoReputacao } from "@barzzo/dominio";
+import { formatarData } from "@barzzo/utilitarios";
 import { esquemaResponderAvaliacao } from "@barzzo/validacoes";
 import type { Avaliacao, ResumoReputacaoBarbearia } from "@barzzo/tipos";
 import {
@@ -298,11 +299,7 @@ export default function PaginaAvaliacoesParceiro() {
                       <div>
                         <h4 className="font-bold text-sm">{av.cliente_nome}</h4>
                         <span className="text-[11px] opacity-60">
-                          {new Date(av.created_at).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
+                          {formatarData(av.created_at)}
                           {av.profissionais?.nome ? ` • Barbeiro: ${av.profissionais.nome}` : ""}
                         </span>
                       </div>
@@ -343,7 +340,7 @@ export default function PaginaAvaliacoesParceiro() {
                         </span>
                         {av.respondido_em && (
                           <span className="text-[10px] opacity-60">
-                            {new Date(av.respondido_em).toLocaleDateString("pt-BR")}
+                            {formatarData(av.respondido_em)}
                           </span>
                         )}
                       </div>

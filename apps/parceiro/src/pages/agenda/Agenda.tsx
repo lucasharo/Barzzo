@@ -16,7 +16,7 @@ import {
   CardAgendamento,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro, formatarTelefone } from "@barzzo/utilitarios";
+import { traduzirErro, formatarTelefone, formatarData } from "@barzzo/utilitarios";
 import type {
   Agendamento,
   AgendamentoComDetalhes,
@@ -252,12 +252,7 @@ export default function PaginaAgendaParceiro() {
     );
   }
 
-  const dataFormatadaExtenso = new Date(dataSelecionada + "T12:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const dataFormatadaExtenso = formatarData(dataSelecionada);
 
   return (
     <div className="flex flex-col gap-6">

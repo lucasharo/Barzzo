@@ -12,6 +12,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarData } from "@barzzo/utilitarios";
 import { Star, ShieldAlert, CheckCircle2, MessageSquare } from "lucide-react";
 
 export default function PaginaAvaliacoesAdmin() {
@@ -101,7 +102,7 @@ export default function PaginaAvaliacoesAdmin() {
                         {av.comentario || <em className="opacity-50">Sem comentário textual</em>}
                       </td>
                       <td className="p-4 opacity-60">
-                        {new Date(av.criado_em).toLocaleDateString("pt-BR")}
+                        {formatarData(av.criado_em)}
                       </td>
                     </tr>
                   ))

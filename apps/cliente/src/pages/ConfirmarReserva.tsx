@@ -19,6 +19,7 @@ import {
   calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
 } from "@barzzo/dominio";
+import { formatarData } from "@barzzo/utilitarios";
 import type {
   RascunhoReserva,
   SlotDisponivel,
@@ -419,7 +420,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
               <div className="flex justify-between">
                 <span className="opacity-60">Horário:</span>
                 <span className="font-bold text-[#B45A2B]">
-                  {rascunho.data} às {rascunho.horario}
+                  {formatarData(rascunho.data)} às {rascunho.horario}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t border-neutral-200 dark:border-neutral-800">

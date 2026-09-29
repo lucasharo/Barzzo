@@ -17,7 +17,7 @@ import {
   Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro, formatarTelefone } from "@barzzo/utilitarios";
+import { traduzirErro, formatarTelefone, formatarData } from "@barzzo/utilitarios";
 import {
   esquemaInfluenciador,
   gerarLinkInfluenciador,
@@ -495,11 +495,7 @@ export default function PaginaInfluenciadoresParceiro() {
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                   {comissoes.map((com) => {
-                    const dataFormatada = new Date(com.created_at).toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    });
+                    const dataFormatada = formatarData(com.created_at);
 
                     return (
                       <tr key={com.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50">
@@ -559,7 +555,7 @@ export default function PaginaInfluenciadoresParceiro() {
                           )}
                           {com.status === "paga" && (
                             <span className="text-[11px] opacity-50">
-                              Acertada em {new Date(com.paga_em || "").toLocaleDateString("pt-BR")}
+                              Acertada em {formatarData(com.paga_em)}
                             </span>
                           )}
                         </td>

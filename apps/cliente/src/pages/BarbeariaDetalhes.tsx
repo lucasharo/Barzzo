@@ -24,7 +24,7 @@ import {
   type Produto,
 } from "@barzzo/tipos";
 import { formatarResumoReputacao } from "@barzzo/dominio";
-import { formatarTelefone, formatarCep } from "@barzzo/utilitarios";
+import { formatarTelefone, formatarCep, formatarData } from "@barzzo/utilitarios";
 import {
   MapPin,
   Phone,
@@ -648,11 +648,7 @@ function ConteudoPerfilPublicoBarbearia() {
                         <div>
                           <span className="text-sm font-bold block">{av.cliente_nome}</span>
                           <span className="text-[11px] opacity-50">
-                            {new Date(av.created_at).toLocaleDateString("pt-BR", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatarData(av.created_at)}
                           </span>
                         </div>
                       </div>

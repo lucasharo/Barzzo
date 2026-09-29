@@ -14,6 +14,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { gerarLinkInfluenciador } from "@barzzo/dominio";
+import { formatarData } from "@barzzo/utilitarios";
 import type {
   Influenciador,
   ComissaoInfluenciador,
@@ -312,11 +313,7 @@ export default function PaginaPainelInfluenciador() {
                 </thead>
                 <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
                   {comissoes.map((com) => {
-                    const dataFormatada = new Date(com.created_at).toLocaleDateString("pt-BR", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    });
+                    const dataFormatada = formatarData(com.created_at);
 
                     return (
                       <tr key={com.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50">
@@ -352,7 +349,7 @@ export default function PaginaPainelInfluenciador() {
                         </td>
                         <td className="py-3 px-4 text-right opacity-60">
                           {com.paga_em
-                            ? `Acertado em ${new Date(com.paga_em).toLocaleDateString("pt-BR")}`
+                            ? `Acertado em ${formatarData(com.paga_em)}`
                             : "Aguardando repasse da barbearia"}
                         </td>
                       </tr>

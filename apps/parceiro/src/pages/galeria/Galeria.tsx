@@ -16,7 +16,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, formatarData } from "@barzzo/utilitarios";
 import {
   esquemaFotoGaleria,
   calcularDimensoesRedimensionamento,
@@ -451,7 +451,7 @@ export default function PaginaGaleriaParceiro() {
                     {foto.titulo || "Sem legenda"}
                   </p>
                   <span className="text-[10px] opacity-50 block mt-0.5">
-                    Postada em {new Date(foto.created_at).toLocaleDateString("pt-BR")}
+                    Postada em {formatarData(foto.created_at)}
                   </span>
                 </div>
               </div>

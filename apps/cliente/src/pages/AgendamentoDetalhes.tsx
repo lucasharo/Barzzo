@@ -13,7 +13,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, formatarData } from "@barzzo/utilitarios";
 import type { StatusAgendamento } from "@barzzo/tipos";
 import {
   Calendar,
@@ -256,12 +256,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
 
   const statusConfig = getBadgeStatus(agendamento.status);
   const dataObj = new Date(agendamento.inicio_previsto);
-  const dataLegivel = dataObj.toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const dataLegivel = formatarData(agendamento.inicio_previsto);
   const horaInicio = dataObj.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",

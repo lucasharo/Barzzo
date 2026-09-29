@@ -188,4 +188,99 @@ export function formatarCep(valor: string | null | undefined): string {
   return `${digitos.slice(0, 5)}-${digitos.slice(5, 8)}`;
 }
 
+/**
+ * Formata uma data no formato padrão brasileiro `dd/MM/yyyy`.
+ * Suporta strings no formato ISO, YYYY-MM-DD, instâncias de Date e timestamps numéricos.
+ */
+export function formatarData(valor: string | Date | number | null | undefined): string {
+  if (!valor) return "";
+
+  if (typeof valor === "string") {
+    const trimmed = valor.trim();
+    if (!trimmed) return "";
+
+    // Se já estiver no formato YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+      const [ano, mes, dia] = trimmed.split("-");
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    // Se já estiver no formato dd/MM/yyyy
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    // Tratamento seguro para strings de data ISO
+    const d = new Date(trimmed);
+    if (isNaN(d.getTime())) return trimmed;
+    const dia = String(d.getDate()).padStart(2, "0");
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+    const ano = d.getFullYear();
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  const d = typeof valor === "number" ? new Date(valor) : valor;
+  if (isNaN(d.getTime())) return "";
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const ano = d.getFullYear();
+  return `${dia}/${mes}/${ano}`;
+}
+
+/**
+ * Formata data e hora no formato brasileiro `dd/MM/yyyy HH:mm` ou `dd/MM/yyyy às HH:mm`.
+ */
+export function formatarDataHora(
+  valor: string | Date | number | null | undefined,
+  comAs = false
+): string {
+  if (!valor) return "";
+
+  let d: Date;
+  if (typeof valor === "string") {
+    const trimmed = valor.trim();
+    if (!trimmed) return "";
+    d = new Date(trimmed);
+  } else if (typeof valor === "number") {
+    d = new Date(valor);
+  } else {
+    d = valor;
+  }
+
+  if (isNaN(d.getTime())) return "";
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const ano = d.getFullYear();
+  const hora = String(d.getHours()).padStart(2, "0");
+  const minuto = String(d.getMinutes()).padStart(2, "0");
+
+  const separador = comAs ? " às " : " ";
+  return `${dia}/${mes}/${ano}${separador}${hora}:${minuto}`;
+}
+
+/**
+ * Formata apenas o horário no formato `HH:mm`.
+ */
+export function formatarHora(valor: string | Date | number | null | undefined): string {
+  if (!valor) return "";
+
+  if (typeof valor === "string") {
+    const trimmed = valor.trim();
+    if (/^\d{2}:\d{2}(:\d{2})?$/.test(trimmed)) {
+      return trimmed.slice(0, 5);
+    }
+    const d = new Date(trimmed);
+    if (isNaN(d.getTime())) return trimmed;
+    const hora = String(d.getHours()).padStart(2, "0");
+    const minuto = String(d.getMinutes()).padStart(2, "0");
+    return `${hora}:${minuto}`;
+  }
+
+  const d = typeof valor === "number" ? new Date(valor) : valor;
+  if (isNaN(d.getTime())) return "";
+  const hora = String(d.getHours()).padStart(2, "0");
+  const minuto = String(d.getMinutes()).padStart(2, "0");
+  return `${hora}:${minuto}`;
+}
+
 

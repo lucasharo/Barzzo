@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarData } from "@barzzo/utilitarios";
 import type { Campanha, Cupom } from "@barzzo/tipos";
 import {
   Tag,
@@ -357,7 +358,7 @@ export default function PaginaCampanhasParceiro() {
 
                       <p className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-[#B45A2B]" />
-                        Até {new Date(cupom.data_fim).toLocaleDateString("pt-BR")}
+                        Até {formatarData(cupom.data_fim)}
                       </p>
                     </div>
                   </div>

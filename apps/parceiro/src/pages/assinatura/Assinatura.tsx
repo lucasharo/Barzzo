@@ -21,6 +21,7 @@ import {
   formatarNumeroCartao,
   formatarValidadeCartao,
   formatarCpf,
+  formatarData,
 } from "@barzzo/utilitarios";
 import {
   CreditCard,
@@ -389,9 +390,7 @@ export default function PaginaAssinaturaParceiro() {
 
       setSucesso(
         data.data_limite
-          ? `Renovação automática desativada. Seu acesso permanecerá 100% liberado até ${new Date(
-              data.data_limite
-            ).toLocaleDateString("pt-BR")}.`
+          ? `Renovação automática desativada. Seu acesso permanecerá 100% liberado até ${formatarData(data.data_limite)}.`
           : "Renovação automática desativada com sucesso."
       );
       setModalCancelarAberto(false);
@@ -499,7 +498,7 @@ export default function PaginaAssinaturaParceiro() {
                 <strong className="block font-bold text-sm">
                   {diasRestantes} dia(s) restantes de teste
                 </strong>
-                <span>Válido até {new Date(barbearia.trial_fim).toLocaleDateString("pt-BR")}</span>
+                <span>Válido até {formatarData(barbearia.trial_fim)}</span>
               </>
             ) : ativa && assinaturaAtual ? (
               <>
@@ -508,8 +507,8 @@ export default function PaginaAssinaturaParceiro() {
                 </strong>
                 <span>
                   {barbearia.recorrencia_ativa
-                    ? `Próxima renovação automática em ${new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")}`
-                    : `Vigência até ${new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")} (Renovação desativada)`}
+                    ? `Próxima renovação automática em ${formatarData(assinaturaAtual.data_fim)}`
+                    : `Vigência até ${formatarData(assinaturaAtual.data_fim)} (Renovação desativada)`}
                 </span>
               </>
             ) : (
@@ -1092,7 +1091,7 @@ export default function PaginaAssinaturaParceiro() {
                 Seu acesso ao sistema continuará 100% ativo até{" "}
                 <strong>
                   {assinaturaAtual
-                    ? new Date(assinaturaAtual.data_fim).toLocaleDateString("pt-BR")
+                    ? formatarData(assinaturaAtual.data_fim)
                     : "o fim do período"}
                 </strong>
                 . Você pode continuar agendando e atendendo normalmente até essa data.

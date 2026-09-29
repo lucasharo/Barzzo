@@ -12,6 +12,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarData } from "@barzzo/utilitarios";
 import { CreditCard, Calendar, CheckCircle, Clock, AlertTriangle } from "lucide-react";
 
 export default function PaginaAssinaturasAdmin() {
@@ -105,8 +106,8 @@ export default function PaginaAssinaturasAdmin() {
                         </span>
                       </td>
                       <td className="p-4 opacity-75">
-                        {new Date(ass.data_inicio).toLocaleDateString("pt-BR")} até{" "}
-                        {new Date(ass.data_fim).toLocaleDateString("pt-BR")}
+                        {formatarData(ass.data_inicio)} até{" "}
+                        {formatarData(ass.data_fim)}
                       </td>
                     </tr>
                   ))

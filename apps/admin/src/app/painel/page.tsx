@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarData } from "@barzzo/utilitarios";
 import type { MetricasAdminGlobal } from "@barzzo/tipos";
 import {
   Building2,
@@ -266,7 +267,7 @@ export default function PaginaPainelAdmin() {
                         </span>
                       </td>
                       <td className="p-4 opacity-75">
-                        {new Date(b.trial_fim).toLocaleDateString("pt-BR")}
+                        {formatarData(b.trial_fim)}
                       </td>
                       <td className="p-4 text-right">
                         <Link href="/barbearias">

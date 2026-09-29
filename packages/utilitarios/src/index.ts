@@ -14,6 +14,9 @@ export {
   limparTelefone,
   extrairPrimeiroNome,
   obterIniciais,
+  formatarData,
+  formatarDataHora,
+  formatarHora,
   type InfoBandeiraCartao,
 } from "./formatadores";
 

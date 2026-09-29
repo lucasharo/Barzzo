@@ -15,7 +15,7 @@ import {
   Seletor,
 } from "@barzzo/ui";
 import { esquemaCriarConvite } from "@barzzo/validacoes";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, formatarData } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { ConviteProfissional, Profissional } from "@barzzo/tipos";
 import { Mail, Send, Copy, Check, Clock, CheckCircle } from "lucide-react";
@@ -304,7 +304,7 @@ export default function PaginaConvites() {
                       </div>
                       <span className="text-xs opacity-60 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Expira em: {new Date(convite.expira_em).toLocaleDateString("pt-BR")}
+                        Expira em: {formatarData(convite.expira_em)}
                       </span>
                     </div>
 

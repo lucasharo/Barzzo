@@ -15,7 +15,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { esquemaCriarObservacaoCliente } from "@barzzo/validacoes";
-import { formatarTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, formatarData } from "@barzzo/utilitarios";
 import type {
   ClienteBarbearia,
   ObservacaoCliente,
@@ -340,7 +340,7 @@ export default function PaginaFichaClienteCRM() {
                   </span>
                 )}
                 <span>
-                  Cadastrado em {new Date(cliente.created_at).toLocaleDateString("pt-BR")}
+                  Cadastrado em {formatarData(cliente.created_at)}
                 </span>
               </div>
             </div>
@@ -456,10 +456,7 @@ export default function PaginaFichaClienteCRM() {
                         {obs.autor_nome}
                       </span>
                       <span>
-                        {new Date(obs.created_at).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
+                        {formatarData(obs.created_at)}
                       </span>
                     </div>
                     <p className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap">
@@ -488,12 +485,7 @@ export default function PaginaFichaClienteCRM() {
               <div className="flex flex-col divide-y divide-neutral-100 dark:divide-neutral-800">
                 {agendamentos.map((ag) => {
                   const statusConf = getBadgeStatus(ag.status);
-                  const dataFormatada = new Date(ag.inicio_previsto).toLocaleDateString("pt-BR", {
-                    weekday: "short",
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  });
+                  const dataFormatada = formatarData(ag.inicio_previsto);
                   const horaFormatada = new Date(ag.inicio_previsto).toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",

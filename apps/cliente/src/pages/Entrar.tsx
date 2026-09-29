@@ -15,7 +15,7 @@ import {
 } from "@barzzo/ui";
 import { esquemaLogin } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { formatarData, traduzirErro } from "@barzzo/utilitarios";
 import { obterRascunhoReserva, calcularDestinoAposAuth } from "@barzzo/dominio";
 import { Sparkles } from "lucide-react";
 
@@ -91,7 +91,7 @@ export default function PaginaEntrar() {
                 <span className="font-bold text-sm block text-[#B45A2B]">
                   Conclua seu agendamento
                 </span>
-                Faça login para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {draft.data} às {draft.horario}).
+                Faça login para confirmar sua reserva em <strong>{draft.barbearia_nome}</strong> ({draft.servico_nome} em {formatarData(draft.data)} às {draft.horario}).
               </div>
             </div>
           )}

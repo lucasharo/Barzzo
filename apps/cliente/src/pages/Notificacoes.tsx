@@ -12,6 +12,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarDataHora } from "@barzzo/utilitarios";
 import type { Notificacao, PreferenciasNotificacao, TipoNotificacao } from "@barzzo/tipos";
 import {
   Bell,
@@ -297,12 +298,7 @@ export default function PaginaNotificacoesCliente() {
                           )}
                         </h3>
                         <span className="text-[11px] opacity-50 shrink-0">
-                          {new Date(n.criado_em).toLocaleDateString("pt-BR", {
-                            day: "2-digit",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {formatarDataHora(n.criado_em)}
                         </span>
                       </div>
 

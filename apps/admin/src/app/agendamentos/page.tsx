@@ -11,6 +11,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarDataHora } from "@barzzo/utilitarios";
 import { Calendar, Clock, DollarSign } from "lucide-react";
 
 export default function PaginaAgendamentosAdmin() {
@@ -98,12 +99,7 @@ export default function PaginaAgendamentosAdmin() {
                       <td className="p-4 opacity-80">{ag.cliente_nome || "Cliente Anônimo"}</td>
                       <td className="p-4 opacity-80">{ag.profissionais?.nome || "Qualquer"}</td>
                       <td className="p-4 opacity-75">
-                        {new Date(ag.inicio_previsto).toLocaleDateString("pt-BR", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {formatarDataHora(ag.inicio_previsto)}
                       </td>
                       <td className="p-4 font-bold text-[#B45A2B]">{formatarMoeda(ag.preco_total)}</td>
                       <td className="p-4">

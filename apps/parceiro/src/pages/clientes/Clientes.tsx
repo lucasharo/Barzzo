@@ -15,7 +15,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { esquemaCriarClienteManual } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, formatarData } from "@barzzo/utilitarios";
 import type { ClienteBarbearia } from "@barzzo/tipos";
 import {
   Users,
@@ -258,11 +258,7 @@ export default function PaginaClientesCRM() {
                   <div className="truncate">
                     <h3 className="font-bold text-base truncate">{c.nome}</h3>
                     <span className="text-[11px] opacity-60 block">
-                      Cliente desde{" "}
-                      {new Date(c.created_at).toLocaleDateString("pt-BR", {
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      Cliente desde {formatarData(c.created_at)}
                     </span>
                   </div>
                 </div>

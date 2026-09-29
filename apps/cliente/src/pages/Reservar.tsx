@@ -24,6 +24,7 @@ import {
   limparRascunhoReserva,
   calcularDescontoCupom,
 } from "@barzzo/dominio";
+import { formatarData } from "@barzzo/utilitarios";
 import type {
   Barbearia,
   Servico,
@@ -994,7 +995,7 @@ function ConteudoWizardReservaCliente() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Data e Horário</span>
                 <span className="font-bold text-sm text-[#B45A2B] sm:text-right">
-                  {dataSelecionada} às {slotSelecionado}
+                  {formatarData(dataSelecionada)} às {slotSelecionado}
                 </span>
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-neutral-200 dark:border-neutral-800">

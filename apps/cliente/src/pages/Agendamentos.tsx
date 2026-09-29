@@ -10,7 +10,7 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, formatarData } from "@barzzo/utilitarios";
 import type { StatusAgendamento } from "@barzzo/tipos";
 import {
   Calendar,
@@ -318,12 +318,7 @@ export default function PaginaMeusAgendamentos() {
           {listaAtual.map((item) => {
             const statusConfig = getBadgeStatus(item.status);
             const dataObj = new Date(item.inicio_previsto);
-            const dataLegivel = dataObj.toLocaleDateString("pt-BR", {
-              weekday: "short",
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            });
+            const dataLegivel = formatarData(item.inicio_previsto);
             const horaInicio = dataObj.toLocaleTimeString("pt-BR", {
               hour: "2-digit",
               minute: "2-digit",
