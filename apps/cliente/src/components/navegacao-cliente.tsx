@@ -66,8 +66,7 @@ export function NavegacaoCliente() {
 
   const rotaLoginComRetorno =
     pathname && pathname !== "/" && pathname !== "/entrar" && pathname !== "/cadastro"
-      ? `/entrar?retorno=${encodeURIComponent(pathname)}`
-      : "/entrar";
+      ? `/entrar?retorno=${encodeURIComponent(pathname)}` : "/entrar";
 
   return (
     <>
