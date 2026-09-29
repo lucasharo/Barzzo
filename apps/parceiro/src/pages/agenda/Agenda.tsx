@@ -120,8 +120,9 @@ export default function PaginaAgendaParceiro() {
       const supabase = criarClienteSupabaseBrowser();
 
       // Buscar agendamentos na data selecionada (do início do dia até o final do dia)
-      const dataInicio = `${dataSelecionada}T00:00:00.000Z`;
-      const dataFim = `${dataSelecionada}T23:59:59.999Z`;
+      const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
+      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
+      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
       const { data: agsDb, error: erroAgs } = await supabase
         .from("agendamentos")

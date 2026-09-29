@@ -258,6 +258,13 @@ function ConteudoWizardReservaCliente() {
     }
   }, [passoAtual, servicoSelecionado, modoProfissional, profissionalSelecionado, dataSelecionada, barbearia]);
 
+  function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
+    const [ano, mes, dia] = dataStr.split("-").map(Number);
+    const [h, m] = horarioStr.split(":").map(Number);
+    const dataLocal = new Date(ano, mes - 1, dia, h, m, 0, 0);
+    return dataLocal.toISOString();
+  }
+
   async function recalcularSlots() {
     try {
       setCalculandoSlots(true);
@@ -268,8 +275,9 @@ function ConteudoWizardReservaCliente() {
       const diaSemana = dataObj.getDay() as DiaSemana;
       const horarioBarb = horariosBarbearia[diaSemana] || null;
 
-      const dataInicio = `${dataSelecionada}T00:00:00.000Z`;
-      const dataFim = `${dataSelecionada}T23:59:59.999Z`;
+      const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
+      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
+      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
       const { data: bloqDb } = await supabase
         .from("bloqueios_agenda")
@@ -291,6 +299,26 @@ function ConteudoWizardReservaCliente() {
         inicio: ag.inicio_previsto,
         fim: ag.fim_previsto,
       }));
+
+      // Se o cliente estiver logado, buscar também agendamentos dele no dia para evitar conflitos
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      let agendamentosCliente: { inicio: string; fim: string }[] = [];
+      if (session?.user?.id) {
+        const { data: agsCliDb } = await supabase
+          .from("agendamentos")
+          .select("inicio_previsto, fim_previsto")
+          .eq("cliente_id", session.user.id)
+          .not("status", "in", '("cancelado","nao_compareceu")')
+          .gte("inicio_previsto", dataInicio)
+          .lte("inicio_previsto", dataFim);
+
+        agendamentosCliente = (agsCliDb || []).map((ag: any) => ({
+          inicio: ag.inicio_previsto,
+          fim: ag.fim_previsto,
+        }));
+      }
 
       const profsAptos = profissionais.map((p) => {
         const habilitado = vinculosServicos.some(
@@ -320,9 +348,26 @@ function ConteudoWizardReservaCliente() {
         profissionalIdFiltro: filtroId,
       });
 
-      setSlotsDisponiveis(slots);
-      if (slots.length > 0) {
-        setSlotSelecionado(slots[0].horario);
+      // Filtrar slots caso o cliente logado já tenha compromisso no mesmo horário
+      const slotsValidos = slots.filter((slot) => {
+        if (agendamentosCliente.length === 0) return true;
+        const [h, m] = slot.horario.split(":").map(Number);
+        const slotIniMs = new Date(ano, mes - 1, dia, h, m, 0, 0).getTime();
+        const slotFimMs = slotIniMs + slot.duracao_minutos * 60 * 1000;
+
+        for (const agCli of agendamentosCliente) {
+          const cliIniMs = new Date(agCli.inicio).getTime();
+          const cliFimMs = new Date(agCli.fim).getTime();
+          if (Math.max(slotIniMs, cliIniMs) < Math.min(slotFimMs, cliFimMs)) {
+            return false;
+          }
+        }
+        return true;
+      });
+
+      setSlotsDisponiveis(slotsValidos);
+      if (slotsValidos.length > 0) {
+        setSlotSelecionado(slotsValidos[0].horario);
       }
     } catch {
       setErro("Falha ao calcular horários livres.");
@@ -503,8 +548,9 @@ function ConteudoWizardReservaCliente() {
           .filter((s) => s.horario === slotSelecionado)
           .map((s) => s.profissional_id);
 
-        const dataInicio = `${dataSelecionada}T00:00:00.000Z`;
-        const dataFim = `${dataSelecionada}T23:59:59.999Z`;
+        const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
+        const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
+        const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
         const { data: agsDia } = await supabase
           .from("agendamentos")
@@ -536,11 +582,11 @@ function ConteudoWizardReservaCliente() {
         profDefinitivoId = escolhido.id;
       }
 
-      const inicioIso = new Date(`${dataSelecionada}T${slotSelecionado}:00.000Z`).toISOString();
       const [h, m] = slotSelecionado.split(":").map(Number);
       const minFim = h * 60 + m + servicoSelecionado.duracao_minutos;
       const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
-      const fimIso = new Date(`${dataSelecionada}T${horaFimStr}:00.000Z`).toISOString();
+      const inicioIso = converterParaIsoUtc(dataSelecionada, slotSelecionado);
+      const fimIso = converterParaIsoUtc(dataSelecionada, horaFimStr);
 
       // 1. Inserir agendamento definitivo com preço com desconto
       const { data: novoAgendamento, error: erroAg } = await (supabase.from("agendamentos") as any)
@@ -562,7 +608,11 @@ function ConteudoWizardReservaCliente() {
         .single();
 
       if (erroAg || !novoAgendamento) {
-        if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
+        if (erroAg?.message?.includes("uq_agendamento_cliente_sem_sobreposicao")) {
+          setErro("Você já possui um agendamento marcado neste mesmo horário. Por favor, escolha outro horário livre.");
+          setPassoAtual(3); // Volta para tela de horário
+          recalcularSlots();
+        } else if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
           setErro("Ops! Este horário acabou de ser ocupado por outro cliente. Por favor, escolha outro slot livre.");
           setPassoAtual(3); // Volta para tela de horário
           recalcularSlots();

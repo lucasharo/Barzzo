@@ -221,13 +221,11 @@ export default function PaginaDetalhesAgendamento() {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
   });
 
   const fimPrevistoFmt = new Date(agendamento.fim_previsto).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
   });
 
   const inicioRealFmt = agendamento.inicio_real

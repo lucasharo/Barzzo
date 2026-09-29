@@ -164,16 +164,29 @@ export function calcularHorariosDisponiveis(
 
       // 4. Checagem de bloqueios de agenda
       if (valido && bloqueios.length > 0) {
-        const slotDataInicioIso = new Date(`${data}T${minutosParaTime(slotInicio)}:00.000Z`).getTime();
-        const slotDataFimIso = new Date(`${data}T${minutosParaTime(slotFim)}:00.000Z`).getTime();
+        const [ano, mes, dia] = data.split("-").map(Number);
+        const [hIni, mIni] = minutosParaTime(slotInicio).split(":").map(Number);
+        const [hFim, mFim] = minutosParaTime(slotFim).split(":").map(Number);
+        const slotDataInicioMs = new Date(ano, mes - 1, dia, hIni, mIni, 0, 0).getTime();
+        const slotDataFimMs = new Date(ano, mes - 1, dia, hFim, mFim, 0, 0).getTime();
 
         for (const bloq of bloqueios) {
           // Bloqueio afeta se for geral da barbearia ou do próprio profissional
           if (!bloq.profissional_id || bloq.profissional_id === prof.id) {
-            const bloqInicio = new Date(bloq.inicio).getTime();
-            const bloqFim = new Date(bloq.fim).getTime();
+            let bloqInicioMs: number;
+            let bloqFimMs: number;
 
-            if (intervalosSobrepoem(slotDataInicioIso, slotDataFimIso, bloqInicio, bloqFim)) {
+            if (bloq.inicio.includes("T")) {
+              bloqInicioMs = new Date(bloq.inicio).getTime();
+              bloqFimMs = new Date(bloq.fim).getTime();
+            } else {
+              const [bHIni, bMIni] = bloq.inicio.split(":").map(Number);
+              const [bHFim, bMFim] = bloq.fim.split(":").map(Number);
+              bloqInicioMs = new Date(ano, mes - 1, dia, bHIni, bMIni, 0, 0).getTime();
+              bloqFimMs = new Date(ano, mes - 1, dia, bHFim, bMFim, 0, 0).getTime();
+            }
+
+            if (intervalosSobrepoem(slotDataInicioMs, slotDataFimMs, bloqInicioMs, bloqFimMs)) {
               valido = false;
               break;
             }
@@ -183,22 +196,28 @@ export function calcularHorariosDisponiveis(
 
       // 5. Checagem de agendamentos existentes do profissional
       if (valido && agendamentosExistentes.length > 0) {
+        const [ano, mes, dia] = data.split("-").map(Number);
+        const [hIni, mIni] = minutosParaTime(slotInicio).split(":").map(Number);
+        const [hFim, mFim] = minutosParaTime(slotFim).split(":").map(Number);
+        const slotDataInicioMs = new Date(ano, mes - 1, dia, hIni, mIni, 0, 0).getTime();
+        const slotDataFimMs = new Date(ano, mes - 1, dia, hFim, mFim, 0, 0).getTime();
+
         for (const ag of agendamentosExistentes) {
           if (ag.profissional_id === prof.id) {
-            let agInicioMin: number;
-            let agFimMin: number;
+            let agInicioMs: number;
+            let agFimMs: number;
 
             if (ag.inicio.includes("T")) {
-              const dIni = new Date(ag.inicio);
-              agInicioMin = dIni.getUTCHours() * 60 + dIni.getUTCMinutes();
-              const dFim = new Date(ag.fim);
-              agFimMin = dFim.getUTCHours() * 60 + dFim.getUTCMinutes();
+              agInicioMs = new Date(ag.inicio).getTime();
+              agFimMs = new Date(ag.fim).getTime();
             } else {
-              agInicioMin = timeParaMinutos(ag.inicio);
-              agFimMin = timeParaMinutos(ag.fim);
+              const [aHIni, aMIni] = ag.inicio.split(":").map(Number);
+              const [aHFim, aMFim] = ag.fim.split(":").map(Number);
+              agInicioMs = new Date(ano, mes - 1, dia, aHIni, aMIni, 0, 0).getTime();
+              agFimMs = new Date(ano, mes - 1, dia, aHFim, aMFim, 0, 0).getTime();
             }
 
-            if (intervalosSobrepoem(slotInicio, slotFim, agInicioMin, agFimMin)) {
+            if (intervalosSobrepoem(slotDataInicioMs, slotDataFimMs, agInicioMs, agFimMs)) {
               valido = false;
               break;
             }

@@ -168,6 +168,13 @@ export default function PaginaNovoAgendamentoManual() {
     recalcularSlots();
   }, [servicoId, dataAgendamento, modoProfissional, profissionalId, barbearia]);
 
+  function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
+    const [ano, mes, dia] = dataStr.split("-").map(Number);
+    const [h, m] = horarioStr.split(":").map(Number);
+    const dataLocal = new Date(ano, mes - 1, dia, h, m, 0, 0);
+    return dataLocal.toISOString();
+  }
+
   async function recalcularSlots() {
     try {
       setCalculandoSlots(true);
@@ -182,8 +189,9 @@ export default function PaginaNovoAgendamentoManual() {
       const horarioBarb = horariosBarbearia[diaSemana] || null;
 
       // Buscar bloqueios e agendamentos existentes na data
-      const dataInicio = `${dataAgendamento}T00:00:00.000Z`;
-      const dataFim = `${dataAgendamento}T23:59:59.999Z`;
+      const [ano, mes, dia] = dataAgendamento.split("-").map(Number);
+      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
+      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
       const { data: bloqDb } = await supabase
         .from("bloqueios_agenda")
@@ -287,8 +295,9 @@ export default function PaginaNovoAgendamentoManual() {
 
       // Calcular carga de cada um deles hoje
       const supabase = criarClienteSupabaseBrowser();
-      const dataInicio = `${dataAgendamento}T00:00:00.000Z`;
-      const dataFim = `${dataAgendamento}T23:59:59.999Z`;
+      const [ano, mes, dia] = dataAgendamento.split("-").map(Number);
+      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
+      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
       const { data: agsDia } = await supabase
         .from("agendamentos")
@@ -321,16 +330,14 @@ export default function PaginaNovoAgendamentoManual() {
     }
 
     // Montar datas ISO
-    const inicioPrevisto = new Date(`${dataAgendamento}T${slotSelecionado}:00.000Z`).toISOString();
-    const fimEmMinutos =
-      parseInt(slotSelecionado.split(":")[0], 10) * 60 +
-      parseInt(slotSelecionado.split(":")[1], 10) +
-      servico.duracao_minutos;
-
+    const [h, m] = slotSelecionado.split(":").map(Number);
+    const fimEmMinutos = h * 60 + m + servico.duracao_minutos;
     const horasFim = Math.floor(fimEmMinutos / 60);
     const minFim = fimEmMinutos % 60;
     const horaFimStr = `${String(horasFim).padStart(2, "0")}:${String(minFim).padStart(2, "0")}`;
-    const fimPrevisto = new Date(`${dataAgendamento}T${horaFimStr}:00.000Z`).toISOString();
+
+    const inicioPrevisto = converterParaIsoUtc(dataAgendamento, slotSelecionado);
+    const fimPrevisto = converterParaIsoUtc(dataAgendamento, horaFimStr);
 
     const dadosValidacao = {
       barbearia_id: barbearia.id,
@@ -384,7 +391,10 @@ export default function PaginaNovoAgendamentoManual() {
         .single();
 
       if (erroAg || !novoAgendamento) {
-        if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
+        if (erroAg?.message?.includes("uq_agendamento_cliente_sem_sobreposicao")) {
+          setErro("O cliente já possui outro agendamento neste mesmo horário.");
+          recalcularSlots();
+        } else if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
           setErro("Conflito de concorrência: Este horário acabou de ser preenchido por outro agendamento. Escolha outro slot.");
           recalcularSlots();
         } else {

@@ -260,8 +260,8 @@ describe("TASK-03: Serviços, Jornadas e Disponibilidade", () => {
         id: "bloq-01",
         barbearia_id: "barb-01",
         profissional_id: null, // Bloqueio geral da barbearia
-        inicio: "2026-10-05T10:00:00.000Z",
-        fim: "2026-10-05T11:00:00.000Z",
+        inicio: new Date("2026-10-05T10:00:00").toISOString(),
+        fim: new Date("2026-10-05T11:00:00").toISOString(),
         motivo: "Reunião de equipe",
         criado_em: new Date().toISOString(),
       };

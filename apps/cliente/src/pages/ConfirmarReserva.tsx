@@ -51,10 +51,18 @@ export default function PaginaConfirmacaoReservaPosLogin() {
 
   const [rascunho, setRascunho] = React.useState<RascunhoReserva | null>(null);
   const [horarioConflitante, setHorarioConflitante] = React.useState(false);
+  const [motivoConflito, setMotivoConflito] = React.useState<"cliente_conflito" | "profissional_ocupado">("profissional_ocupado");
   const [horariosAlternativos, setHorariosAlternativos] = React.useState<SlotDisponivel[]>([]);
   const [novoSlotEscolhido, setNovoSlotEscolhido] = React.useState<string | null>(null);
 
   const [erro, setErro] = React.useState<string | null>(null);
+
+  function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
+    const [ano, mes, dia] = dataStr.split("-").map(Number);
+    const [h, m] = horarioStr.split(":").map(Number);
+    const dataLocal = new Date(ano, mes - 1, dia, h, m, 0, 0);
+    return dataLocal.toISOString();
+  }
 
   React.useEffect(() => {
     processarConfirmacao();
@@ -84,9 +92,10 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       setRascunho(draft);
 
       // Revalidar disponibilidade do slot em tempo real
-      const livre = await verificarSeHorarioEstaLivre(draft);
+      const resultadoChecagem = await verificarSeHorarioEstaLivre(draft, session.user.id);
 
-      if (!livre) {
+      if (!resultadoChecagem.livre) {
+        setMotivoConflito(resultadoChecagem.motivo || "profissional_ocupado");
         setHorarioConflitante(true);
         await carregarHorariosAlternativos(draft);
       } else {
@@ -100,16 +109,33 @@ export default function PaginaConfirmacaoReservaPosLogin() {
     }
   }
 
-  async function verificarSeHorarioEstaLivre(draft: RascunhoReserva): Promise<boolean> {
+  async function verificarSeHorarioEstaLivre(
+    draft: RascunhoReserva,
+    clienteId: string
+  ): Promise<{ livre: boolean; motivo?: "cliente_conflito" | "profissional_ocupado" }> {
     try {
       const supabase = criarClienteSupabaseBrowser();
-      const dataInicioIso = new Date(`${draft.data}T${draft.horario}:00.000Z`).toISOString();
       const [h, m] = draft.horario.split(":").map(Number);
       const minFim = h * 60 + m + draft.duracao_minutos;
       const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
-      const dataFimIso = new Date(`${draft.data}T${horaFimStr}:00.000Z`).toISOString();
 
-      // Checar se há agendamento sobreposto
+      const dataInicioIso = converterParaIsoUtc(draft.data, draft.horario);
+      const dataFimIso = converterParaIsoUtc(draft.data, horaFimStr);
+
+      // 1. Checar se o próprio cliente já tem agendamento ativo sobreposto
+      const { data: agCliente } = await supabase
+        .from("agendamentos")
+        .select("id")
+        .eq("cliente_id", clienteId)
+        .not("status", "in", '("cancelado","nao_compareceu")')
+        .lt("inicio_previsto", dataFimIso)
+        .gt("fim_previsto", dataInicioIso);
+
+      if (agCliente && agCliente.length > 0) {
+        return { livre: false, motivo: "cliente_conflito" };
+      }
+
+      // 2. Checar se há agendamento sobreposto para o profissional / barbearia
       let query = supabase
         .from("agendamentos")
         .select("id")
@@ -123,9 +149,13 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       }
 
       const { data } = await query;
-      return !data || data.length === 0;
+      if (data && data.length > 0) {
+        return { livre: false, motivo: "profissional_ocupado" };
+      }
+
+      return { livre: true };
     } catch {
-      return false;
+      return { livre: false, motivo: "profissional_ocupado" };
     }
   }
 
@@ -207,11 +237,12 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         .eq("id", authUserId)
         .single();
 
-      const inicioIso = new Date(`${draft.data}T${draft.horario}:00.000Z`).toISOString();
       const [h, m] = draft.horario.split(":").map(Number);
       const minFim = h * 60 + m + draft.duracao_minutos;
       const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
-      const fimIso = new Date(`${draft.data}T${horaFimStr}:00.000Z`).toISOString();
+
+      const inicioIso = converterParaIsoUtc(draft.data, draft.horario);
+      const fimIso = converterParaIsoUtc(draft.data, horaFimStr);
 
       let profId = draft.profissional_id;
       if (!profId) {
@@ -259,7 +290,12 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         .single();
 
       if (erroAg || !novoAgendamento) {
-        if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
+        if (erroAg?.message?.includes("uq_agendamento_cliente_sem_sobreposicao")) {
+          setMotivoConflito("cliente_conflito");
+          setHorarioConflitante(true);
+          await carregarHorariosAlternativos(draft);
+        } else if (erroAg?.message?.includes("uq_agendamento_sem_sobreposicao")) {
+          setMotivoConflito("profissional_ocupado");
           setHorarioConflitante(true);
           await carregarHorariosAlternativos(draft);
         } else {
@@ -415,10 +451,13 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
           <div className="text-xs">
             <strong className="block text-sm font-bold text-amber-500 mb-1">
-              Horário acabou de ser ocupado!
+              {motivoConflito === "cliente_conflito"
+                ? "Conflito de Horário na sua Agenda"
+                : "Horário acabou de ser ocupado!"}
             </strong>
-            Enquanto você se autenticava, outro cliente acabou de reservar o horário das {rascunho?.horario}.
-            Não se preocupe: seu serviço continua salvo! Escolha outro dos horários livres abaixo para confirmar:
+            {motivoConflito === "cliente_conflito"
+              ? `Você já possui um agendamento marcado neste mesmo horário (${rascunho?.horario}). Escolha outro horário livre abaixo para concluir este agendamento:`
+              : `Enquanto você se autenticava, outro cliente acabou de reservar o horário das ${rascunho?.horario}. Não se preocupe: seu serviço continua salvo! Escolha outro dos horários livres abaixo para confirmar:`}
           </div>
         </div>
 
