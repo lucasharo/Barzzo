@@ -75,8 +75,6 @@ function ConteudoListagemBarbearias() {
 
   const [busca, setBusca] = React.useState(termoInicial);
   const [localidade, setLocalidade] = React.useState(localidadeParam);
-  const [bairroFiltro, setBairroFiltro] = React.useState("");
-  const [bairrosDisponiveis, setBairrosDisponiveis] = React.useState<string[]>([]);
   const [carregando, setCarregando] = React.useState(true);
   const [barbearias, setBarbearias] = React.useState<BarbeariaComDistancia[]>([]);
   const [localizacaoUsuario, setLocalizacaoUsuario] = React.useState<{ lat: number; lng: number } | null>(null);
@@ -113,9 +111,6 @@ function ConteudoListagemBarbearias() {
             setLocalizacaoUsuario({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
           }
         }
-        if (enderecoSessao.bairro) {
-          setBairroFiltro(enderecoSessao.bairro);
-        }
         return;
       }
 
@@ -130,9 +125,6 @@ function ConteudoListagemBarbearias() {
           const enderecoConta = formatarEnderecoConta(session.user.user_metadata);
           if (enderecoConta && enderecoConta.texto) {
             setLocalidade(enderecoConta.texto);
-            if (enderecoConta.bairro) {
-              setBairroFiltro(enderecoConta.bairro);
-            }
             if (enderecoConta.lat && enderecoConta.lng) {
               setCoordenadasEndereco({ lat: enderecoConta.lat, lng: enderecoConta.lng });
               salvarEnderecoBuscaSessao({
@@ -224,36 +216,11 @@ function ConteudoListagemBarbearias() {
     return count;
   }, [faixaPreco, raioDistancia, notaMinima]);
 
-  // Carregar lista de bairros disponíveis para filtros rápidos
-  React.useEffect(() => {
-    async function carregarBairros() {
-      try {
-        const supabase = criarClienteSupabaseBrowser();
-        const { data } = await supabase
-          .from("barbearias")
-          .select("bairro")
-          .eq("ativa", true)
-          .not("bairro", "is", null);
 
-        if (data) {
-          const conjunto = new Set<string>();
-          data.forEach((b: any) => {
-            if (b.bairro && b.bairro.trim()) {
-              conjunto.add(b.bairro.trim());
-            }
-          });
-          setBairrosDisponiveis(Array.from(conjunto).sort());
-        }
-      } catch {
-        // Fallback silencioso
-      }
-    }
-    carregarBairros();
-  }, []);
 
   // Geocodificação com debounce do endereço/localidade digitado
   React.useEffect(() => {
-    const termo = (bairroFiltro || localidade).trim();
+    const termo = localidade.trim();
 
     if (!termo) {
       setCoordenadasEndereco(null);
@@ -296,12 +263,12 @@ function ConteudoListagemBarbearias() {
       cancelado = true;
       clearTimeout(timer);
     };
-  }, [localidade, bairroFiltro]);
+  }, [localidade]);
 
   // Autocomplete em tempo real de endereços (ViaCEP + OpenStreetMap)
   React.useEffect(() => {
     const termo = localidade.trim();
-    if (termo.length < 3 || bairroFiltro) {
+    if (termo.length < 3) {
       setSugestoesEndereco([]);
       setBuscandoSugestoes(false);
       return;
@@ -331,7 +298,7 @@ function ConteudoListagemBarbearias() {
       cancelado = true;
       clearTimeout(timer);
     };
-  }, [localidade, bairroFiltro]);
+  }, [localidade]);
 
   React.useEffect(() => {
     // Se está em processo de geocodificar o endereço digitado, aguarda a resolução das coordenadas
@@ -340,7 +307,6 @@ function ConteudoListagemBarbearias() {
   }, [
     busca,
     localidade,
-    bairroFiltro,
     localizacaoUsuario,
     coordenadasEndereco,
     geocodificando,
@@ -355,7 +321,7 @@ function ConteudoListagemBarbearias() {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
 
-      const termoLoc = (bairroFiltro || localidade).trim();
+      const termoLoc = localidade.trim();
       // O endereço digitado no campo de busca tem prioridade absoluta sobre o GPS do dispositivo
       const coordsEfetivas = termoLoc ? coordenadasEndereco : localizacaoUsuario;
 
@@ -545,7 +511,6 @@ function ConteudoListagemBarbearias() {
       setMensagemLocalizacao(null);
       setErroLocalizacao(null);
       setLocalidade("");
-      setBairroFiltro("");
       setCoordenadasEndereco(null);
       limparEnderecoBuscaSessao();
       return;
@@ -595,7 +560,6 @@ function ConteudoListagemBarbearias() {
 
         // Preenche o campo de endereço com a localização detectada por GPS
         setLocalidade(enderecoTexto);
-        setBairroFiltro(bairroDetectado);
 
         // Grava na sessão
         salvarEnderecoBuscaSessao({
@@ -704,7 +668,7 @@ function ConteudoListagemBarbearias() {
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#B45A2B]/10 border border-[#B45A2B]/20 text-xs text-[#B45A2B] font-medium">
           <MapPin className="h-4 w-4 shrink-0" />
           <span>
-            Exibindo barbearias com distâncias calculadas a partir de &quot;{bairroFiltro || localidade}&quot; e ordenadas pelas mais próximas.
+            Exibindo barbearias com distâncias calculadas a partir de &quot;{localidade}&quot; e ordenadas pelas mais próximas.
           </span>
         </div>
       )}
@@ -745,7 +709,7 @@ function ConteudoListagemBarbearias() {
                 <input
                   type="text"
                   placeholder="Digite rua, bairro, cidade ou CEP..."
-                  value={bairroFiltro || localidade}
+                  value={localidade}
                   onFocus={() => {
                     if (sugestoesEndereco.length > 0 || (localidade && localidade.length >= 3)) {
                       setSugestoesAbertas(true);
@@ -753,7 +717,6 @@ function ConteudoListagemBarbearias() {
                   }}
                   onChange={(e) => {
                     setLocalidade(e.target.value);
-                    setBairroFiltro("");
                     setSugestoesAbertas(true);
                     if (localizacaoUsuario) {
                       setLocalizacaoUsuario(null);
@@ -763,7 +726,7 @@ function ConteudoListagemBarbearias() {
                   onKeyDown={async (e) => {
                     if (e.key === "Enter") {
                       setSugestoesAbertas(false);
-                      const termo = (bairroFiltro || localidade).trim();
+                      const termo = localidade.trim();
                       if (termo.length >= 3) {
                         setGeocodificando(true);
                         try {
@@ -788,12 +751,11 @@ function ConteudoListagemBarbearias() {
                 {geocodificando && (
                   <LoadingSpinner tamanho="sm" />
                 )}
-                {(localidade || bairroFiltro) && !geocodificando && (
+                {localidade && !geocodificando && (
                   <button
                     type="button"
                     onClick={() => {
                       setLocalidade("");
-                      setBairroFiltro("");
                       setCoordenadasEndereco(null);
                       setLocalizacaoUsuario(null);
                       setMensagemLocalizacao(null);
@@ -826,7 +788,6 @@ function ConteudoListagemBarbearias() {
                         e.preventDefault();
                         const texto = sug.enderecoCompleto || sug.titulo;
                         setLocalidade(texto);
-                        setBairroFiltro("");
                         setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
                         setSugestoesAbertas(false);
                         if (localizacaoUsuario) {
@@ -1123,18 +1084,21 @@ function ConteudoListagemBarbearias() {
                 Tente ajustar os filtros de busca (preço, raio de distância ou avaliação).
               </p>
             </div>
-            {(busca || localidade || bairroFiltro || totalFiltrosAtivos > 0) && (
+            {(busca || localidade || totalFiltrosAtivos > 0) && (
               <Button
                 variante="secundario"
                 tamanho="sm"
                 onClick={() => {
                   setBusca("");
                   setLocalidade("");
-                  setBairroFiltro("");
+                  setCoordenadasEndereco(null);
+                  setLocalizacaoUsuario(null);
+                  setMensagemLocalizacao(null);
                   setFaixaPreco("todos");
                   setRaioDistancia(null);
                   setNotaMinima(null);
                   setOrdenacao("relevancia");
+                  limparEnderecoBuscaSessao();
                 }}
               >
                 Limpar todos os filtros
