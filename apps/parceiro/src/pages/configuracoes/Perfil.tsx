@@ -13,7 +13,13 @@ import {
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
-import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import {
+  formatarTelefone,
+  limparTelefone,
+  formatarDocumento,
+  formatarCep,
+  traduzirErro,
+} from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Barbearia } from "@barzzo/tipos";
 import { Store } from "lucide-react";
@@ -67,12 +73,12 @@ export default function PaginaConfiguracoesBarbearia() {
             setNome(b.nome);
             setTelefone(formatarTelefone(b.telefone || ""));
             setEmail(b.email || "");
-            setDocumento(b.documento || "");
+            setDocumento(formatarDocumento(b.documento || ""));
             setEndereco(b.endereco || "");
             setBairro(b.bairro || "");
             setCidade(b.cidade || "");
             setEstado(b.estado || "SP");
-            setCep(b.cep || "");
+            setCep(formatarCep(b.cep || ""));
           }
         }
       } catch {
@@ -210,13 +216,27 @@ export default function PaginaConfiguracoesBarbearia() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="documento">CNPJ ou CPF</Label>
-              <Input
-                id="documento"
-                value={documento}
-                onChange={(e) => setDocumento(e.target.value)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="documento">CNPJ ou CPF</Label>
+                <Input
+                  id="documento"
+                  value={documento}
+                  placeholder="00.000.000/0000-00 ou 000.000.000-00"
+                  onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="cep">CEP</Label>
+                <Input
+                  id="cep"
+                  value={cep}
+                  placeholder="00000-000"
+                  maxLength={9}
+                  onChange={(e) => setCep(formatarCep(e.target.value))}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">

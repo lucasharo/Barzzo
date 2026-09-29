@@ -160,3 +160,32 @@ export function formatarCpf(valor: string | null | undefined): string {
   return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
 }
 
+export function formatarCnpj(valor: string | null | undefined): string {
+  if (!valor) return "";
+  const digitos = valor.replace(/\D/g, "").slice(0, 14);
+
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 5) return `${digitos.slice(0, 2)}.${digitos.slice(2)}`;
+  if (digitos.length <= 8) return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5)}`;
+  if (digitos.length <= 12)
+    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8)}`;
+  return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
+}
+
+export function formatarDocumento(valor: string | null | undefined): string {
+  if (!valor) return "";
+  const digitos = valor.replace(/\D/g, "");
+  if (digitos.length > 11) {
+    return formatarCnpj(digitos);
+  }
+  return formatarCpf(digitos);
+}
+
+export function formatarCep(valor: string | null | undefined): string {
+  if (!valor) return "";
+  const digitos = valor.replace(/\D/g, "").slice(0, 8);
+  if (digitos.length <= 5) return digitos;
+  return `${digitos.slice(0, 5)}-${digitos.slice(5, 8)}`;
+}
+
+

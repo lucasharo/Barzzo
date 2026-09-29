@@ -13,6 +13,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarTelefone } from "@barzzo/utilitarios";
 import { Users, Search, Mail, Phone, Calendar } from "lucide-react";
 
 export default function PaginaUsuariosAdmin() {
@@ -121,7 +122,9 @@ export default function PaginaUsuariosAdmin() {
                         {u.nome || "Sem Nome"}
                       </td>
                       <td className="p-4 opacity-80">{u.email}</td>
-                      <td className="p-4 opacity-80">{u.telefone || "Não cadastrado"}</td>
+                      <td className="p-4 opacity-80">
+                        {u.telefone ? formatarTelefone(u.telefone) : "Não cadastrado"}
+                      </td>
                       <td className="p-4 opacity-60">
                         {new Date(u.criado_em).toLocaleDateString("pt-BR")}
                       </td>

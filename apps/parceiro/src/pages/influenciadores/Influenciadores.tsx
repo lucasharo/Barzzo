@@ -17,7 +17,7 @@ import {
   Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, formatarTelefone } from "@barzzo/utilitarios";
 import {
   esquemaInfluenciador,
   gerarLinkInfluenciador,
@@ -41,6 +41,7 @@ import {
   CreditCard,
   UserCheck,
   TrendingUp,
+  Phone,
 } from "lucide-react";
 
 export default function PaginaInfluenciadoresParceiro() {
@@ -418,6 +419,13 @@ export default function PaginaInfluenciadoresParceiro() {
                         </span>
                       </p>
 
+                      {inf.telefone && (
+                        <p className="flex items-center gap-1.5">
+                          <Phone className="w-3.5 h-3.5 text-[#B45A2B]" />
+                          WhatsApp: <span>{formatarTelefone(inf.telefone)}</span>
+                        </p>
+                      )}
+
                       {inf.chave_pix && (
                         <p className="flex items-center gap-1.5 truncate">
                           <CreditCard className="w-3.5 h-3.5 text-[#B45A2B]" />
@@ -680,7 +688,7 @@ export default function PaginaInfluenciadoresParceiro() {
                   <Input
                     id="telInf"
                     value={telefone}
-                    onChange={(e) => setTelefone(e.target.value)}
+                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
                     placeholder="(11) 98888-7777"
                   />
                 </div>

@@ -24,6 +24,7 @@ import {
   type Produto,
 } from "@barzzo/tipos";
 import { formatarResumoReputacao } from "@barzzo/dominio";
+import { formatarTelefone, formatarCep } from "@barzzo/utilitarios";
 import {
   MapPin,
   Phone,
@@ -370,7 +371,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
             {barbearia.telefone && (
               <p className="text-xs opacity-70 flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-[#B45A2B]" /> {barbearia.telefone}
+                <Phone className="h-3.5 w-3.5 text-[#B45A2B]" /> {formatarTelefone(barbearia.telefone)}
               </p>
             )}
           </div>
@@ -760,7 +761,7 @@ function ConteudoPerfilPublicoBarbearia() {
               {barbearia.cep && (
                 <div className="flex items-center justify-between py-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
                   <span className="opacity-70">CEP</span>
-                  <span className="font-mono">{barbearia.cep}</span>
+                  <span className="font-mono">{formatarCep(barbearia.cep)}</span>
                 </div>
               )}
 

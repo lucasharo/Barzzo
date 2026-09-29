@@ -13,6 +13,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { formatarTelefone } from "@barzzo/utilitarios";
 import type { StatusAgendamento } from "@barzzo/tipos";
 import {
   Calendar,
@@ -357,7 +358,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
                   className="text-sm text-copper-600 dark:text-copper-400 hover:underline flex items-center gap-1.5 min-h-[44px]"
                 >
                   <Phone className="w-3.5 h-3.5" />
-                  {agendamento.barbearias.telefone}
+                  {formatarTelefone(agendamento.barbearias.telefone)}
                 </a>
               </CardContent>
             )}
