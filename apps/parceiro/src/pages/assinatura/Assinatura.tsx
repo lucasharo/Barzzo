@@ -703,10 +703,21 @@ export default function PaginaAssinaturaParceiro() {
 
                 <div className="flex flex-col gap-1.5 pt-2">
                   {ehPlanoAtual ? (
-                    <div className="p-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-center text-xs font-semibold opacity-80">
-                      {barbearia.recorrencia_ativa
-                        ? "Renovação Automática Ativa"
-                        : "Vigência em Andamento"}
+                    <div className="flex flex-col gap-2">
+                      <div className="p-2.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-center text-xs font-semibold opacity-80">
+                        {barbearia.recorrencia_ativa
+                          ? "Renovação Automática Ativa"
+                          : "Vigência em Andamento"}
+                      </div>
+                      {(barbearia.recorrencia_ativa || ativa) && (
+                        <button
+                          type="button"
+                          onClick={() => setModalCancelarAberto(true)}
+                          className="text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium hover:underline text-center py-1 transition-colors"
+                        >
+                          Cancelar assinatura
+                        </button>
+                      )}
                     </div>
                   ) : ehUpgrade ? (
                     <Button
