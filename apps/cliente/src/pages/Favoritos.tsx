@@ -114,7 +114,7 @@ export default function PaginaFavoritosCliente() {
 
   if (carregando) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-4xl flex flex-col items-center justify-center gap-4">
+      <div className="w-full max-w-4xl mx-auto py-16 flex flex-col items-center justify-center gap-4">
         <LoadingSpinner tamanho="lg" />
         <p className="text-neutral-500 text-sm">Carregando seus favoritos...</p>
       </div>
@@ -123,8 +123,8 @@ export default function PaginaFavoritosCliente() {
 
   if (autenticado === false) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-md">
-        <Card className="text-center p-8 border-neutral-200 dark:border-neutral-800">
+      <div className="w-full max-w-md mx-auto py-16">
+        <Card className="text-center p-6 sm:p-8 border-neutral-200 dark:border-neutral-800">
           <Heart className="w-12 h-12 text-red-500 fill-current mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Suas Barbearias Favoritas</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">
@@ -152,7 +152,7 @@ export default function PaginaFavoritosCliente() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="w-full max-w-4xl mx-auto py-4 sm:py-8 min-w-0">
       {/* Cabeçalho */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
@@ -206,20 +206,20 @@ export default function PaginaFavoritosCliente() {
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-12 h-12 rounded-xl bg-copper-100 dark:bg-copper-950/60 text-copper-700 dark:text-copper-300 flex items-center justify-center font-bold text-lg flex-shrink-0">
                         {b.nome[0]}
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <Link
                           to={`/barbearias/${b.slug}`}
-                          className="font-bold text-base hover:text-copper-600 dark:hover:text-copper-400 transition-colors"
+                          className="font-bold text-base hover:text-copper-600 dark:hover:text-copper-400 transition-colors truncate block"
                         >
                           {b.nome}
                         </Link>
-                        <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5">
+                        <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5 truncate">
                           <MapPin className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                          <span>
+                          <span className="truncate">
                             {[b.bairro, b.cidade].filter(Boolean).join(", ") || "Localização não informada"}
                           </span>
                         </p>

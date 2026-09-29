@@ -19,7 +19,7 @@ export default function App() {
   return (
     <>
       <NavegacaoCliente />
-      <main className="flex-1 flex flex-col max-w-6xl w-full mx-auto px-4 py-6 pb-28 md:pb-6">
+      <main className="flex-1 flex flex-col max-w-6xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 md:pb-6 min-w-0 overflow-x-hidden">
         <Routes>
           <Route path="/" element={<PaginaListagemBarbearias />} />
           <Route path="/barbearias" element={<Navigate to="/" replace />} />

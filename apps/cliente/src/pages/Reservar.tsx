@@ -695,16 +695,16 @@ function ConteudoWizardReservaCliente() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto flex flex-col gap-6 py-4">
+    <div className="max-w-3xl w-full mx-auto flex flex-col gap-5 sm:gap-6 py-2 sm:py-4 min-w-0">
       {/* Topo / Breadcrumb */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 min-w-0">
         <Link
           to={`/barbearias/${barbearia.slug}`}
-          className="text-sm font-semibold opacity-70 hover:opacity-100 flex items-center gap-1.5 transition-opacity"
+          className="text-xs sm:text-sm font-semibold opacity-70 hover:opacity-100 flex items-center gap-1.5 transition-opacity self-start truncate"
         >
-          <ArrowLeft className="h-4 w-4" /> Cancelar e voltar ao perfil
+          <ArrowLeft className="h-4 w-4 shrink-0" /> Cancelar e voltar ao perfil
         </Link>
-        <span className="text-xs font-bold text-[#B45A2B] uppercase tracking-wider">
+        <span className="text-xs font-bold text-[#B45A2B] uppercase tracking-wider truncate max-w-full">
           {barbearia.nome}
         </span>
       </div>
@@ -716,7 +716,7 @@ function ConteudoWizardReservaCliente() {
       )}
 
       {/* Indicador Visual de Etapas */}
-      <div className="grid grid-cols-4 gap-2 text-center text-xs font-semibold">
+      <div className="grid grid-cols-4 gap-1 sm:gap-2 text-center text-[10px] sm:text-xs font-semibold min-w-0">
         {[
           { num: 1, label: "Serviço" },
           { num: 2, label: "Barbeiro" },
@@ -726,7 +726,7 @@ function ConteudoWizardReservaCliente() {
           <div
             key={etapa.num}
             onClick={() => etapa.num < passoAtual && setPassoAtual(etapa.num)}
-            className={`py-2 rounded-lg border transition-all ${
+            className={`py-2 px-1 rounded-lg border transition-all truncate min-w-0 ${
               passoAtual === etapa.num
                 ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm"
                 : etapa.num < passoAtual
@@ -734,7 +734,7 @@ function ConteudoWizardReservaCliente() {
                 : "bg-neutral-50 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 opacity-50"
             }`}
           >
-            <span className="block">{etapa.num}. {etapa.label}</span>
+            <span className="block truncate">{etapa.num}. {etapa.label}</span>
           </div>
         ))}
       </div>
@@ -742,15 +742,15 @@ function ConteudoWizardReservaCliente() {
       {/* ETAPA 1: SELEÇÃO DE SERVIÇO */}
       {passoAtual === 1 && (
         <Card camada="primaria">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <Scissors className="h-5 w-5 text-[#B45A2B]" /> 1. Escolha o Serviço
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <Scissors className="h-5 w-5 text-[#B45A2B] shrink-0" /> 1. Escolha o Serviço
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Selecione o corte, barba ou combo desejado para este atendimento.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-3">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-3">
             {servicos.map((s) => {
               const selecionado = servicoSelecionado?.id === s.id;
               return (
@@ -760,24 +760,24 @@ function ConteudoWizardReservaCliente() {
                     setServicoSelecionado(s);
                     setPassoAtual(2);
                   }}
-                  className={`p-4 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between gap-4 ${
+                  className={`p-3 sm:p-4 rounded-xl border cursor-pointer select-none transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
                     selecionado
                       ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
                       : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
                   }`}
                 >
-                  <div className="flex flex-col">
-                    <span className="font-bold text-base">{s.nome}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-bold text-sm sm:text-base break-words">{s.nome}</span>
                     {s.descricao && (
-                      <p className="text-xs opacity-70 line-clamp-1 mt-0.5">{s.descricao}</p>
+                      <p className="text-xs opacity-70 line-clamp-2 mt-0.5">{s.descricao}</p>
                     )}
                     <span className="text-xs opacity-60 mt-1 flex items-center gap-1">
-                      <Clock className="h-3 w-3 text-[#B45A2B]" /> {s.duracao_minutos} minutos
+                      <Clock className="h-3 w-3 text-[#B45A2B] shrink-0" /> {s.duracao_minutos} minutos
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-extrabold text-lg text-[#B45A2B]">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-neutral-100 dark:border-neutral-800">
+                    <span className="font-extrabold text-base sm:text-lg text-[#B45A2B]">
                       {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(s.preco))}
                     </span>
                     <Button variante="principal" tamanho="sm">
@@ -794,15 +794,15 @@ function ConteudoWizardReservaCliente() {
       {/* ETAPA 2: SELEÇÃO DE PROFISSIONAL */}
       {passoAtual === 2 && (
         <Card camada="primaria">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <User className="h-5 w-5 text-[#B45A2B]" /> 2. Escolha o Profissional
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <User className="h-5 w-5 text-[#B45A2B] shrink-0" /> 2. Escolha o Profissional
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Serviço selecionado: <strong>{servicoSelecionado?.nome}</strong>
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-4">
             {/* Opção Qualquer Profissional */}
             <div
               onClick={() => {
@@ -810,17 +810,17 @@ function ConteudoWizardReservaCliente() {
                 setProfissionalSelecionado(null);
                 setPassoAtual(3);
               }}
-              className={`p-4 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between group ${
+              className={`p-3 sm:p-4 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between gap-3 group ${
                 modoProfissional === "qualquer"
                   ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
                   : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-900/40"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <Sparkles className="h-7 w-7 text-[#B45A2B] shrink-0" />
-                <div>
-                  <span className="font-bold text-base block">Qualquer Profissional Disponível</span>
-                  <span className="text-xs opacity-70">
+              <div className="flex items-center gap-3 min-w-0">
+                <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-[#B45A2B] shrink-0" />
+                <div className="min-w-0">
+                  <span className="font-bold text-sm sm:text-base block truncate">Qualquer Profissional Disponível</span>
+                  <span className="text-xs opacity-70 line-clamp-2">
                     Maior variedade de horários livres e menor tempo de espera.
                   </span>
                 </div>
@@ -875,19 +875,19 @@ function ConteudoWizardReservaCliente() {
       {/* ETAPA 3: DATA E HORÁRIO EM TEMPO REAL */}
       {passoAtual === 3 && (
         <Card camada="primaria">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-[#B45A2B]" /> 3. Data e Horário
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-[#B45A2B] shrink-0" /> 3. Data e Horário
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               {servicoSelecionado?.nome} com{" "}
               {modoProfissional === "qualquer"
                 ? "Qualquer Profissional Disponível"
                 : profissionalSelecionado?.nome}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
-            <div className="max-w-md">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-6">
+            <div className="max-w-md w-full">
               <SeletorData
                 id="data"
                 rotulo="Escolha o Dia do Atendimento"
@@ -916,7 +916,7 @@ function ConteudoWizardReservaCliente() {
                   </span>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                   {Array.from(new Set(slotsDisponiveis.map((s) => s.horario))).map((h) => {
                     const selecionado = slotSelecionado === h;
                     return (
@@ -938,14 +938,15 @@ function ConteudoWizardReservaCliente() {
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
-              <Button variante="fantasma" onClick={() => setPassoAtual(2)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <Button variante="fantasma" onClick={() => setPassoAtual(2)} className="w-full sm:w-auto">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
               <Button
                 variante="principal"
                 disabled={!slotSelecionado}
                 onClick={handleProsseguirResumo}
+                className="w-full sm:w-auto"
               >
                 Continuar para Resumo <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
@@ -957,42 +958,42 @@ function ConteudoWizardReservaCliente() {
       {/* ETAPA 4: RESUMO E CONFIRMAÇÃO (SEM LOGIN ATÉ AQUI) */}
       {passoAtual === 4 && (
         <Card camada="primaria" className="border-l-4 border-l-[#B45A2B]">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-[#B45A2B]" /> 4. Resumo do Agendamento
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-[#B45A2B] shrink-0" /> 4. Resumo do Agendamento
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Revise as informações antes de confirmar definitivamente.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
+          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-6">
             {/* Bloco de Resumo */}
-            <div className="p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Barbearia</span>
-                <span className="font-bold text-sm">{barbearia.nome}</span>
+            <div className="p-3 sm:p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Barbearia</span>
+                <span className="font-bold text-sm sm:text-right break-words">{barbearia.nome}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Localização</span>
-                <span className="font-semibold text-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Localização</span>
+                <span className="font-semibold text-xs sm:text-sm sm:text-right break-words">
                   {[barbearia.bairro, barbearia.cidade].filter(Boolean).join(", ") || barbearia.endereco || "Localização informada"}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Serviço</span>
-                <span className="font-bold text-sm">{servicoSelecionado?.nome}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Serviço</span>
+                <span className="font-bold text-sm sm:text-right break-words">{servicoSelecionado?.nome}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Profissional</span>
-                <span className="font-bold text-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Profissional</span>
+                <span className="font-bold text-sm sm:text-right break-words">
                   {modoProfissional === "qualquer"
                     ? "Qualquer Profissional Disponível"
                     : profissionalSelecionado?.nome}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Data e Horário</span>
-                <span className="font-bold text-sm text-[#B45A2B]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Data e Horário</span>
+                <span className="font-bold text-sm text-[#B45A2B] sm:text-right">
                   {dataSelecionada} às {slotSelecionado}
                 </span>
               </div>
@@ -1105,8 +1106,8 @@ function ConteudoWizardReservaCliente() {
             )}
 
             {/* Ações */}
-            <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
-              <Button variante="fantasma" onClick={() => setPassoAtual(3)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <Button variante="fantasma" onClick={() => setPassoAtual(3)} className="w-full sm:w-auto">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
 
@@ -1115,7 +1116,7 @@ function ConteudoWizardReservaCliente() {
                 tamanho="lg"
                 disabled={salvando}
                 onClick={handleFinalizarReserva}
-                className="font-bold text-base shadow-md"
+                className="w-full sm:w-auto font-bold text-base shadow-md"
               >
                 {salvando
                   ? "Confirmando..."

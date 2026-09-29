@@ -203,7 +203,7 @@ export default function PaginaAvaliacaoAtendimento() {
   const checagemElegibilidade = validarElegibilidadeAvaliacao(agendamento.status);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-xl">
+    <div className="w-full max-w-xl mx-auto py-4 sm:py-8 min-w-0">
       {/* Voltar */}
       <div className="mb-6">
         <Link

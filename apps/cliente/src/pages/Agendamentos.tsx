@@ -194,7 +194,7 @@ export default function PaginaMeusAgendamentos() {
 
   if (carregando) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-4xl flex flex-col items-center justify-center gap-4">
+      <div className="w-full max-w-4xl mx-auto py-16 flex flex-col items-center justify-center gap-4">
         <LoadingSpinner tamanho="lg" />
         <p className="text-neutral-500 text-sm">Carregando seus agendamentos...</p>
       </div>
@@ -203,8 +203,8 @@ export default function PaginaMeusAgendamentos() {
 
   if (autenticado === false) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-lg">
-        <Card className="text-center p-8 border-neutral-200 dark:border-neutral-800">
+      <div className="w-full max-w-lg mx-auto py-12">
+        <Card className="text-center p-6 sm:p-8 border-neutral-200 dark:border-neutral-800">
           <Calendar className="w-12 h-12 text-[#B45A2B] mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">Acesse seus agendamentos</h2>
           <p className="text-neutral-500 dark:text-neutral-400 text-sm mb-6">
@@ -232,7 +232,7 @@ export default function PaginaMeusAgendamentos() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="w-full max-w-4xl mx-auto py-4 sm:py-6">
       {/* Header da Página */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>

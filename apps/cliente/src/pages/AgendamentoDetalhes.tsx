@@ -228,7 +228,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
 
   if (carregando) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-3xl flex flex-col items-center justify-center gap-4">
+      <div className="w-full max-w-3xl mx-auto py-16 flex flex-col items-center justify-center gap-4">
         <LoadingSpinner tamanho="lg" />
         <p className="text-neutral-500 text-sm">Carregando detalhes do agendamento...</p>
       </div>
@@ -237,7 +237,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
 
   if (erro && !agendamento) {
     return (
-      <div className="container mx-auto px-4 py-16 max-w-2xl text-center">
+      <div className="w-full max-w-2xl mx-auto py-12 text-center">
         <Alert variante="erro" className="mb-6">
           <AlertCircle className="w-4 h-4 mr-2" />
           <AlertDescription>{erro}</AlertDescription>
@@ -288,7 +288,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
     (!agendamento.avaliacoes || agendamento.avaliacoes.length === 0);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="w-full max-w-3xl mx-auto py-4 sm:py-6">
       {/* Navegação Breadcrumb */}
       <div className="mb-6">
         <Link

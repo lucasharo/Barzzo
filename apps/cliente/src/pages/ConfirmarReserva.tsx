@@ -500,9 +500,9 @@ export default function PaginaConfirmacaoReservaPosLogin() {
               </div>
             )}
 
-            <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
-              <Link to={`/reservar/${slug}`}>
-                <Button variante="fantasma" tamanho="sm">
+            <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <Link to={`/reservar/${slug}`} className="w-full sm:w-auto">
+                <Button variante="fantasma" tamanho="sm" className="w-full sm:w-auto">
                   Trocar Data
                 </Button>
               </Link>
@@ -510,6 +510,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
                 variante="principal"
                 disabled={!novoSlotEscolhido}
                 onClick={handleEscolherNovoSlot}
+                className="w-full sm:w-auto"
               >
                 Confirmar com {novoSlotEscolhido}
               </Button>
