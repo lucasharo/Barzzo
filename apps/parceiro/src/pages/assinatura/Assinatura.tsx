@@ -38,6 +38,7 @@ import {
   Lock,
   ArrowUpRight,
   Ban,
+  Pencil,
 } from "lucide-react";
 
 export default function PaginaAssinaturaParceiro() {
@@ -555,29 +556,21 @@ export default function PaginaAssinaturaParceiro() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2">
           {barbearia.recorrencia_ativa ? (
-            <>
-              <Button
-                variante="secundario"
-                tamanho="sm"
-                onClick={() => {
-                  limparFormularioCartao();
-                  setModalTrocarCartaoAberto(true);
-                }}
-                className="text-xs font-semibold"
-              >
-                Alterar Cartão
-              </Button>
-              <Button
-                variante="cancelar-destrutivo"
-                tamanho="sm"
-                onClick={() => setModalCancelarAberto(true)}
-                className="text-xs font-semibold"
-              >
-                Cancelar Assinatura
-              </Button>
-            </>
+            <Button
+              variante="fantasma"
+              tamanho="icone"
+              onClick={() => {
+                limparFormularioCartao();
+                setModalTrocarCartaoAberto(true);
+              }}
+              title="Alterar Cartão"
+              aria-label="Alterar Cartão"
+              className="text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
           ) : (
             <Button
               variante="principal"
