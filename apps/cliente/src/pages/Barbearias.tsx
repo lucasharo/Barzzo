@@ -98,6 +98,17 @@ function ConteudoListagemBarbearias() {
           texto: localidadeParam,
           origem: "manual",
         });
+        geocodificarEndereco(localidadeParam).then((coords) => {
+          if (coords) {
+            setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
+            salvarEnderecoBuscaSessao({
+              texto: localidadeParam,
+              lat: coords.lat,
+              lng: coords.lng,
+              origem: "manual",
+            });
+          }
+        });
         return;
       }
 
@@ -110,6 +121,18 @@ function ConteudoListagemBarbearias() {
           if (enderecoSessao.origem === "gps") {
             setLocalizacaoUsuario({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
           }
+        } else {
+          // Geocodifica imediatamente caso a sessão não tenha lat/lng gravados
+          geocodificarEndereco(enderecoSessao.texto).then((coords) => {
+            if (coords) {
+              setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
+              salvarEnderecoBuscaSessao({
+                ...enderecoSessao,
+                lat: coords.lat,
+                lng: coords.lng,
+              });
+            }
+          });
         }
         return;
       }
@@ -244,6 +267,12 @@ function ConteudoListagemBarbearias() {
         if (!cancelado) {
           if (coords) {
             setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
+            salvarEnderecoBuscaSessao({
+              texto: termo,
+              lat: coords.lat,
+              lng: coords.lng,
+              origem: "manual",
+            });
           } else {
             setCoordenadasEndereco(null);
           }
@@ -339,10 +368,23 @@ function ConteudoListagemBarbearias() {
 
       if (data) {
         let lista: BarbeariaComDistancia[] = (data as any[]).map((b) => {
-          const dist =
+          let dist =
             b.distancia_km !== null && b.distancia_km !== undefined
               ? Number(b.distancia_km)
               : null;
+
+          // Se a RPC não calculou mas temos coordenadas efetivas e da barbearia, calcula via frontend
+          if (dist === null && coordsEfetivas && b.latitude && b.longitude) {
+            dist = Number(
+              calcularDistanciaKm(
+                coordsEfetivas.lat,
+                coordsEfetivas.lng,
+                Number(b.latitude),
+                Number(b.longitude)
+              )
+            );
+          }
+
           const precoCorte =
             b.preco_corte !== null && b.preco_corte !== undefined
               ? Number(b.preco_corte)
@@ -384,25 +426,23 @@ function ConteudoListagemBarbearias() {
 
         // Refinamento de busca textual de endereço SOMENTE se não houver coordenadas geocodificadas
         if (!coordsEfetivas && termoLoc) {
-          const termoNorm = normalizarTexto(termoLoc);
+          const termosTokens = normalizarTexto(termoLoc)
+            .split(/[,-\s]+/)
+            .filter((t) => t.length >= 2);
           const termoDigitos = termoLoc.replace(/\D/g, "");
+
           lista = lista.filter((b) => {
-            const bairroNorm = normalizarTexto(b.bairro || "");
-            const cidadeNorm = normalizarTexto(b.cidade || "");
-            const estadoNorm = normalizarTexto(b.estado || "");
-            const enderecoNorm = normalizarTexto(b.endereco || "");
+            const textoBarbearia = [
+              normalizarTexto(b.bairro || ""),
+              normalizarTexto(b.cidade || ""),
+              normalizarTexto(b.estado || ""),
+              normalizarTexto(b.endereco || ""),
+            ].join(" ");
             const cepDigitos = (b.cep || "").replace(/\D/g, "");
 
-            return (
-              bairroNorm.includes(termoNorm) ||
-              cidadeNorm.includes(termoNorm) ||
-              estadoNorm.includes(termoNorm) ||
-              enderecoNorm.includes(termoNorm) ||
-              (termoDigitos.length >= 4 && cepDigitos.includes(termoDigitos)) ||
-              `${bairroNorm} ${cidadeNorm}`.includes(termoNorm) ||
-              `${cidadeNorm} ${bairroNorm}`.includes(termoNorm) ||
-              `${enderecoNorm} ${bairroNorm}`.includes(termoNorm)
-            );
+            const matchToken = termosTokens.some((tok) => textoBarbearia.includes(tok));
+            const matchCep = termoDigitos.length >= 4 && cepDigitos.includes(termoDigitos);
+            return matchToken || matchCep;
           });
         }
 
