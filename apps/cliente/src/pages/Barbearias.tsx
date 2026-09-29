@@ -21,7 +21,11 @@ import {
   calcularMediaAvaliacoes,
   obterPrecoCorte,
 } from "@barzzo/dominio";
-import { geocodificarEndereco } from "@barzzo/utilitarios";
+import {
+  geocodificarEndereco,
+  buscarSugestoesEndereco,
+  type SugestaoEndereco,
+} from "@barzzo/utilitarios";
 import type { Barbearia } from "@barzzo/tipos";
 import {
   Search,
@@ -76,6 +80,8 @@ function ConteudoListagemBarbearias() {
   const [mensagemLocalizacao, setMensagemLocalizacao] = React.useState<string | null>(null);
   const [coordenadasEndereco, setCoordenadasEndereco] = React.useState<{ lat: number; lng: number } | null>(null);
   const [geocodificando, setGeocodificando] = React.useState(false);
+  const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
+  const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
 
   // Novos estados para filtros de Preço, Distância, Nota e Ordenação
   const [faixaPreco, setFaixaPreco] = React.useState<"todos" | "ate-35" | "ate-50" | "ate-75" | "acima-75">("todos");
@@ -200,6 +206,41 @@ function ConteudoListagemBarbearias() {
         }
       }
     }, 400);
+
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [localidade, bairroFiltro]);
+
+  // Autocomplete em tempo real de endereços (ViaCEP + OpenStreetMap)
+  React.useEffect(() => {
+    const termo = localidade.trim();
+    if (termo.length < 3 || bairroFiltro) {
+      setSugestoesEndereco([]);
+      setBuscandoSugestoes(false);
+      return;
+    }
+
+    let cancelado = false;
+    setBuscandoSugestoes(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const resultados = await buscarSugestoesEndereco(termo, 5);
+        if (!cancelado) {
+          setSugestoesEndereco(resultados);
+        }
+      } catch {
+        if (!cancelado) {
+          setSugestoesEndereco([]);
+        }
+      } finally {
+        if (!cancelado) {
+          setBuscandoSugestoes(false);
+        }
+      }
+    }, 300);
 
     return () => {
       cancelado = true;
@@ -694,6 +735,48 @@ function ConteudoListagemBarbearias() {
                       </button>
                     )}
                   </div>
+
+                  {/* Sugestões de Autocomplete em Tempo Real */}
+                  {(buscandoSugestoes || sugestoesEndereco.length > 0) && (
+                    <div className="flex flex-col gap-1.5 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#B45A2B]">
+                          Sugestões de Endereço
+                        </span>
+                        {buscandoSugestoes && <LoadingSpinner tamanho="sm" />}
+                      </div>
+
+                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                        {sugestoesEndereco.map((sug) => (
+                          <button
+                            key={sug.id}
+                            type="button"
+                            onClick={() => {
+                              setLocalidade(sug.titulo);
+                              setBairroFiltro("");
+                              setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
+                              if (localizacaoUsuario) {
+                                setLocalizacaoUsuario(null);
+                                setMensagemLocalizacao(null);
+                              }
+                              setDropdownEnderecoAberto(false);
+                            }}
+                            className="flex items-start gap-2 p-2 rounded-lg hover:bg-[#B45A2B]/10 text-left transition-colors group"
+                          >
+                            <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0 mt-0.5" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-xs font-semibold text-black dark:text-white truncate group-hover:text-[#B45A2B]">
+                                {sug.titulo}
+                              </span>
+                              <span className="text-[11px] opacity-60 truncate">
+                                {sug.subtitulo}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Ação rápida: Usar GPS */}
                   <button

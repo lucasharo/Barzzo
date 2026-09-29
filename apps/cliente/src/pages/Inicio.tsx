@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, CardContent, LoadingSpinner } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import {
+  buscarSugestoesEndereco,
+  type SugestaoEndereco,
+} from "@barzzo/utilitarios";
 import type { Barbearia } from "@barzzo/tipos";
 import {
   Search,
@@ -20,6 +24,10 @@ export default function PaginaInicialCliente() {
   const navigate = useNavigate();
   const [termoBusca, setTermoBusca] = React.useState("");
   const [localidadeBusca, setLocalidadeBusca] = React.useState("São Paulo, SP");
+  const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
+  const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
+  const [dropdownAberto, setDropdownAberto] = React.useState(false);
+  const containerEnderecoRef = React.useRef<HTMLDivElement>(null);
   const [barbearias, setBarbearias] = React.useState<Barbearia[]>([]);
   const [carregando, setCarregando] = React.useState(true);
 
@@ -83,6 +91,53 @@ export default function PaginaInicialCliente() {
     carregarDestaques();
   }, []);
 
+  React.useEffect(() => {
+    function lidarComCliqueFora(e: MouseEvent) {
+      if (
+        containerEnderecoRef.current &&
+        !containerEnderecoRef.current.contains(e.target as Node)
+      ) {
+        setDropdownAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", lidarComCliqueFora);
+    return () => document.removeEventListener("mousedown", lidarComCliqueFora);
+  }, []);
+
+  React.useEffect(() => {
+    const termo = localidadeBusca.trim();
+    if (termo.length < 3) {
+      setSugestoesEndereco([]);
+      setBuscandoSugestoes(false);
+      return;
+    }
+
+    let cancelado = false;
+    setBuscandoSugestoes(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const resultados = await buscarSugestoesEndereco(termo, 5);
+        if (!cancelado) {
+          setSugestoesEndereco(resultados);
+        }
+      } catch {
+        if (!cancelado) {
+          setSugestoesEndereco([]);
+        }
+      } finally {
+        if (!cancelado) {
+          setBuscandoSugestoes(false);
+        }
+      }
+    }, 300);
+
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [localidadeBusca]);
+
   function handlePesquisar(e: React.FormEvent) {
     e.preventDefault();
     const params = new URLSearchParams();
@@ -126,15 +181,67 @@ export default function PaginaInicialCliente() {
 
           <div className="h-8 w-[1px] bg-neutral-300 dark:bg-neutral-700 hidden sm:block self-center" />
 
-          <div className="flex-1 sm:flex-[1.4] min-w-0 flex items-center px-3 gap-2 min-h-[44px]">
+          <div
+            ref={containerEnderecoRef}
+            className="relative flex-1 sm:flex-[1.4] min-w-0 flex items-center px-3 gap-2 min-h-[44px]"
+          >
             <MapPin className="h-5 w-5 opacity-60 shrink-0 text-[#B45A2B]" />
             <input
               type="text"
               placeholder="Bairro, Cidade, Rua ou CEP..."
               value={localidadeBusca}
-              onChange={(e) => setLocalidadeBusca(e.target.value)}
+              onFocus={() => {
+                if (sugestoesEndereco.length > 0 || localidadeBusca.length >= 3) {
+                  setDropdownAberto(true);
+                }
+              }}
+              onChange={(e) => {
+                setLocalidadeBusca(e.target.value);
+                setDropdownAberto(true);
+              }}
               className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50"
             />
+            {buscandoSugestoes && <LoadingSpinner tamanho="sm" />}
+
+            {/* Popover de Sugestões de Endereço */}
+            {dropdownAberto && (buscandoSugestoes || sugestoesEndereco.length > 0) && (
+              <div className="absolute left-0 right-0 top-full mt-2 p-3 rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl z-50 flex flex-col gap-2 animate-in fade-in zoom-in-95 duration-150 text-left">
+                <div className="flex items-center justify-between pb-1.5 border-b border-neutral-200 dark:border-neutral-800">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#B45A2B]">
+                    Sugestões de Localização
+                  </span>
+                  {buscandoSugestoes && <LoadingSpinner tamanho="sm" />}
+                </div>
+
+                <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                  {sugestoesEndereco.map((sug) => (
+                    <button
+                      key={sug.id}
+                      type="button"
+                      onClick={() => {
+                        setLocalidadeBusca(sug.titulo);
+                        setDropdownAberto(false);
+                        const params = new URLSearchParams();
+                        if (termoBusca.trim()) params.set("q", termoBusca.trim());
+                        params.set("localidade", sug.titulo);
+                        navigate(`/barbearias?${params.toString()}`);
+                      }}
+                      className="flex items-start gap-2 p-2 rounded-lg hover:bg-[#B45A2B]/10 text-left transition-colors group"
+                    >
+                      <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0 mt-0.5" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-xs font-semibold text-black dark:text-white truncate group-hover:text-[#B45A2B]">
+                          {sug.titulo}
+                        </span>
+                        <span className="text-[11px] opacity-60 truncate">
+                          {sug.subtitulo}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <Button variante="principal" tamanho="md" type="submit" className="shrink-0 min-h-[44px]">
