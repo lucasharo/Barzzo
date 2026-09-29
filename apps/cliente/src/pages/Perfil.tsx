@@ -23,6 +23,8 @@ import {
   traduzirErro,
   geocodificarEndereco,
   salvarEnderecoBuscaSessao,
+  salvarEnderecoPerfilLocal,
+  obterEnderecoPerfilLocal,
 } from "@barzzo/utilitarios";
 import { redimensionarEComprimirImagem } from "@barzzo/imagens";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
@@ -63,46 +65,57 @@ export default function PaginaPerfil() {
         setCarregandoInicial(true);
         const supabase = criarClienteSupabaseBrowser();
 
+        // Obter os dados atualizados do usuário diretamente do Auth
         const {
-          data: { session },
-        } = await supabase.auth.getSession();
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-        if (!session) {
+        if (userError || !user) {
           navigate("/entrar");
           return;
         }
 
-        const meta = session.user.user_metadata || {};
+        const meta = user.user_metadata || {};
+        const localPerfil = obterEnderecoPerfilLocal(user.id) || {};
 
-        // Preencher dados de endereço a partir dos metadados da conta
-        setCep(formatarCep(meta.cep || ""));
-        setLogradouro(meta.logradouro || meta.endereco || "");
-        setNumero(meta.numero || "");
-        setComplemento(meta.complemento || "");
-        setBairro(meta.bairro || "");
-        setCidade(meta.cidade || "");
-        setEstado(meta.estado || "");
+        // Preencher dados de endereço combinando os metadados mais recentes e o armazenamento local
+        const cepVal = meta.cep || localPerfil.cep || "";
+        const logradouroVal = meta.logradouro || meta.endereco || localPerfil.logradouro || "";
+        const numeroVal = meta.numero || localPerfil.numero || "";
+        const complementoVal = meta.complemento || localPerfil.complemento || "";
+        const bairroVal = meta.bairro || localPerfil.bairro || "";
+        const cidadeVal = meta.cidade || localPerfil.cidade || "";
+        const estadoVal = meta.estado || localPerfil.estado || "";
+
+        setCep(formatarCep(cepVal));
+        setLogradouro(logradouroVal);
+        setNumero(numeroVal);
+        setComplemento(complementoVal);
+        setBairro(bairroVal);
+        setCidade(cidadeVal);
+        setEstado(estadoVal);
 
         // Buscar dados na tabela public.usuarios
         const { data: usuarioDb, error } = await (supabase.from("usuarios") as any)
           .select("*")
-          .eq("id", session.user.id)
+          .eq("id", user.id)
           .single();
 
         if (error || !usuarioDb) {
           // Fallback para metadados de autenticação
           setNome(meta.nome || "");
-          setEmail(session.user.email || "");
+          setEmail(user.email || "");
           setTelefone(formatarTelefone(meta.telefone || ""));
           setFotoUrl(meta.foto_url || null);
         } else {
           setUsuario(usuarioDb as Usuario);
           setNome(usuarioDb.nome);
           setEmail(usuarioDb.email);
-          setTelefone(formatarTelefone(usuarioDb.telefone || ""));
-          setFotoUrl(usuarioDb.foto_url);
+          setTelefone(formatarTelefone(usuarioDb.telefone || meta.telefone || ""));
+          setFotoUrl(usuarioDb.foto_url || meta.foto_url || null);
         }
-      } catch (err) {
+      } catch {
         setErro("Não foi possível carregar os dados do seu perfil.");
       } finally {
         setCarregandoInicial(false);
@@ -240,10 +253,10 @@ export default function PaginaPerfil() {
       setSalvando(true);
       const supabase = criarClienteSupabaseBrowser();
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (!session) {
+      if (!user) {
         setErro("Sessão expirada. Faça login novamente.");
         return;
       }
@@ -271,20 +284,21 @@ export default function PaginaPerfil() {
         }
       }
 
+      // 1. Atualizar nome e telefone na tabela public.usuarios
       const { error: dbError } = await (supabase.from("usuarios") as any)
         .update({
           nome,
           telefone: telefoneLimpo || null,
         })
-        .eq("id", session.user.id);
+        .eq("id", user.id);
 
       if (dbError) {
         setErro(traduzirErro(dbError, "Erro ao atualizar perfil. Tente novamente."));
         return;
       }
 
-      // Sincronizar metadados no auth incluindo os campos de endereço
-      await supabase.auth.updateUser({
+      // 2. Sincronizar metadados no auth incluindo todos os campos de endereço
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           nome,
           telefone: telefoneLimpo || null,
@@ -302,7 +316,29 @@ export default function PaginaPerfil() {
         },
       });
 
-      // Atualizar endereço padrão na sessão de busca
+      if (authError) {
+        setErro(traduzirErro(authError, "Erro ao salvar dados de endereço na conta."));
+        return;
+      }
+
+      // 3. Atualizar token e cache da sessão ativa para refletir os novos metadados
+      await supabase.auth.refreshSession();
+
+      // 4. Salvar endereço localmente vinculado à conta do usuário
+      salvarEnderecoPerfilLocal(user.id, {
+        cep: cep || null,
+        logradouro: logradouro || null,
+        numero: numero || null,
+        complemento: complemento || null,
+        bairro: bairro || null,
+        cidade: cidade || null,
+        estado: estado || null,
+        latitude: coords?.lat ?? null,
+        longitude: coords?.lng ?? null,
+        endereco_completo: enderecoCompletoFormatado || null,
+      });
+
+      // 5. Atualizar endereço padrão na sessão de busca
       if (enderecoCompletoFormatado) {
         salvarEnderecoBuscaSessao({
           texto: enderecoCompletoFormatado,

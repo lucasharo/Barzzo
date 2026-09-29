@@ -28,6 +28,7 @@ import {
   salvarEnderecoBuscaSessao,
   obterEnderecoBuscaSessao,
   limparEnderecoBuscaSessao,
+  obterEnderecoPerfilLocal,
   formatarEnderecoConta,
   type SugestaoEndereco,
 } from "@barzzo/utilitarios";
@@ -141,11 +142,13 @@ function ConteudoListagemBarbearias() {
       try {
         const supabase = criarClienteSupabaseBrowser();
         const {
-          data: { session },
-        } = await supabase.auth.getSession();
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        if (session?.user?.user_metadata) {
-          const enderecoConta = formatarEnderecoConta(session.user.user_metadata);
+        if (user) {
+          const localPerfil = obterEnderecoPerfilLocal(user.id);
+          const metaCombinada = { ...(localPerfil || {}), ...(user.user_metadata || {}) };
+          const enderecoConta = formatarEnderecoConta(metaCombinada);
           if (enderecoConta && enderecoConta.texto) {
             setLocalidade(enderecoConta.texto);
             if (enderecoConta.lat && enderecoConta.lng) {

@@ -71,6 +71,42 @@ export function limparEnderecoBuscaSessao(): void {
 }
 
 /**
+ * Salva o endereço cadastrado do perfil localmente vinculado ao ID do usuário.
+ */
+export function salvarEnderecoPerfilLocal(
+  usuarioId: string,
+  dados: EnderecoContaCliente
+): void {
+  try {
+    if (typeof window === "undefined" || !usuarioId) return;
+    localStorage.setItem(
+      `barzzo_endereco_perfil_${usuarioId}`,
+      JSON.stringify(dados)
+    );
+  } catch {
+    // Ignorar falhas
+  }
+}
+
+/**
+ * Obtém o endereço cadastrado do perfil armazenado localmente para o ID do usuário.
+ */
+export function obterEnderecoPerfilLocal(
+  usuarioId: string
+): EnderecoContaCliente | null {
+  try {
+    if (typeof window === "undefined" || !usuarioId) return null;
+    const item = localStorage.getItem(`barzzo_endereco_perfil_${usuarioId}`);
+    if (item) {
+      return JSON.parse(item) as EnderecoContaCliente;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Formata os dados de endereço salvos no perfil/metadados da conta do cliente
  * no padrão legível: "Nome da Rua, Número, Bairro, Cidade - UF".
  */
@@ -105,8 +141,8 @@ export function formatarEnderecoConta(meta: any): {
 
   return {
     texto,
-    lat: typeof meta.latitude === "number" ? meta.latitude : null,
-    lng: typeof meta.longitude === "number" ? meta.longitude : null,
+    lat: typeof meta.latitude === "number" ? meta.latitude : (meta.latitude ? parseFloat(meta.latitude) : null),
+    lng: typeof meta.longitude === "number" ? meta.longitude : (meta.longitude ? parseFloat(meta.longitude) : null),
     bairro: bairro || null,
     cidade: meta.cidade || null,
   };
