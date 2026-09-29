@@ -16,11 +16,18 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaAtualizarPerfil } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import {
+  formatarTelefone,
+  limparTelefone,
+  formatarCep,
+  traduzirErro,
+  geocodificarEndereco,
+  salvarEnderecoBuscaSessao,
+} from "@barzzo/utilitarios";
 import { redimensionarEComprimirImagem } from "@barzzo/imagens";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import type { Usuario } from "@barzzo/tipos";
-import { Camera, LogOut } from "lucide-react";
+import { Camera, LogOut, MapPin, Search } from "lucide-react";
 
 export default function PaginaPerfil() {
   const navigate = useNavigate();
@@ -35,6 +42,16 @@ export default function PaginaPerfil() {
   const [email, setEmail] = React.useState("");
   const [telefone, setTelefone] = React.useState("");
   const [fotoUrl, setFotoUrl] = React.useState<string | null>(null);
+
+  // Estados de Endereço do Cliente
+  const [cep, setCep] = React.useState("");
+  const [logradouro, setLogradouro] = React.useState("");
+  const [numero, setNumero] = React.useState("");
+  const [complemento, setComplemento] = React.useState("");
+  const [bairro, setBairro] = React.useState("");
+  const [cidade, setCidade] = React.useState("");
+  const [estado, setEstado] = React.useState("");
+  const [buscandoCep, setBuscandoCep] = React.useState(false);
 
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
@@ -55,6 +72,17 @@ export default function PaginaPerfil() {
           return;
         }
 
+        const meta = session.user.user_metadata || {};
+
+        // Preencher dados de endereço a partir dos metadados da conta
+        setCep(formatarCep(meta.cep || ""));
+        setLogradouro(meta.logradouro || meta.endereco || "");
+        setNumero(meta.numero || "");
+        setComplemento(meta.complemento || "");
+        setBairro(meta.bairro || "");
+        setCidade(meta.cidade || "");
+        setEstado(meta.estado || "");
+
         // Buscar dados na tabela public.usuarios
         const { data: usuarioDb, error } = await (supabase.from("usuarios") as any)
           .select("*")
@@ -63,12 +91,10 @@ export default function PaginaPerfil() {
 
         if (error || !usuarioDb) {
           // Fallback para metadados de autenticação
-          setNome(session.user.user_metadata?.nome || "");
+          setNome(meta.nome || "");
           setEmail(session.user.email || "");
-          setTelefone(
-            formatarTelefone(session.user.user_metadata?.telefone || "")
-          );
-          setFotoUrl(session.user.user_metadata?.foto_url || null);
+          setTelefone(formatarTelefone(meta.telefone || ""));
+          setFotoUrl(meta.foto_url || null);
         } else {
           setUsuario(usuarioDb as Usuario);
           setNome(usuarioDb.nome);
@@ -163,7 +189,34 @@ export default function PaginaPerfil() {
   };
 
 
-  // Salvar alterações de nome e telefone
+  // Busca de endereço automática via CEP
+  const lidarComCep = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valorFormatado = formatarCep(e.target.value);
+    setCep(valorFormatado);
+
+    const digitos = valorFormatado.replace(/\D/g, "");
+    if (digitos.length === 8) {
+      try {
+        setBuscandoCep(true);
+        const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`);
+        if (res.ok) {
+          const dados = await res.json();
+          if (!dados.erro) {
+            if (dados.logradouro) setLogradouro(dados.logradouro);
+            if (dados.bairro) setBairro(dados.bairro);
+            if (dados.localidade) setCidade(dados.localidade);
+            if (dados.uf) setEstado(dados.uf);
+          }
+        }
+      } catch {
+        // Silencioso
+      } finally {
+        setBuscandoCep(false);
+      }
+    }
+  };
+
+  // Salvar alterações de perfil e endereço
   const salvarPerfil = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
@@ -195,6 +248,30 @@ export default function PaginaPerfil() {
         return;
       }
 
+      // Geocodificar endereço do cliente para coordenadas precisas de busca
+      const partesEndereco = [
+        logradouro ? `${logradouro}${numero ? ", " + numero : ""}` : null,
+        bairro,
+        cidade && estado ? `${cidade} - ${estado}` : (cidade || estado),
+        cep ? `CEP ${cep}` : null,
+      ].filter(Boolean);
+
+      const enderecoCompletoFormatado = partesEndereco.join(", ");
+      let coords: { lat: number; lng: number } | null = null;
+
+      if (enderecoCompletoFormatado) {
+        try {
+          const resCoords = await geocodificarEndereco(
+            partesEndereco.slice(0, 3).join(", ") || enderecoCompletoFormatado
+          );
+          if (resCoords) {
+            coords = { lat: resCoords.lat, lng: resCoords.lng };
+          }
+        } catch {
+          // Mantém null
+        }
+      }
+
       const { error: dbError } = await (supabase.from("usuarios") as any)
         .update({
           nome,
@@ -207,15 +284,38 @@ export default function PaginaPerfil() {
         return;
       }
 
-      // Sincronizar metadados no auth
+      // Sincronizar metadados no auth incluindo os campos de endereço
       await supabase.auth.updateUser({
         data: {
           nome,
           telefone: telefoneLimpo || null,
+          cep: cep || null,
+          logradouro: logradouro || null,
+          endereco: logradouro || null,
+          numero: numero || null,
+          complemento: complemento || null,
+          bairro: bairro || null,
+          cidade: cidade || null,
+          estado: estado || null,
+          latitude: coords?.lat ?? null,
+          longitude: coords?.lng ?? null,
+          endereco_completo: enderecoCompletoFormatado || null,
         },
       });
 
-      setSucesso("Perfil atualizado com sucesso!");
+      // Atualizar endereço padrão na sessão de busca
+      if (enderecoCompletoFormatado) {
+        salvarEnderecoBuscaSessao({
+          texto: enderecoCompletoFormatado,
+          lat: coords?.lat ?? null,
+          lng: coords?.lng ?? null,
+          bairro: bairro || null,
+          cidade: cidade || null,
+          origem: "conta",
+        });
+      }
+
+      setSucesso("Perfil e endereço salvos com sucesso!");
     } catch {
       setErro("Ocorreu um erro ao salvar o perfil.");
     } finally {
@@ -244,7 +344,7 @@ export default function PaginaPerfil() {
       <div>
         <h1 className="text-2xl md:text-3xl font-bold">Meu Perfil</h1>
         <p className="text-sm opacity-70">
-          Gerencie suas informações de conta e foto de perfil.
+          Gerencie suas informações de conta, foto e endereço padrão de busca.
         </p>
       </div>
 
@@ -312,12 +412,12 @@ export default function PaginaPerfil() {
         </CardContent>
       </Card>
 
-      <Card camada="primaria">
-        <CardHeader>
-          <CardTitle className="text-lg">Dados Pessoais</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={salvarPerfil} className="flex flex-col gap-4">
+      <form onSubmit={salvarPerfil} className="flex flex-col gap-6">
+        <Card camada="primaria">
+          <CardHeader>
+            <CardTitle className="text-lg">Dados Pessoais</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="nome" obrigatorio>
                 Nome Completo
@@ -358,19 +458,132 @@ export default function PaginaPerfil() {
                 maxLength={15}
               />
             </div>
+          </CardContent>
+        </Card>
 
-            <Button
-              type="submit"
-              variante="principal"
-              tamanho="md"
-              carregando={salvando}
-              className="mt-2 self-start"
-            >
-              Salvar Alterações
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Card de Endereço do Cliente */}
+        <Card camada="primaria">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-[#B45A2B]" />
+              <CardTitle className="text-lg">Meu Endereço</CardTitle>
+            </div>
+            <CardDescription>
+              Seu endereço é utilizado automaticamente para encontrar as barbearias mais próximas de você no Barzzo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <Label htmlFor="cep">CEP</Label>
+                <div className="relative">
+                  <Input
+                    id="cep"
+                    type="text"
+                    placeholder="00000-000"
+                    value={cep}
+                    onChange={lidarComCep}
+                    disabled={salvando}
+                    maxLength={9}
+                  />
+                  {buscandoCep && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <LoadingSpinner tamanho="sm" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label htmlFor="logradouro">Rua / Logradouro</Label>
+                <Input
+                  id="logradouro"
+                  type="text"
+                  placeholder="Ex: Av. Paulista, Rua Augusta..."
+                  value={logradouro}
+                  onChange={(e) => setLogradouro(e.target.value)}
+                  disabled={salvando}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  type="text"
+                  placeholder="123"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  disabled={salvando}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <Label htmlFor="complemento">Complemento (opcional)</Label>
+                <Input
+                  id="complemento"
+                  type="text"
+                  placeholder="Apto 42, Bloco B..."
+                  value={complemento}
+                  onChange={(e) => setComplemento(e.target.value)}
+                  disabled={salvando}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <Label htmlFor="bairro">Bairro</Label>
+                <Input
+                  id="bairro"
+                  type="text"
+                  placeholder="Ex: Bela Vista"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  disabled={salvando}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  type="text"
+                  placeholder="São Paulo"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  disabled={salvando}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 sm:col-span-1">
+                <Label htmlFor="estado">Estado (UF)</Label>
+                <Input
+                  id="estado"
+                  type="text"
+                  placeholder="SP"
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value.toUpperCase())}
+                  disabled={salvando}
+                  maxLength={2}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Button
+          type="submit"
+          variante="principal"
+          tamanho="lg"
+          carregando={salvando}
+          className="self-start min-h-[44px]"
+        >
+          Salvar Alterações
+        </Button>
+      </form>
 
       {/* Ações da Conta / Sair no final da tela */}
       <div className="pt-4 pb-8 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-4">

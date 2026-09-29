@@ -129,6 +129,72 @@ export async function buscarSugestoesEndereco(
   return sugestoes;
 }
 
+export interface InfoEnderecoReverso {
+  enderecoCompleto: string;
+  titulo: string;
+  subtitulo: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
+  cep?: string;
+}
+
+/**
+ * Obtém o endereço formatado e legível a partir de coordenadas de GPS (geocodificação reversa via Nominatim).
+ */
+export async function obterEnderecoPorCoordenadas(
+  lat: number,
+  lng: number
+): Promise<InfoEnderecoReverso | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: {
+        "Accept-Language": "pt-BR",
+        "User-Agent": "Barzzo-App/1.0",
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || !data.address) return null;
+
+    const addr = data.address;
+    const rua = addr.road || addr.street;
+    const numero = addr.house_number;
+    const bairro = addr.suburb || addr.neighbourhood || addr.city_district || addr.quarter;
+    const cidade = addr.city || addr.town || addr.municipality || addr.village;
+    const estado = addr.state_code || addr.state;
+    const cep = addr.postcode;
+
+    const titulo = rua
+      ? `${rua}${numero ? ", " + numero : ""}`
+      : bairro || cidade || data.display_name.split(",")[0];
+
+    const partesSub = [bairro && bairro !== titulo ? bairro : null, cidade, estado].filter(Boolean);
+    const subtitulo = partesSub.join(" - ") || data.display_name;
+
+    const partesCompletas = [
+      rua ? `${rua}${numero ? ", " + numero : ""}` : null,
+      bairro && bairro !== rua ? bairro : null,
+      cidade && estado ? `${cidade} - ${estado}` : (cidade || estado),
+    ].filter(Boolean);
+
+    const enderecoCompleto = partesCompletas.join(", ") || data.display_name;
+
+    return {
+      enderecoCompleto,
+      titulo,
+      subtitulo,
+      bairro: bairro || undefined,
+      cidade: cidade || undefined,
+      estado: estado || undefined,
+      cep: cep || undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function buscarNoNominatim(query: string): Promise<Coordenadas | null> {
   try {
     const consulta = query.toLowerCase().includes("brasil") ? query : `${query}, Brasil`;

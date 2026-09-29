@@ -5,6 +5,9 @@ import { Button, Card, CardContent, LoadingSpinner } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
   buscarSugestoesEndereco,
+  salvarEnderecoBuscaSessao,
+  obterEnderecoBuscaSessao,
+  formatarEnderecoConta,
   type SugestaoEndereco,
 } from "@barzzo/utilitarios";
 import type { Barbearia } from "@barzzo/tipos";
@@ -24,12 +27,56 @@ export default function PaginaInicialCliente() {
   const navigate = useNavigate();
   const [termoBusca, setTermoBusca] = React.useState("");
   const [localidadeBusca, setLocalidadeBusca] = React.useState("São Paulo, SP");
+  const [coordenadasBusca, setCoordenadasBusca] = React.useState<{ lat: number; lng: number } | null>(null);
   const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
   const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
   const [dropdownAberto, setDropdownAberto] = React.useState(false);
   const containerEnderecoRef = React.useRef<HTMLDivElement>(null);
   const [barbearias, setBarbearias] = React.useState<Barbearia[]>([]);
   const [carregando, setCarregando] = React.useState(true);
+
+  // Inicializar endereço: 1º Sessão ativa, 2º Endereço da conta do usuário autenticado
+  React.useEffect(() => {
+    async function inicializarEndereco() {
+      const enderecoSessao = obterEnderecoBuscaSessao();
+      if (enderecoSessao && enderecoSessao.texto) {
+        setLocalidadeBusca(enderecoSessao.texto);
+        if (enderecoSessao.lat && enderecoSessao.lng) {
+          setCoordenadasBusca({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+        }
+        return;
+      }
+
+      try {
+        const supabase = criarClienteSupabaseBrowser();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user?.user_metadata) {
+          const enderecoConta = formatarEnderecoConta(session.user.user_metadata);
+          if (enderecoConta && enderecoConta.texto) {
+            setLocalidadeBusca(enderecoConta.texto);
+            if (enderecoConta.lat && enderecoConta.lng) {
+              setCoordenadasBusca({ lat: enderecoConta.lat, lng: enderecoConta.lng });
+            }
+            salvarEnderecoBuscaSessao({
+              texto: enderecoConta.texto,
+              lat: enderecoConta.lat,
+              lng: enderecoConta.lng,
+              bairro: enderecoConta.bairro,
+              cidade: enderecoConta.cidade,
+              origem: "conta",
+            });
+          }
+        }
+      } catch {
+        // Silencioso
+      }
+    }
+
+    inicializarEndereco();
+  }, []);
 
   React.useEffect(() => {
     async function carregarDestaques() {
@@ -140,11 +187,21 @@ export default function PaginaInicialCliente() {
 
   function handlePesquisar(e: React.FormEvent) {
     e.preventDefault();
+    const loc = localidadeBusca.trim();
+    if (loc) {
+      salvarEnderecoBuscaSessao({
+        texto: loc,
+        lat: coordenadasBusca?.lat ?? null,
+        lng: coordenadasBusca?.lng ?? null,
+        origem: "manual",
+      });
+    }
+
     const params = new URLSearchParams();
     if (termoBusca.trim()) params.set("q", termoBusca.trim());
-    if (localidadeBusca.trim()) {
-      params.set("localidade", localidadeBusca.trim());
-      params.set("cidade", localidadeBusca.trim());
+    if (loc) {
+      params.set("localidade", loc);
+      params.set("cidade", loc);
     }
     navigate(`/barbearias?${params.toString()}`);
   }
@@ -219,14 +276,22 @@ export default function PaginaInicialCliente() {
                       key={sug.id}
                       type="button"
                       onClick={() => {
-                        setLocalidadeBusca(sug.titulo);
+                        const texto = sug.enderecoCompleto || sug.titulo;
+                        setLocalidadeBusca(texto);
+                        setCoordenadasBusca({ lat: sug.lat, lng: sug.lng });
+                        salvarEnderecoBuscaSessao({
+                          texto,
+                          lat: sug.lat,
+                          lng: sug.lng,
+                          origem: "manual",
+                        });
                         setDropdownAberto(false);
                         const params = new URLSearchParams();
                         if (termoBusca.trim()) params.set("q", termoBusca.trim());
-                        params.set("localidade", sug.titulo);
+                        params.set("localidade", texto);
                         navigate(`/barbearias?${params.toString()}`);
                       }}
-                      className="flex items-start gap-2 p-2 rounded-lg hover:bg-[#B45A2B]/10 text-left transition-colors group"
+                      className="flex items-start gap-2 p-2 rounded-lg hover:bg-[#B45A2B]/10 text-left transition-colors group cursor-pointer"
                     >
                       <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0 mt-0.5" />
                       <div className="flex flex-col min-w-0">

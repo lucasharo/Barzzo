@@ -24,6 +24,11 @@ import {
 import {
   geocodificarEndereco,
   buscarSugestoesEndereco,
+  obterEnderecoPorCoordenadas,
+  salvarEnderecoBuscaSessao,
+  obterEnderecoBuscaSessao,
+  limparEnderecoBuscaSessao,
+  formatarEnderecoConta,
   type SugestaoEndereco,
 } from "@barzzo/utilitarios";
 import type { Barbearia } from "@barzzo/tipos";
@@ -62,14 +67,14 @@ function normalizarTexto(texto: string): string {
 function ConteudoListagemBarbearias() {
   const [searchParams] = useSearchParams();
   const termoInicial = searchParams.get("q") || "";
-  const localidadeInicial =
+  const localidadeParam =
     searchParams.get("localidade") ||
     searchParams.get("cidade") ||
     searchParams.get("bairro") ||
     "";
 
   const [busca, setBusca] = React.useState(termoInicial);
-  const [localidade, setLocalidade] = React.useState(localidadeInicial);
+  const [localidade, setLocalidade] = React.useState(localidadeParam);
   const [bairroFiltro, setBairroFiltro] = React.useState("");
   const [bairrosDisponiveis, setBairrosDisponiveis] = React.useState<string[]>([]);
   const [carregando, setCarregando] = React.useState(true);
@@ -82,6 +87,72 @@ function ConteudoListagemBarbearias() {
   const [geocodificando, setGeocodificando] = React.useState(false);
   const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
   const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
+
+  // Inicialização inteligente do endereço de busca:
+  // 1. URL searchParams (se houver)
+  // 2. Endereço salvo na sessão ativa
+  // 3. Endereço cadastrado na conta do usuário autenticado
+  React.useEffect(() => {
+    async function inicializarEnderecoBusca() {
+      // Se veio parâmetro na URL, já foi atribuído e salva na sessão
+      if (localidadeParam) {
+        salvarEnderecoBuscaSessao({
+          texto: localidadeParam,
+          origem: "manual",
+        });
+        return;
+      }
+
+      // Se há endereço na sessão ativa, recupera
+      const enderecoSessao = obterEnderecoBuscaSessao();
+      if (enderecoSessao && enderecoSessao.texto) {
+        setLocalidade(enderecoSessao.texto);
+        if (enderecoSessao.lat && enderecoSessao.lng) {
+          setCoordenadasEndereco({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+          if (enderecoSessao.origem === "gps") {
+            setLocalizacaoUsuario({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+          }
+        }
+        if (enderecoSessao.bairro) {
+          setBairroFiltro(enderecoSessao.bairro);
+        }
+        return;
+      }
+
+      // Se não há na sessão, verifica conta do usuário logado
+      try {
+        const supabase = criarClienteSupabaseBrowser();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.user?.user_metadata) {
+          const enderecoConta = formatarEnderecoConta(session.user.user_metadata);
+          if (enderecoConta && enderecoConta.texto) {
+            setLocalidade(enderecoConta.texto);
+            if (enderecoConta.lat && enderecoConta.lng) {
+              setCoordenadasEndereco({ lat: enderecoConta.lat, lng: enderecoConta.lng });
+            }
+            if (enderecoConta.bairro) {
+              setBairroFiltro(enderecoConta.bairro);
+            }
+            salvarEnderecoBuscaSessao({
+              texto: enderecoConta.texto,
+              lat: enderecoConta.lat,
+              lng: enderecoConta.lng,
+              bairro: enderecoConta.bairro,
+              cidade: enderecoConta.cidade,
+              origem: "conta",
+            });
+          }
+        }
+      } catch {
+        // Silencioso
+      }
+    }
+
+    inicializarEnderecoBusca();
+  }, [localidadeParam]);
 
   // Novos estados para filtros de Preço, Distância, Nota e Ordenação
   const [faixaPreco, setFaixaPreco] = React.useState<"todos" | "ate-35" | "ate-50" | "ate-75" | "acima-75">("todos");
@@ -459,6 +530,10 @@ function ConteudoListagemBarbearias() {
       setLocalizacaoUsuario(null);
       setMensagemLocalizacao(null);
       setErroLocalizacao(null);
+      setLocalidade("");
+      setBairroFiltro("");
+      setCoordenadasEndereco(null);
+      limparEnderecoBuscaSessao();
       return;
     }
 
@@ -482,42 +557,45 @@ function ConteudoListagemBarbearias() {
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setLocalizacaoUsuario({ lat, lng });
+        setCoordenadasEndereco({ lat, lng });
         setObtendoLocalizacao(false);
 
+        let enderecoTexto = "";
         let bairroDetectado = "";
         let cidadeDetectada = "";
 
         try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3500);
-          const res = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`,
-            { signal: controller.signal }
-          );
-          clearTimeout(timeoutId);
-          if (res.ok) {
-            const dataGeo = await res.json();
-            bairroDetectado = dataGeo.locality || dataGeo.district || "";
-            cidadeDetectada = dataGeo.city || "";
+          const info = await obterEnderecoPorCoordenadas(lat, lng);
+          if (info) {
+            enderecoTexto = info.enderecoCompleto || info.titulo;
+            bairroDetectado = info.bairro || "";
+            cidadeDetectada = info.cidade || "";
           }
         } catch {
-          // Fallback silencioso para geocodificação
+          // Fallback silencioso
         }
 
-        const localFormatado = [bairroDetectado, cidadeDetectada].filter(Boolean).join(", ");
-        if (localFormatado) {
-          setMensagemLocalizacao(
-            `Localização detectada: ${localFormatado}! Barbearias ordenadas pelas mais próximas de você.`
-          );
-        } else {
-          setMensagemLocalizacao(
-            "Localização detectada com sucesso! Barbearias ordenadas pelas mais próximas de você."
-          );
+        if (!enderecoTexto) {
+          enderecoTexto = [bairroDetectado, cidadeDetectada].filter(Boolean).join(", ") || "Minha Localização Atual";
         }
 
-        setLocalidade("");
-        setBairroFiltro("");
-        setCoordenadasEndereco(null);
+        // Preenche o campo de endereço com a localização detectada por GPS
+        setLocalidade(enderecoTexto);
+        setBairroFiltro(bairroDetectado);
+
+        // Grava na sessão
+        salvarEnderecoBuscaSessao({
+          texto: enderecoTexto,
+          lat,
+          lng,
+          bairro: bairroDetectado || null,
+          cidade: cidadeDetectada || null,
+          origem: "gps",
+        });
+
+        setMensagemLocalizacao(
+          `Localização detectada: ${enderecoTexto}! Barbearias ordenadas pelas mais próximas de você.`
+        );
       },
       (err) => {
         setObtendoLocalizacao(false);
@@ -703,8 +781,11 @@ function ConteudoListagemBarbearias() {
                       setLocalidade("");
                       setBairroFiltro("");
                       setCoordenadasEndereco(null);
+                      setLocalizacaoUsuario(null);
+                      setMensagemLocalizacao(null);
                       setSugestoesEndereco([]);
                       setSugestoesAbertas(false);
+                      limparEnderecoBuscaSessao();
                     }}
                     className="text-xs opacity-50 hover:opacity-100 p-1"
                     title="Limpar endereço"
@@ -729,7 +810,8 @@ function ConteudoListagemBarbearias() {
                       type="button"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        setLocalidade(sug.enderecoCompleto || sug.titulo);
+                        const texto = sug.enderecoCompleto || sug.titulo;
+                        setLocalidade(texto);
                         setBairroFiltro("");
                         setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
                         setSugestoesAbertas(false);
@@ -737,6 +819,12 @@ function ConteudoListagemBarbearias() {
                           setLocalizacaoUsuario(null);
                           setMensagemLocalizacao(null);
                         }
+                        salvarEnderecoBuscaSessao({
+                          texto,
+                          lat: sug.lat,
+                          lng: sug.lng,
+                          origem: "manual",
+                        });
                       }}
                       className="w-full flex items-start gap-3 p-3.5 hover:bg-[#B45A2B]/10 text-left transition-colors group cursor-pointer"
                     >
