@@ -2,11 +2,24 @@
 
 SaaS + marketplace para barbearias.
 
-## Para agentes
+## Para agentes de IA
 
-Comece por [GEMINI.md](GEMINI.md). Depois siga [REGRAS_GERAIS.md](REGRAS_GERAIS.md), [AGENTES.md](AGENTES.md), [WORKFLOW.md](WORKFLOW.md) e [STATUS.md](STATUS.md).
+A entrada universal do projeto é [AGENTS.md](AGENTS.md).
 
-O desenvolvimento é dividido em 10 tasks sequenciais em `tarefas/`, também representadas pelas issues #1 a #10.
+Qualquer IA deve começar por ele e reconstruir o contexto a partir do repositório, não da memória da conversa.
+
+Adaptadores disponíveis:
+
+- Gemini: [GEMINI.md](GEMINI.md) + `.gemini/settings.json`;
+- Claude: [CLAUDE.md](CLAUDE.md);
+- Codex/OpenAI: `AGENTS.md`;
+- GitHub Copilot: `.github/copilot-instructions.md`;
+- Cursor: `AGENTS.md` + `.cursor/rules/barzzo.mdc`;
+- outras IAs: [PROMPT_INICIAL_IA.md](PROMPT_INICIAL_IA.md).
+
+A arquitetura de contexto está documentada em [docs/ia/arquitetura_contexto.md](docs/ia/arquitetura_contexto.md).
+
+Depois do contrato universal, siga [REGRAS_GERAIS.md](REGRAS_GERAIS.md), [AGENTES.md](AGENTES.md), [WORKFLOW.md](WORKFLOW.md) e [STATUS.md](STATUS.md).
 
 ## Stack definida
 
@@ -28,4 +41,7 @@ O desenvolvimento é dividido em 10 tasks sequenciais em `tarefas/`, também rep
 - pagamento de serviços não passa pelo Barzzo no MVP;
 - ui-ux-pro-max obrigatório nas interfaces.
 
-Branch de preparação: `feature/init`.
+Fluxo de branches:
+- `feature/*`: desenvolvimento;
+- `release/*`: homologação/estabilização;
+- `main`: somente produção.

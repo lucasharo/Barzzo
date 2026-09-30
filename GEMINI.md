@@ -1,83 +1,35 @@
-# Instruções para o Gemini
+# Adaptador Gemini — Barzzo
 
-Este repositório é a fonte de verdade do Barzzo.
+Este arquivo contém apenas instruções específicas de inicialização do Gemini.
 
-## Leitura obrigatória
-1. REGRAS_GERAIS.md
-2. AGENTES.md
-3. WORKFLOW.md
-4. STATUS.md
-5. docs/produto/produto.md
-6. docs/arquitetura/*
-7. docs/design/design_system.md
-8. docs/arquitetura/separacao_aplicacoes.md
-9. TASK.md da task atual
+A fonte universal de regras para agentes é **`AGENTS.md`**.
 
-## Execução
-Execute as 10 tasks em ordem. Cada task passa por:
-PO -> Líder Técnico -> Dev -> Revisão Técnica -> QA -> PO.
+## Inicialização
 
-Se houver reprovação, corrija e repita o ciclo. Só avance quando a task anterior estiver CONCLUIDA.
+O Gemini CLI está configurado em `.gemini/settings.json` para carregar:
 
-Nunca invente regra de negócio. Se uma decisão necessária não estiver documentada, marque BLOQUEADA_POR_DECISAO em STATUS.md.
+- `AGENTS.md`;
+- `GEMINI.md`.
 
-Nunca invente soluções de contorno, botões extras de simulação ou recursos não solicitados quando algo falhar ou estiver faltando. Se houver erro, credencial inválida/pendente ou configuração incorreta, apenas avise o usuário de forma clara e peça para ele fornecer os dados ou realizar a correção necessária.
+Ao iniciar, retomar ou compactar uma sessão:
 
-## Arquitetura das aplicações
+1. confirme que `AGENTS.md` foi carregado;
+2. leia `STATUS.md`;
+3. siga a ordem de leitura obrigatória definida em `AGENTS.md`;
+4. não dependa da memória da conversa anterior.
 
-É obrigatório respeitar `docs/arquitetura/separacao_aplicacoes.md`.
+Quando disponível, use `/memory reload` após mudanças relevantes nas instruções e `/memory show` para conferir o contexto carregado.
 
-Não consolidar Cliente, Parceiro e Admin em um único app com apenas separação por rotas. A estrutura deve permitir execução, deploy e empacotamento independentes.
+## Skill de UI
 
-A experiência pública de Cliente não pode ser protegida por autenticação global. Pesquisa e consulta de agenda permanecem públicas até o resumo; autenticação acontece antes da confirmação definitiva.
+A skill oficial está em:
 
-## UX
-Toda task com interface exige uso da skill `ui-ux-pro-max` antes da implementação e novamente na revisão de QA. Se ela não estiver instalada no ambiente, deve ser baixada/instalada antes de iniciar trabalho de UI. Não substituir por outra skill sem decisão explícita. Registre decisões relevantes de UX.
+`.agents/skills/ui-ux-pro-max/SKILL.md`
 
-A implementação visual deve obedecer integralmente `docs/design/design_system.md`. Não criar cores, tipografias ou variantes visuais fora dos tokens documentados sem decisão explícita de produto/design.
+Use-a conforme `AGENTS.md` e `docs/design/design_system.md`.
 
-## Idioma
-Código de domínio, banco, variáveis, rotas, telas e documentação em português. Identificadores técnicos sem acentos.
-É terminantemente proibido exibir mensagens, erros, alertas, placeholders ou qualquer texto em inglês para o usuário final. Mensagens de SDKs externos (Supabase Auth, Postgres, etc.) devem ser interceptadas e traduzidas com `traduzirErro` (`@barzzo/utilitarios`).
+## Regra de manutenção
 
-## Segurança
-Nunca grave segredos. Nunca exponha chave secreta no frontend. Nunca desative RLS para contornar erro.
+Não adicione aqui regras de produto, banco, arquitetura, segurança ou workflow que devam valer para outras IAs.
 
-## Migrações de banco de dados
-
-**SEMPRE use o Supabase CLI para aplicar migrações ao banco remoto.** Nunca use scripts Node/pg diretos, pois a senha do banco Postgres não é a service key.
-
-### Fluxo obrigatório para migrações:
-1. Criar o arquivo SQL em `supabase/migrations/<timestamp>_<descricao>.sql`
-2. Aplicar ao banco remoto com:
-   ```bash
-   npx supabase db push --project-ref gdgeokfwkbusemayqucb
-   ```
-3. Se migrações já foram aplicadas manualmente mas não estão no histórico do CLI, repará-las primeiro:
-   ```bash
-   npx supabase migration repair --project-ref gdgeokfwkbusemayqucb --status applied <versao>
-   ```
-4. Verificar o status das migrações com:
-   ```bash
-   npx supabase migration list --project-ref gdgeokfwkbusemayqucb
-   ```
-
-O projeto está autenticado e vinculado (`linked: true`). Ref: `gdgeokfwkbusemayqucb`.
-
-
-## Resultado
-Ao fim da Task 10, o MVP deve estar funcional, testado, responsivo, seguro e pronto para homologação.
-
-
-## Protocolo entre tasks
-
-Ao concluir cada task, antes de iniciar a próxima, é obrigatório:
-
-1. consolidar decisões, implementação e testes nos arquivos versionados;
-2. compactar o contexto, descartando debugging e hipóteses temporárias;
-3. tratar a próxima task como uma nova sessão;
-4. reler STATUS.md, GEMINI.md, REGRAS_GERAIS.md, AGENTES.md, WORKFLOW.md e a documentação relevante;
-5. ler a nova TASK.md e inspecionar o código produzido que ela reutiliza;
-6. nunca depender apenas da memória acumulada da conversa.
-
-O procedimento completo está em `PROMPT_INICIAL_GEMINI.md`.
+Se uma regra é universal, altere `AGENTS.md` ou o documento de domínio correspondente.

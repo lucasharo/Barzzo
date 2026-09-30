@@ -1,0 +1,9 @@
+---
+description: Contrato universal do projeto Barzzo
+alwaysApply: true
+---
+
+Leia e obedeça @AGENTS.md antes de analisar ou modificar o projeto.
+
+Use @STATUS.md para identificar o estado atual.
+Não duplique regras universais nesta rule; mantenha a fonte de verdade em @AGENTS.md.
