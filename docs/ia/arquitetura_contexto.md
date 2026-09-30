@@ -7,25 +7,37 @@ Permitir que diferentes IAs trabalhem no mesmo projeto sem depender de memória 
 ## Modelo
 
 ```text
-                 AGENTS.md
-                    |
-      +-------------+-------------+
-      |             |             |
-  GEMINI.md     CLAUDE.md     Copilot/Cursor
-      |             |             |
-      +-------------+-------------+
-                    |
-       REGRAS_GERAIS / AGENTES
-          WORKFLOW / STATUS
-                    |
-           docs + tarefas
-                    |
-      código + migrations + testes
+Git remoto
+    |
+    | git fetch + comparação/diff
+    | somente se houver atualização e for seguro
+    v
+git pull --ff-only
+    |
+    v
+ARQUIVOS LOCAIS ATUAIS
+    |
+    +--> AGENTS.md
+    +--> STATUS.md
+    +--> docs/ e tarefas/
+    +--> apps/ e packages/
+    +--> supabase/ e testes
+    |
+    v
+IA trabalha a partir daqui
+    |
+    +--> Codex/OpenAI
+    +--> Gemini
+    +--> Claude
+    +--> Cursor
+    +--> GitHub Copilot
 ```
 
 ## Fonte central
 
 `AGENTS.md` é o contrato operacional universal.
+
+Os arquivos locais atuais são a fonte de verdade operacional durante o trabalho. O estado real de um ambiente externo é consultado quando a tarefa exigir. O Git não é memória operacional: é usado para sincronização, versionamento, histórico, colaboração e recuperação de mudanças.
 
 Os arquivos específicos de fornecedor são adaptadores. Eles não devem conter regras de negócio ou arquitetura próprias.
 
@@ -83,6 +95,20 @@ O que não deve persistir como verdade:
 - hipótese rejeitada;
 - tentativa que falhou;
 - conclusão baseada apenas na conversa.
+
+## Sincronização e contexto entre sessões
+
+Ao iniciar ou retomar uma sessão, o agente deve:
+
+1. confirmar o repositório, executar `git status` e confirmar a branch;
+2. executar `git fetch origin` e comparar o estado local com o remoto;
+3. não executar `pull` se não houver atualização remota;
+4. executar `git pull --ff-only` somente quando houver atualização e não houver risco ao trabalho local;
+5. interromper e informar o usuário diante de alterações locais, divergência ou conflito que impeça o fast-forward;
+6. depois da sincronização, trabalhar sobre os arquivos locais;
+7. ler `AGENTS.md`, `STATUS.md` e os arquivos relevantes da tarefa.
+
+O histórico Git pode ser consultado para uma investigação histórica específica, mas não deve ser usado por padrão para reconstruir contexto.
 
 ## Regra de segurança operacional
 

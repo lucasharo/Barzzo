@@ -6,7 +6,7 @@ SaaS + marketplace para barbearias.
 
 A entrada universal do projeto é [AGENTS.md](AGENTS.md).
 
-Qualquer IA deve começar por ele e reconstruir o contexto a partir do repositório, não da memória da conversa.
+Qualquer IA deve começar por ele e reconstruir o contexto a partir dos arquivos locais atuais, não da memória da conversa.
 
 Adaptadores disponíveis:
 
@@ -18,6 +18,8 @@ Adaptadores disponíveis:
 - outras IAs: [PROMPT_INICIAL_IA.md](PROMPT_INICIAL_IA.md).
 
 A arquitetura de contexto está documentada em [docs/ia/arquitetura_contexto.md](docs/ia/arquitetura_contexto.md).
+
+Os arquivos locais são a fonte de verdade operacional. Ao iniciar uma sessão, o agente verifica a sincronização com `git fetch` e comparação local/remoto, executando `git pull --ff-only` somente se houver atualização remota e for seguro. Depois disso, trabalha localmente. O Git é usado para sincronização, versionamento, histórico, colaboração e recuperação de mudanças; não é a memória operacional do projeto.
 
 Depois do contrato universal, siga [REGRAS_GERAIS.md](REGRAS_GERAIS.md), [AGENTES.md](AGENTES.md), [WORKFLOW.md](WORKFLOW.md) e [STATUS.md](STATUS.md).
 

@@ -4,25 +4,28 @@ Este arquivo é a **porta de entrada oficial para qualquer IA ou agente de desen
 
 As regras permanentes do projeto não pertencem a Gemini, Claude, Codex, Copilot, Cursor ou qualquer outro fornecedor. Arquivos específicos de ferramenta devem apenas adaptar o agente a este contrato e **nunca duplicar regras de negócio ou arquitetura**.
 
-## 1. Fonte de verdade
+## 1. Fonte de verdade operacional
 
-Não use memória de conversa como fonte principal.
+Não use memória de conversa como fonte de verdade.
 
-A fonte de verdade do Barzzo é, nesta ordem de responsabilidade:
+Durante o trabalho, os **arquivos locais atuais** são a fonte de verdade operacional da IA. Isso inclui código, migrations, testes, documentação, tarefas, `AGENTS.md` e `STATUS.md`.
 
-1. código versionado;
-2. migrations versionadas;
-3. testes versionados;
-4. documentação versionada;
-5. `STATUS.md`;
-6. issues e histórico Git.
+A hierarquia operacional é:
+
+1. arquivos locais atuais;
+2. estado real do ambiente externo quando a tarefa exigir verificação, como a introspecção do Supabase;
+3. Git como mecanismo de sincronização, versionamento, histórico, colaboração e recuperação de mudanças.
+
+O Git não é a memória operacional do projeto. Depois que a sincronização inicial for verificada, trabalhe a partir dos arquivos locais e não consulte continuamente o Git remoto para reconstruir contexto.
+
+O histórico Git pode ser consultado quando houver necessidade específica de investigar uma alteração passada, autoria, regressão ou decisão histórica. Ele não substitui a leitura dos arquivos locais atuais.
 
 Para o estado de um ambiente já implantado:
 - migrations representam o estado **reproduzível/intencional** do schema;
 - introspecção do Supabase representa o estado **real atual** do ambiente;
 - se houver divergência, trate como drift e investigue antes de alterar qualquer coisa.
 
-Nunca transforme uma lembrança da conversa em fato quando o repositório ou o ambiente puderem ser consultados.
+Nunca transforme uma lembrança da conversa em fato quando os arquivos locais ou o ambiente puderem ser consultados.
 
 ## 2. Leitura obrigatória ao iniciar ou retomar trabalho
 
@@ -204,6 +207,24 @@ Fluxo oficial:
 
 Não trate `main` como branch de desenvolvimento.
 Não promova para `main` sem solicitação explícita de produção.
+
+### Sincronização ao iniciar ou retomar uma sessão
+
+Antes de continuar o trabalho:
+
+1. confirme que está no repositório Barzzo;
+2. execute `git status` e verifique se há alterações locais;
+3. confirme a branch atual; para desenvolvimento normal, espere `feature/init`, salvo instrução explícita diferente do usuário;
+4. nunca mude automaticamente para `release/*` ou `main`;
+5. execute `git fetch origin` para atualizar apenas as referências remotas;
+6. compare o estado local com o remoto, por exemplo `git diff HEAD..origin/feature/init`;
+7. se não houver alterações remotas, não execute `pull` e continue usando os arquivos locais;
+8. se houver alterações remotas, verifique primeiro se há alterações locais não commitadas e nunca descarte, sobrescreva ou esconda trabalho local automaticamente;
+9. se for seguro atualizar, execute somente `git pull --ff-only`;
+10. se houver divergência, conflito ou impossibilidade de fast-forward, não faça merge, rebase, reset, checkout, restore ou stash automático: informe o usuário e aguarde decisão;
+11. após um pull bem-sucedido, trate os novos arquivos locais como fonte operacional e releia `AGENTS.md`, `STATUS.md` e os arquivos relevantes da tarefa.
+
+É proibido usar o Git remoto ou o histórico Git como substituto da leitura dos arquivos locais atuais.
 
 Commits:
 - `feat:`
