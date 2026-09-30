@@ -395,7 +395,7 @@ function ConteudoWizardReservaCliente() {
       const supabase = criarClienteSupabaseBrowser();
 
       // 1. Buscar cupom
-      let { data: cupDb } = await (supabase.from("cupons") as any)
+      const { data: cupDb } = await (supabase.from("cupons") as any)
         .select("*")
         .eq("barbearia_id", barbearia.id)
         .ilike("codigo", codigoLimpo)

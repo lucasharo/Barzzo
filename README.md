@@ -25,6 +25,18 @@ O RAG local para agentes está documentado em [docs/ia/rag.md](docs/ia/rag.md). 
 
 Depois do contrato universal, siga [REGRAS_GERAIS.md](REGRAS_GERAIS.md), [AGENTES.md](AGENTES.md), [WORKFLOW.md](WORKFLOW.md) e [STATUS.md](STATUS.md).
 
+## Verificações técnicas
+
+O lint é compartilhado pela configuração da raiz em `.eslintrc.cjs`. Os apps Next usam apenas um adaptador mínimo para `next/core-web-vitals`; Cliente, Parceiro e `packages/*` usam a mesma base ESLint/TypeScript.
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+```
+
+O lint retorna falha para erros reais. Warnings de `any` explícito e símbolos não usados permanecem visíveis, mas não bloqueiam o comando enquanto a dívida técnica existente é tratada em tarefas próprias.
+
 ## Stack definida
 
 - Next.js + React + TypeScript
