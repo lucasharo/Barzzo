@@ -1,5 +1,7 @@
 # Plano Técnico — TASK-08: Campanhas, Cupons e Influenciadores
 
+> **Histórico superseded pela TASK-11:** a atribuição por `ref`, o vínculo principal em `influenciadores.cupom_padrao_id`, o cálculo sobre o total e a consulta de configuração atual na conclusão foram substituídos. A migration desta task não será editada; a evolução ocorre em migration incremental.
+
 **Líder Técnico**: Agente Líder Técnico  
 **Data**: 25/09/2026  
 **Status**: Aprovado para Implementação  

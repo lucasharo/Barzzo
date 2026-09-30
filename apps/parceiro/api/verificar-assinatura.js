@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ativada: true, status: 'ativo', sincronizado: true, plano_id });
     }
 
-    return res.status(200).json({ ativada: false, status: barbearia?.status_assinatura || 'pendente' });
+    return res.status(200).json({ ativada: false, status: ultimaAssinatura?.status || 'pendente' });
   } catch (err) {
     return res.status(500).json({ error: err.message || 'Erro ao verificar assinatura' });
   }

@@ -43,6 +43,7 @@ export default function PaginaFormularioCampanha() {
 
   const [barbeariaId, setBarbeariaId] = React.useState<string | null>(null);
   const [servicosDisponiveis, setServicosDisponiveis] = React.useState<Servico[]>([]);
+  const [influenciadoresDisponiveis, setInfluenciadoresDisponiveis] = React.useState<Array<{ id: string; nome: string }>>([]);
 
   // Campos do formulário
   const [codigo, setCodigo] = React.useState("");
@@ -59,6 +60,14 @@ export default function PaginaFormularioCampanha() {
   );
   const [servicosSelecionados, setServicosSelecionados] = React.useState<string[]>([]);
   const [ativo, setAtivo] = React.useState(true);
+  const [origemCupom, setOrigemCupom] = React.useState<"BARBEARIA" | "INFLUENCIADOR" | "BARZZO_GLOBAL">("BARBEARIA");
+  const [influenciadorId, setInfluenciadorId] = React.useState("");
+  const [escopoHistorico, setEscopoHistorico] = React.useState<"BARBEARIA" | "GLOBAL_BARZZO">("BARBEARIA");
+  const [minAtendimentos, setMinAtendimentos] = React.useState("");
+  const [maxAtendimentos, setMaxAtendimentos] = React.useState("");
+  const [faixaSeguinteAtiva, setFaixaSeguinteAtiva] = React.useState(false);
+  const [tipoDescontoSeguinte, setTipoDescontoSeguinte] = React.useState<"percentual" | "valor_fixo">("percentual");
+  const [valorDescontoSeguinte, setValorDescontoSeguinte] = React.useState("");
 
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
@@ -103,6 +112,12 @@ export default function PaginaFormularioCampanha() {
         .order("nome", { ascending: true });
 
       setServicosDisponiveis((sDb || []) as Servico[]);
+      const { data: infDb } = await (supabase.from("influenciadores") as any)
+        .select("id, nome")
+        .eq("barbearia_id", membro.barbearia_id)
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+      setInfluenciadoresDisponiveis(infDb || []);
 
       // Se for edição, carregar dados do cupom
       if (!isNovo) {
@@ -130,6 +145,23 @@ export default function PaginaFormularioCampanha() {
         setDataFim(new Date(cupom.data_fim).toISOString().split("T")[0]);
         setServicosSelecionados(cupom.servicos_elegiveis || []);
         setAtivo(cupom.ativo);
+        setOrigemCupom(cupom.origem || "BARBEARIA");
+        setInfluenciadorId(cupom.influenciador_id || "");
+        const { data: regrasDb } = await (supabase.from("cupons_regras") as any)
+          .select("*")
+          .eq("cupom_id", cupom.id)
+          .order("prioridade", { ascending: true });
+        const regraDb = regrasDb?.[0];
+        if (regraDb) {
+          setEscopoHistorico(regraDb.escopo_historico || "BARBEARIA");
+          setMinAtendimentos(regraDb.atendimentos_minimos === null ? "" : String(regraDb.atendimentos_minimos));
+          setMaxAtendimentos(regraDb.atendimentos_maximos === null ? "" : String(regraDb.atendimentos_maximos));
+        }
+        if (regrasDb?.[1]) {
+          setFaixaSeguinteAtiva(true);
+          setTipoDescontoSeguinte(regrasDb[1].tipo_desconto || "percentual");
+          setValorDescontoSeguinte(String(regrasDb[1].valor_desconto));
+        }
       }
     } catch {
       setErro("Falha ao inicializar formulário de cupom.");
@@ -161,6 +193,41 @@ export default function PaginaFormularioCampanha() {
       const valorMinimoNum = parseFloat(valorMinimo.replace(",", ".")) || 0;
       const limiteTotalNum = limiteTotal ? parseInt(limiteTotal) : null;
       const limiteClienteNum = parseInt(limitePorCliente) || 1;
+      const regra = {
+        prioridade: 100,
+        escopo_historico: escopoHistorico,
+        atendimentos_minimos: apenasPrimeiraReserva ? 0 : (minAtendimentos ? parseInt(minAtendimentos) : null),
+        atendimentos_maximos: apenasPrimeiraReserva ? 0 : (maxAtendimentos ? parseInt(maxAtendimentos) : null),
+        tipo_desconto: tipoDesconto,
+        valor_desconto: valorDescontoNum,
+        valor_minimo_reserva: valorMinimoNum,
+        limite_usos_total: limiteTotalNum,
+        limite_usos_por_cliente: limitePorCliente.trim() ? limiteClienteNum : null,
+        servicos_elegiveis: servicosSelecionados,
+        ativo,
+      };
+      const regras = [regra];
+      if (faixaSeguinteAtiva) {
+        const valorSeguinte = parseFloat(valorDescontoSeguinte.replace(",", "."));
+        if (!valorSeguinte || valorSeguinte <= 0) {
+          setErro("Informe o desconto da faixa para atendimentos seguintes.");
+          setSalvando(false);
+          return;
+        }
+        regras.push({
+          prioridade: 200,
+          escopo_historico: escopoHistorico,
+          atendimentos_minimos: 1,
+          atendimentos_maximos: null,
+          tipo_desconto: tipoDescontoSeguinte,
+          valor_desconto: valorSeguinte,
+          valor_minimo_reserva: valorMinimoNum,
+          limite_usos_total: limiteTotalNum,
+          limite_usos_por_cliente: null,
+          servicos_elegiveis: servicosSelecionados,
+          ativo,
+        });
+      }
 
       const dadosValidados = esquemaCupom.safeParse({
         codigo: codigo.trim().toUpperCase(),
@@ -175,6 +242,9 @@ export default function PaginaFormularioCampanha() {
         data_inicio: new Date(`${dataInicio}T00:00:00.000Z`).toISOString(),
         data_fim: new Date(`${dataFim}T23:59:59.999Z`).toISOString(),
         ativo,
+        origem: origemCupom,
+        influenciador_id: origemCupom === "INFLUENCIADOR" ? (influenciadorId || null) : null,
+        regras,
       });
 
       if (!dadosValidados.success) {
@@ -198,11 +268,14 @@ export default function PaginaFormularioCampanha() {
         data_inicio: dadosValidados.data.data_inicio,
         data_fim: dadosValidados.data.data_fim,
         ativo: dadosValidados.data.ativo,
+        origem: dadosValidados.data.origem,
+        influenciador_id: dadosValidados.data.influenciador_id,
         updated_at: new Date().toISOString(),
       };
 
+      let cupomSalvoId = id;
       if (isNovo) {
-        const { error: erroInsert } = await (supabase.from("cupons") as any).insert(payload);
+        const { data: novoCupom, error: erroInsert } = await (supabase.from("cupons") as any).insert(payload).select("id").single();
         if (erroInsert) {
           if (erroInsert.message.includes("cupons_codigo_barbearia_unique")) {
             setErro("Já existe um cupom com este código nesta barbearia.");
@@ -212,6 +285,7 @@ export default function PaginaFormularioCampanha() {
           setSalvando(false);
           return;
         }
+        cupomSalvoId = novoCupom.id;
       } else {
         const { error: erroUpdate } = await (supabase.from("cupons") as any)
           .update(payload)
@@ -223,6 +297,21 @@ export default function PaginaFormularioCampanha() {
           setSalvando(false);
           return;
         }
+      }
+
+      const regraPayloads = (dadosValidados.data.regras || regras).map((item, indice) => ({
+        ...item,
+        cupom_id: cupomSalvoId,
+        prioridade: item.prioridade ?? (indice + 1) * 100,
+      }));
+      if (!isNovo) {
+        await (supabase.from("cupons_regras") as any).delete().eq("cupom_id", cupomSalvoId);
+      }
+      const { error: erroRegra } = await (supabase.from("cupons_regras") as any).insert(regraPayloads);
+      if (erroRegra) {
+        setErro(traduzirErro(erroRegra, "Cupom salvo, mas não foi possível salvar a regra de desconto."));
+        setSalvando(false);
+        return;
       }
 
       setSucesso("Cupom salvo com sucesso!");
@@ -435,6 +524,27 @@ export default function PaginaFormularioCampanha() {
             </div>
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="origemCupom" className="block text-sm font-semibold mb-1.5">Origem do cupom</Label>
+              <select id="origemCupom" value={origemCupom} onChange={(e) => setOrigemCupom(e.target.value as typeof origemCupom)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
+                <option value="BARBEARIA">Barbearia</option>
+                <option value="INFLUENCIADOR">Influenciador</option>
+                <option value="BARZZO_GLOBAL">Global Barzzo</option>
+              </select>
+            </div>
+            {origemCupom === "INFLUENCIADOR" && (
+              <div>
+                <Label htmlFor="influenciadorId" className="block text-sm font-semibold mb-1.5">Influenciador associado</Label>
+                <select id="influenciadorId" value={influenciadorId} onChange={(e) => setInfluenciadorId(e.target.value)} required className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
+                  <option value="">Selecione um influencer</option>
+                  {influenciadoresDisponiveis.map((influenciador) => <option key={influenciador.id} value={influenciador.id}>{influenciador.nome}</option>)}
+                </select>
+                <span className="text-[11px] opacity-60 mt-1 block">Este cupom identifica o influencer; não é necessário usar ref.</span>
+              </div>
+            )}
+          </div>
+
           {/* Valor Mínimo e Limites */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
@@ -560,6 +670,23 @@ export default function PaginaFormularioCampanha() {
           </div>
 
           {/* Checkboxes de Regras */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="escopoHistorico" className="block text-sm font-semibold mb-1.5">Histórico considerado</Label>
+              <select id="escopoHistorico" value={escopoHistorico} onChange={(e) => setEscopoHistorico(e.target.value as typeof escopoHistorico)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
+                <option value="BARBEARIA">Nesta barbearia</option>
+                <option value="GLOBAL_BARZZO">Em todo o Barzzo</option>
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="minAtendimentos" className="block text-sm font-semibold mb-1.5">Atendimentos mínimos</Label>
+              <Input id="minAtendimentos" type="number" min="0" value={minAtendimentos} onChange={(e) => setMinAtendimentos(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <Label htmlFor="maxAtendimentos" className="block text-sm font-semibold mb-1.5">Atendimentos máximos</Label>
+              <Input id="maxAtendimentos" type="number" min="0" value={maxAtendimentos} onChange={(e) => setMaxAtendimentos(e.target.value)} placeholder="Ilimitado" />
+            </div>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <label className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
               <input
@@ -589,6 +716,29 @@ export default function PaginaFormularioCampanha() {
                 <span className="text-xs opacity-60">Disponível para validação e resgate</span>
               </div>
             </label>
+          </div>
+
+          <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+            <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
+              <input type="checkbox" checked={faixaSeguinteAtiva} onChange={(e) => setFaixaSeguinteAtiva(e.target.checked)} className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]" />
+              <span className="text-sm font-bold">Criar faixa para atendimentos seguintes</span>
+            </label>
+            {faixaSeguinteAtiva && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="tipoDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Tipo da faixa seguinte</Label>
+                  <select id="tipoDescontoSeguinte" value={tipoDescontoSeguinte} onChange={(e) => setTipoDescontoSeguinte(e.target.value as typeof tipoDescontoSeguinte)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
+                    <option value="percentual">Percentual (%)</option>
+                    <option value="valor_fixo">Fixo em Reais (R$)</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="valorDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Desconto após a primeira faixa</Label>
+                  <Input id="valorDescontoSeguinte" type="number" min="0.01" step="0.01" value={valorDescontoSeguinte} onChange={(e) => setValorDescontoSeguinte(e.target.value)} placeholder={tipoDescontoSeguinte === "percentual" ? "5" : "8.00"} required />
+                </div>
+              </div>
+            )}
+            <p className="text-[11px] opacity-60">A prioridade e o histórico determinam a faixa aplicável; a regra é congelada na confirmação.</p>
           </div>
 
           {/* Ações */}

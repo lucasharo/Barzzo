@@ -1,9 +1,9 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: Nenhuma (MVP Completo)
-- Estado: MVP_PRONTO_PARA_HOMOLOGACAO
-- Próximo agente: Homologação / Produção
+- Task ativa: 11 — Revisão de cupons, atribuição e comissões
+- Estado: AGUARDANDO_ACEITE_PO
+- Próximo agente: PO final / QA remoto
 - Bloqueios: nenhum
 
 | Task | Issue | Nome | Estado |
@@ -19,5 +19,6 @@
 | 09 | #9 | Notificações, dashboard e relatórios | CONCLUIDA |
 | 10 | #10 | Assinaturas, Admin e produção | CONCLUIDA |
 | HOTFIX-01 | #11 | Mercado Pago nas assinaturas | CONCLUIDA |
+| 11 | #12 | Revisão de cupons, atribuição e comissões | AGUARDANDO_ACEITE_PO |
 
 Atualizar em toda troca de gate. Nunca iniciar task posterior antes da anterior estar CONCLUIDA.

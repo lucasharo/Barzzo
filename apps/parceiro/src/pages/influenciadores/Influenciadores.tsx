@@ -26,6 +26,7 @@ import type {
   Influenciador,
   ComissaoInfluenciador,
   Barbearia,
+  Cupom,
 } from "@barzzo/tipos";
 import {
   Share2,
@@ -50,6 +51,7 @@ export default function PaginaInfluenciadoresParceiro() {
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
   const [influenciadores, setInfluenciadores] = React.useState<Influenciador[]>([]);
   const [comissoes, setComissoes] = React.useState<ComissaoInfluenciador[]>([]);
+  const [cupons, setCupons] = React.useState<Cupom[]>([]);
 
   // Modal Novo Influenciador
   const [modalAberto, setModalAberto] = React.useState(false);
@@ -133,6 +135,14 @@ export default function PaginaInfluenciadoresParceiro() {
       }
 
       setInfluenciadores((infDb || []) as Influenciador[]);
+
+      const { data: cuponsDb } = await (supabase.from("cupons") as any)
+        .select("*")
+        .eq("barbearia_id", bId)
+        .eq("ativo", true)
+        .eq("origem", "INFLUENCIADOR")
+        .order("created_at", { ascending: false });
+      setCupons((cuponsDb || []) as Cupom[]);
 
       // 2. Buscar comissões com join no influenciador
       const { data: comDb, error: erroCom } = await (supabase.from("comissoes_influenciadores") as any)
@@ -229,8 +239,13 @@ export default function PaginaInfluenciadoresParceiro() {
 
   function copiarLink(inf: Influenciador) {
     if (!barbearia) return;
+    const cupom = cupons.find((item) => item.influenciador_id === inf.id);
+    if (!cupom) {
+      setErro("Este influencer ainda não possui cupom ativo para divulgação. Crie um cupom associado antes de copiar o link.");
+      return;
+    }
     const origin = typeof window !== "undefined" ? window.location.origin : "https://barzzo.com.br";
-    const link = gerarLinkInfluenciador(origin, barbearia.slug, inf.codigo_ref);
+    const link = gerarLinkInfluenciador(origin, barbearia.slug, cupom.codigo);
 
     navigator.clipboard.writeText(link);
     setCopiadoId(inf.id);
@@ -298,7 +313,7 @@ export default function PaginaInfluenciadoresParceiro() {
             Influenciadores e Comissões
           </h1>
           <p className="text-sm opacity-70 mt-1">
-            Cadastre promotores locais, gere links rastreados e gerencie comissões por cortes concluídos
+            Cadastre promotores locais, associe cupons de benefício e gerencie comissões por atendimentos concluídos
           </p>
         </div>
 
@@ -397,7 +412,7 @@ export default function PaginaInfluenciadoresParceiro() {
                           {inf.nome}
                         </h3>
                         <span className="font-mono text-xs font-bold text-[#B45A2B]">
-                          CÓDIGO: {inf.codigo_ref}
+                          CUPOM: {cupons.find((cupom) => cupom.influenciador_id === inf.id)?.codigo || "Nenhum cupom ativo"}
                         </span>
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20">
@@ -435,7 +450,7 @@ export default function PaginaInfluenciadoresParceiro() {
 
                       <p className="flex items-center gap-1.5">
                         <MousePointerClick className="w-3.5 h-3.5 text-[#B45A2B]" />
-                        Cliques no link: {inf.cliques_rastreados}
+                        Divulgação por cupom; cliques legados: {inf.cliques_rastreados}
                       </p>
                     </div>
                   </div>
@@ -603,7 +618,7 @@ export default function PaginaInfluenciadoresParceiro() {
 
               <div>
                 <Label htmlFor="codigoInf" className="block text-sm font-semibold mb-1.5">
-                  Código de Rastreamento (Ref) <span className="text-[#DC2626]">*</span>
+                  Código interno do parceiro <span className="text-[#DC2626]">*</span>
                 </Label>
                 <Input
                   id="codigoInf"
@@ -614,7 +629,7 @@ export default function PaginaInfluenciadoresParceiro() {
                   required
                 />
                 <span className="text-[11px] opacity-60 mt-1 block">
-                  Identificador usado no link de indicação: ?ref=CODIGO
+                  O link público deve usar um cupom ativo associado a este influencer.
                 </span>
               </div>
 

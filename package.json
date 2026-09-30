@@ -14,9 +14,17 @@
     "build": "npm run build --workspaces --if-present",
     "test": "vitest run",
     "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "rag:index": "node tools/rag/cli.mjs index",
+    "rag:rebuild": "node tools/rag/cli.mjs rebuild",
+    "rag:query": "node tools/rag/cli.mjs query"
   },
   "devDependencies": {
+    "@huggingface/transformers": "3.8.1",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.18.0",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.3",
     "supabase": "^2.118.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"

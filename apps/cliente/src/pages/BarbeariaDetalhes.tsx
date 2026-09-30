@@ -51,7 +51,7 @@ function ConteudoPerfilPublicoBarbearia() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const refParam = searchParams.get("ref") || searchParams.get("cupom");
+  const cupomParam = searchParams.get("cupom");
 
   const [carregando, setCarregando] = React.useState(true);
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
@@ -109,19 +109,6 @@ function ConteudoPerfilPublicoBarbearia() {
       }
 
       setBarbearia(barb);
-
-      // Rastrear clique do influenciador e persistir atribuição
-      if (refParam && typeof window !== "undefined") {
-        try {
-          localStorage.setItem("@barzzo:atribuicao_influenciador", refParam.toUpperCase());
-          await (supabase.rpc as any)("registrar_clique_influenciador", {
-            p_barbearia_id: barb.id,
-            p_codigo_ref: refParam.toUpperCase(),
-          });
-        } catch {
-          // Silencioso
-        }
-      }
 
       // 2. Serviços ativos da barbearia
       const { data: sDb } = await (supabase.from("servicos") as any)
@@ -379,7 +366,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
         {/* CTA Principal de Agendamento */}
         <div className="flex flex-col sm:flex-row md:flex-col items-stretch gap-2.5 shrink-0">
-          <Link to={`/reservar/${barbearia.slug}`}>
+          <Link to={`/reservar/${barbearia.slug}${cupomParam ? `?cupom=${encodeURIComponent(cupomParam)}` : ""}`}>
             <Button variante="principal" tamanho="lg" className="w-full text-base font-bold shadow-md">
               <Calendar className="h-5 w-5 mr-2" /> Agendar Horário Agora
             </Button>
@@ -445,7 +432,7 @@ function ConteudoPerfilPublicoBarbearia() {
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servico.preco))}
                       </span>
 
-                      <Link to={`/reservar/${barbearia.slug}?servico_id=${servico.id}`}>
+                      <Link to={`/reservar/${barbearia.slug}?servico_id=${encodeURIComponent(servico.id)}${cupomParam ? `&cupom=${encodeURIComponent(cupomParam)}` : ""}`}>
                         <Button variante="principal" tamanho="sm">
                           Escolher
                         </Button>

@@ -1,5 +1,7 @@
 # Resultado da Implementação — TASK-08: Campanhas, Cupons e Influenciadores
 
+> **Registro histórico superseded pela TASK-11:** a implementação abaixo descreve o estado entregue pela Task 08. As regras comerciais atuais estão formalizadas na Task 11 e não devem ser inferidas deste relatório para novas reservas.
+
 **Desenvolvedor**: Agente Dev  
 **Data**: 25/09/2026  
 **Status**: Concluído para Revisão Técnica  

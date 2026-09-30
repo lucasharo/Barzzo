@@ -27,6 +27,9 @@ coverage/
 playwright-report/
 test-results/
 
+# índice local descartável para contexto de agentes
+.barzzo/rag/
+
 # sistema/editor
 .DS_Store
 .idea/

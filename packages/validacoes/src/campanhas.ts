@@ -58,6 +58,21 @@ export const esquemaCupom = z
     data_inicio: z.string().min(1, "Data de início é obrigatória."),
     data_fim: z.string().min(1, "Data de término é obrigatória."),
     ativo: z.boolean().default(true),
+    origem: z.enum(["BARBEARIA", "INFLUENCIADOR", "BARZZO_GLOBAL"]).default("BARBEARIA"),
+    influenciador_id: z.string().uuid("Influenciador inválido.").optional().nullable(),
+    regras: z.array(z.object({
+      prioridade: z.coerce.number().int().min(0).default(100),
+      escopo_historico: z.enum(["BARBEARIA", "GLOBAL_BARZZO"]).default("BARBEARIA"),
+      atendimentos_minimos: z.coerce.number().int().min(0).optional().nullable(),
+      atendimentos_maximos: z.coerce.number().int().min(0).optional().nullable(),
+      tipo_desconto: z.enum(["percentual", "valor_fixo"]),
+      valor_desconto: z.coerce.number().positive(),
+      valor_minimo_reserva: z.coerce.number().min(0).default(0),
+      limite_usos_total: z.coerce.number().int().positive().optional().nullable(),
+      limite_usos_por_cliente: z.coerce.number().int().positive().optional().nullable(),
+      servicos_elegiveis: z.array(z.string().uuid()).default([]),
+      ativo: z.boolean().default(true),
+    })).optional(),
   })
   .refine(
     (dados) => {

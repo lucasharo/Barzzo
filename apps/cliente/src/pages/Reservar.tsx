@@ -57,6 +57,7 @@ function ConteudoWizardReservaCliente() {
   const [searchParams] = useSearchParams();
   const slug = params.slug as string;
   const servicoIdUrl = searchParams.get("servico_id");
+  const cupomParamUrl = searchParams.get("cupom");
 
   const [carregando, setCarregando] = React.useState(true);
   const [salvando, setSalvando] = React.useState(false);
@@ -85,7 +86,7 @@ function ConteudoWizardReservaCliente() {
   });
   const [slotSelecionado, setSlotSelecionado] = React.useState<string | null>(null);
   const [observacoes, setObservacoes] = React.useState("");
-  const [codigoCupom, setCodigoCupom] = React.useState("");
+  const [codigoCupom, setCodigoCupom] = React.useState(cupomParamUrl?.toUpperCase() || "");
   const [cupomAplicado, setCupomAplicado] = React.useState<Cupom | null>(null);
   const [descontoCalculado, setDescontoCalculado] = React.useState<number>(0);
   const [validandoCupom, setValidandoCupom] = React.useState<boolean>(false);
@@ -101,18 +102,18 @@ function ConteudoWizardReservaCliente() {
     carregarDadosIniciais();
   }, [slug]);
 
+  React.useEffect(() => {
+    if (cupomParamUrl && barbearia && servicoSelecionado && !cupomAplicado && !validandoCupom) {
+      void aplicarValidarCupom();
+    }
+  }, [cupomParamUrl, barbearia, servicoSelecionado]);
+
   async function carregarDadosIniciais() {
     try {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
 
-      // Recuperar código de influenciador/cupom do localStorage se presente
-      if (typeof window !== "undefined") {
-        const refArmazenada = localStorage.getItem("@barzzo:atribuicao_influenciador");
-        if (refArmazenada && !codigoCupom) {
-          setCodigoCupom(refArmazenada);
-        }
-      }
+      if (cupomParamUrl) setCodigoCupom(cupomParamUrl.trim().toUpperCase());
 
       // Verificar sessão (pode ser anônimo!)
       const {
@@ -394,26 +395,12 @@ function ConteudoWizardReservaCliente() {
       const supabase = criarClienteSupabaseBrowser();
 
       // 1. Buscar cupom
-      let { data: cupDb } = await (supabase.from("cupons") as any)
+      const { data: cupDb } = await (supabase.from("cupons") as any)
         .select("*")
         .eq("barbearia_id", barbearia.id)
         .ilike("codigo", codigoLimpo)
         .eq("ativo", true)
         .maybeSingle();
-
-      // Se não encontrou como cupom direto, buscar se é código de influenciador com cupom padrão
-      if (!cupDb) {
-        const { data: infDb } = await (supabase.from("influenciadores") as any)
-          .select("*, cupons(*)")
-          .eq("barbearia_id", barbearia.id)
-          .ilike("codigo_ref", codigoLimpo)
-          .eq("ativo", true)
-          .maybeSingle();
-
-        if (infDb?.cupons) {
-          cupDb = infDb.cupons;
-        }
-      }
 
       if (!cupDb) {
         setCupomAplicado(null);
@@ -422,8 +409,16 @@ function ConteudoWizardReservaCliente() {
         return;
       }
 
-      // 2. Verificar histórico de agendamentos anteriores do cliente se logado
+      const { data: regrasDb } = await (supabase.from("cupons_regras") as any)
+        .select("*")
+        .eq("cupom_id", cupDb.id)
+        .eq("ativo", true)
+        .order("prioridade", { ascending: true });
+      cupDb.regras = regrasDb || [];
+
+      // Verificar histórico local para o preview; a RPC revalida tudo na confirmação.
       let totalConcluidos = 0;
+      let totalConcluidosGlobal = 0;
       if (usuarioId) {
         const { count } = await (supabase.from("agendamentos") as any)
           .select("id", { count: "exact", head: true })
@@ -431,6 +426,11 @@ function ConteudoWizardReservaCliente() {
           .eq("cliente_id", usuarioId)
           .eq("status", "concluido");
         totalConcluidos = count || 0;
+        const { count: countGlobal } = await (supabase.from("agendamentos") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("cliente_id", usuarioId)
+          .eq("status", "concluido");
+        totalConcluidosGlobal = countGlobal || 0;
       }
 
       // 3. Executar cálculo de domínio
@@ -438,7 +438,9 @@ function ConteudoWizardReservaCliente() {
         cupom: cupDb as Cupom,
         valorTotal: Number(servicoSelecionado.preco),
         servicosIds: [servicoSelecionado.id],
+        servicos: [{ id: servicoSelecionado.id, preco: Number(servicoSelecionado.preco) }],
         totalAgendamentosConcluidosCliente: totalConcluidos,
+        historicoPorEscopo: { barbearia: totalConcluidos, global: totalConcluidosGlobal },
       });
 
       if (!resultado.valido) {
@@ -632,41 +634,27 @@ function ConteudoWizardReservaCliente() {
         duracao_minutos: servicoSelecionado.duracao_minutos,
       });
 
-      // 3. Atualizar usos do cupom se aplicado
-      if (cupomAplicado) {
-        await (supabase.from("cupons") as any)
-          .update({ usos_atuais: cupomAplicado.usos_atuais + 1 })
-          .eq("id", cupomAplicado.id);
-      }
-
-      // 4. Se houver código de influenciador ou cupom com influenciador, registrar indicação
-      const codigoRef = codigoCupom.trim().toUpperCase();
-      if (codigoRef) {
-        const { data: infDb } = await (supabase.from("influenciadores") as any)
-          .select("id")
-          .eq("barbearia_id", barbearia.id)
-          .ilike("codigo_ref", codigoRef)
-          .eq("ativo", true)
-          .maybeSingle();
-
-        if (infDb) {
-          await (supabase.from("indicacoes") as any).insert({
-            barbearia_id: barbearia.id,
-            influenciador_id: infDb.id,
-            cupom_id: cupomAplicado?.id || null,
-            agendamento_id: novoAgendamento.id,
-            cliente_id: usuarioId,
-            codigo_ref_usado: codigoRef,
-            status: "pendente",
+      // A confirmação do cupom, do snapshot e dos limites ocorre atomicamente no banco.
+      if (codigoCupom.trim()) {
+        const { error: erroCupom } = await (supabase.rpc as any)("registrar_uso_cupom", {
+          p_barbearia_id: barbearia.id,
+          p_cupom_id: cupomAplicado?.id || null,
+          p_agendamento_id: novoAgendamento.id,
+          p_cliente_id: usuarioId,
+          p_codigo: codigoCupom.trim().toUpperCase(),
+          p_influenciador_id: null,
+        });
+        if (erroCupom) {
+          await (supabase.rpc as any)("atualizar_status_agendamento", {
+            p_agendamento_id: novoAgendamento.id,
+            p_novo_status: "cancelado",
           });
+          setErro(erroCupom.message || "Não foi possível aplicar o cupom nesta reserva.");
+          return;
         }
       }
 
       limparRascunhoReserva();
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("@barzzo:atribuicao_influenciador");
-      }
-
       navigate(`/agendamentos/${novoAgendamento.id}?sucesso=true`);
     } catch {
       setErro("Erro inesperado ao confirmar reserva.");
