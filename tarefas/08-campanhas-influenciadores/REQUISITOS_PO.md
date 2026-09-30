@@ -1,5 +1,7 @@
 # Requisitos de Produto — TASK-08: Campanhas, Cupons e Influenciadores
 
+> **Histórico superseded pela TASK-11:** este documento preserva os requisitos aprovados originalmente. Para novas reservas, a atribuição comercial vem exclusivamente do cupom aplicado, sem dependência de `ref` ou persistência entre agendamentos.
+
 **Product Owner (PO)**: Agente PO  
 **Data**: 25/09/2026  
 **Status**: Aprovado para o Líder Técnico  

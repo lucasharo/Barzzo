@@ -1122,7 +1122,7 @@ function calcularValorComissaoTest(valorServicos, tipoComissao, taxaComissao) {
 
 function gerarLinkInfluenciadorTest(urlBase, slugBarbearia, codigoRef) {
   const baseLimpa = urlBase.replace(/\/+$/, "");
-  return `${baseLimpa}/barbearias/${slugBarbearia}?ref=${encodeURIComponent(codigoRef)}`;
+  return `${baseLimpa}/barbearias/${slugBarbearia}?cupom=${encodeURIComponent(codigoRef)}`;
 }
 
 test("Task 08: Validação Zod de Cupons e Formatação de Código", () => {
@@ -1202,7 +1202,7 @@ test("Task 08: Cálculo de comissão de influenciadores e link de atribuição",
 
   // Link de rastreamento com ref
   const link = gerarLinkInfluenciadorTest("https://barzzo.com.br", "barbearia-vintage", "PEDROVIP");
-  expect(link).toBe("https://barzzo.com.br/barbearias/barbearia-vintage?ref=PEDROVIP");
+  expect(link).toBe("https://barzzo.com.br/barbearias/barbearia-vintage?cupom=PEDROVIP");
 });
 
 test("Migration Task 08: Tabelas de campanhas, cupons, influenciadores, comissões e RPC de idempotência", () => {
@@ -1216,6 +1216,20 @@ test("Migration Task 08: Tabelas de campanhas, cupons, influenciadores, comissõ
   expect(sqlTask08).toContain("comissoes_agendamento_unique UNIQUE (agendamento_id)");
   expect(sqlTask08).toContain("CREATE OR REPLACE FUNCTION public.processar_comissao_conclusao_atendimento");
   expect(sqlTask08).toContain("ON CONFLICT (agendamento_id) DO NOTHING");
+});
+
+test("Migration Task 11: regras, utilizações, snapshots, RLS e processamento por snapshot", () => {
+  const caminhoSqlTask11 = path.resolve(raiz, "supabase/migrations/20260930135753_revisao_cupons_influenciadores.sql");
+  const sqlTask11 = fs.readFileSync(caminhoSqlTask11, "utf-8");
+  expect(sqlTask11).toContain("CREATE TABLE IF NOT EXISTS public.cupons_regras");
+  expect(sqlTask11).toContain("CREATE TABLE IF NOT EXISTS public.cupons_utilizacoes");
+  expect(sqlTask11).toContain("influenciador_id UUID REFERENCES public.influenciadores");
+  expect(sqlTask11).toContain("idx_indicacoes_agendamento_unico");
+  expect(sqlTask11).toContain("trigger_proteger_snapshot_comercial");
+  expect(sqlTask11).toContain("trigger_comissao_agendamento_concluido");
+  expect(sqlTask11).toContain("status IN ('reservado', 'consumido', 'liberado', 'cancelado')");
+  expect(sqlTask11).toContain("v_agendamento.tipo_comissao_snapshot");
+  expect(sqlTask11).toContain("REVOKE EXECUTE ON FUNCTION public.registrar_uso_cupom");
 });
 
 // --- 10. Testes de Notificações, Dashboard e Relatórios (Task 09) ---
@@ -1499,6 +1513,12 @@ fs.writeFileSync(
 
 fs.writeFileSync(
   path.resolve(raiz, "tarefas/10-assinaturas-admin-producao/test-results.json"),
+  JSON.stringify(resultadoGeral, null, 2),
+  "utf-8"
+);
+
+fs.writeFileSync(
+  path.resolve(raiz, "tarefas/11-revisao-cupons-influenciadores/test-results.json"),
   JSON.stringify(resultadoGeral, null, 2),
   "utf-8"
 );

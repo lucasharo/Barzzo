@@ -317,7 +317,6 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       // Se houver cupom/influenciador utilizado, registrar uso atomicamente via RPC
       if (codigoCupomLimpo) {
         let cupomId: string | null = null;
-        let infId: string | null = null;
 
         const { data: cupDb } = await (supabase.from("cupons") as any)
           .select("id")
@@ -329,32 +328,19 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           cupomId = cupDb.id;
         }
 
-        const { data: infDb } = await (supabase.from("influenciadores") as any)
-          .select("id")
-          .eq("barbearia_id", draft.barbearia_id)
-          .ilike("codigo_ref", codigoCupomLimpo)
-          .eq("ativo", true)
-          .maybeSingle();
-
-        if (infDb) {
-          infId = infDb.id;
-        }
-
-        await supabase.rpc("registrar_uso_cupom", {
+        const { error: erroUsoCupom } = await supabase.rpc("registrar_uso_cupom", {
           p_barbearia_id: draft.barbearia_id,
           p_cupom_id: cupomId,
           p_agendamento_id: novoAgendamento.id,
           p_cliente_id: authUserId,
           p_codigo: codigoCupomLimpo,
-          p_influenciador_id: infId,
+          p_influenciador_id: null,
         });
+        if (erroUsoCupom) throw erroUsoCupom;
       }
 
       // Limpar rascunho persistido e atribuição
       limparRascunhoReserva();
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("@barzzo:atribuicao_influenciador");
-      }
       setAgendamentoIdCriado(novoAgendamento.id);
       setConcluido(true);
     } catch {

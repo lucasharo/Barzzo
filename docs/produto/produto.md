@@ -16,7 +16,14 @@ Dashboard, agenda, clientes, profissionais, serviços, horários, bloqueios, pro
 Própria agenda, atendimentos, clientes necessários, disponibilidade, perfil e indicadores próprios.
 
 ## Influenciador
-Código/link, campanhas, cliques quando rastreáveis, reservas, concluídos, comissão pendente/paga.
+Cupons associados, campanhas, reservas atribuídas, concluídos, comissão pendente/paga. Links novos divulgam diretamente `?cupom=CODIGO`; `ref` é apenas compatibilidade de navegação e não cria atribuição.
+
+## Cupons e atribuição comercial
+- O cupom aplicado na reserva é a única fonte de atribuição comercial.
+- Cada reserva tem no máximo um cupom. Um novo cupom substitui o anterior.
+- O cupom é reaplicado em cada agendamento e não é herdado de reservas anteriores.
+- Cupons podem possuir múltiplas regras/faixas, com prioridade, histórico por barbearia ou global Barzzo, serviços elegíveis, valor mínimo, limites e desconto percentual/fixo.
+- O agendamento congela o snapshot comercial no momento da confirmação; comissão percentual usa o líquido e comissão fixa usa o valor congelado.
 
 ## Admin
 Barbearias, usuários, trials, assinaturas, agendamentos, influenciadores, moderação e logs.
@@ -49,6 +56,10 @@ Geral e por profissional: atendimentos, faturamento estimado, ticket médio, ocu
 
 ## Dentro do MVP
 Auth, barbearia, equipe, serviços, disponibilidade, agenda, reservas, marketplace, clientes, favoritos, avaliações, catálogo, galeria, campanhas, influencers, push, relatórios, assinatura, admin, PWA.
+
+## Revisão de regras comerciais
+
+As regras de cupons e influencers descritas na Task 08 continuam como histórico de implementação, mas foram superseded pela Task 11. A fonte de verdade atual é o cupom associado ao agendamento, nunca o parâmetro `ref`.
 
 ## Fora do MVP
 Pagamento de serviços no app, multa/sinal, ecommerce, e-mail, WhatsApp, estoque avançado, pontos, repasse automático, DRE, apps nativos publicados.

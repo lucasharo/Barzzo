@@ -5,6 +5,9 @@ export type TipoDescontoCupom = "percentual" | "valor_fixo";
 export type TipoComissaoInfluenciador = "percentual" | "valor_fixo";
 export type StatusComissaoInfluenciador = "pendente" | "paga" | "cancelada";
 export type StatusIndicacao = "pendente" | "concluido" | "cancelado";
+export type OrigemCupom = "BARBEARIA" | "INFLUENCIADOR" | "BARZZO_GLOBAL";
+export type EscopoHistoricoCupom = "BARBEARIA" | "GLOBAL_BARZZO";
+export type StatusUtilizacaoCupom = "reservado" | "consumido" | "liberado" | "cancelado";
 
 export interface Campanha {
   id: string;
@@ -31,12 +34,51 @@ export interface Cupom {
   usos_atuais: number;
   limite_usos_por_cliente: number;
   apenas_primeira_reserva: boolean;
-  servicos_elegiveis: string[];
+  servicos_elegiveis?: string[];
+  origem?: OrigemCupom;
+  influenciador_id?: string | null;
+  regras?: CupomRegra[];
   data_inicio: string;
   data_fim: string;
   ativo: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CupomRegra {
+  id: string;
+  cupom_id: string;
+  prioridade: number;
+  escopo_historico: EscopoHistoricoCupom;
+  atendimentos_minimos: number | null;
+  atendimentos_maximos: number | null;
+  tipo_desconto: TipoDescontoCupom;
+  valor_desconto: number;
+  valor_minimo_reserva: number;
+  limite_usos_total: number | null;
+  limite_usos_por_cliente: number | null;
+  servicos_elegiveis: string[];
+  ativo: boolean;
+  criado_em?: string;
+  atualizado_em?: string;
+}
+
+export interface CupomUtilizacao {
+  id: string;
+  cupom_id: string;
+  regra_id: string | null;
+  cliente_id: string | null;
+  agendamento_id: string | null;
+  status: StatusUtilizacaoCupom;
+  valor_bruto: number;
+  subtotal_elegivel: number;
+  valor_desconto: number;
+  regra_aplicada: Record<string, unknown>;
+  reservado_em: string;
+  consumido_em: string | null;
+  liberado_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
 }
 
 export interface Influenciador {
@@ -83,6 +125,11 @@ export interface ComissaoInfluenciador {
   paga_em: string | null;
   created_at: string;
   updated_at: string;
+  cupom_id?: string | null;
+  codigo_cupom?: string | null;
+  origem_cupom?: OrigemCupom | null;
+  subtotal_elegivel?: number;
+  valor_liquido?: number;
   // Joins opcionais
   influenciadores?: {
     nome: string;
@@ -96,5 +143,7 @@ export interface ResultadoValidacaoCupom {
   motivo_invalido?: string;
   cupom?: Cupom;
   valor_desconto_calculado?: number;
+  subtotal_elegivel?: number;
   valor_final?: number;
+  regra_aplicada?: CupomRegra;
 }

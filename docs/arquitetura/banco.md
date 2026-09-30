@@ -22,7 +22,9 @@ bloqueios_agenda
 agendamentos
 agendamentos_servicos
 
-agendamentos deve conter barbearia_id, cliente_id, profissional_id, inicio_previsto, fim_previsto, inicio_real, fim_real, status, observacoes e timestamps.
+Além dos dados operacionais, `agendamentos` possui snapshot comercial imutável: `cupom_id`, código/origem do cupom, influencer atribuído, valor bruto dos serviços, subtotal elegível, desconto, valor líquido, regra aplicada e tipo/taxa/valor da comissão. O cupom e o influencer são referências históricas; alteração posterior de cadastro não recalcula o agendamento.
+
+Uma reserva tem no máximo um cupom e uma atribuição comercial. O vínculo atual é `cupons.influenciador_id`; `influenciadores.cupom_padrao_id` permanece somente para compatibilidade histórica e não é usado como fonte de verdade.
 
 agendamentos_servicos preserva snapshot do nome, preço e duração.
 
@@ -39,10 +41,18 @@ galeria_fotos
 ## Marketing
 campanhas
 cupons
+cupons_regras
+cupons_utilizacoes
 influenciadores
 campanhas_influenciadores
 indicacoes
 comissoes_influenciadores
+
+`cupons_regras` representa faixas extensíveis por prioridade, intervalo de atendimentos anteriores, escopo (`BARBEARIA` ou `GLOBAL_BARZZO`), benefício, serviços elegíveis, valor mínimo e limites. `cupons_utilizacoes` registra individualmente os estados `reservado`, `consumido`, `liberado` e `cancelado`, com valores e regra aplicada. A contagem de limites é feita sob lock da linha do cupom na RPC de confirmação, não no frontend.
+
+No fluxo atual, uma utilização é criada como `consumido` na confirmação definitiva; cancelamento ou não comparecimento muda o registro para `liberado` e não gera comissão. `reservado` fica disponível para fluxos transacionais intermediários e `cancelado` para invalidações explícitas auditadas.
+
+`comissoes_influenciadores` tem no máximo uma linha por agendamento (`UNIQUE(agendamento_id)`) e usa exclusivamente o snapshot do agendamento. Influencer desativado não impede a comissão de reserva já confirmada.
 
 ## Sistema
 dispositivos
@@ -61,3 +71,9 @@ Entidades privadas devem carregar barbearia_id quando isso fortalece isolamento 
 
 ## Concorrência
 Sobreposição de agenda deve ser impedida no banco/transação, não apenas pela UI. A Task 04 define a estratégia final.
+
+Limites de cupons seguem a mesma regra: a RPC bloqueia o cupom, valida usos totais e por cliente, seleciona uma única faixa elegível e registra a utilização na mesma transação. Dois últimos usos concorrentes não podem ambos ser aceitos.
+
+### Evolução da Task 08
+
+A migration `20260925000007_campanhas_cupons_influenciadores.sql` é histórica e não deve ser editada. A Task 11 adiciona a migration incremental para vínculo cupom-influencer, regras/faixas, histórico de utilizações e snapshots. A atribuição legada por `ref` foi superseded e não deve ser usada em novas operações.

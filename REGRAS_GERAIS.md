@@ -56,8 +56,22 @@
 - Campanha pode existir sem influencer.
 - Desconto percentual ou fixo.
 - Pode ter validade, limite, primeira reserva e serviços elegíveis.
+- O cupom é a fonte de verdade da atribuição comercial do agendamento. Um cupom pode ter origem `BARBEARIA`, `INFLUENCIADOR` ou `BARZZO_GLOBAL` e pode apontar opcionalmente para um influencer.
+- Uma reserva possui no máximo um cupom ativo. Aplicar outro cupom substitui integralmente o anterior e recalcula desconto, valor final e atribuição.
+- A atribuição não é persistida para futuras reservas. O cliente precisa informar/aplicar o cupom em cada novo agendamento.
+- `ref` é compatibilidade legada de navegação e nunca decide atribuição ou comissão. Links novos usam `?cupom=CODIGO`.
+- Influencer usado como canal de aquisição precisa possuir ao menos um cupom ativo; um influencer pode possuir vários cupons.
+- Na confirmação do agendamento, congelar cupom, código, origem, influencer, valores bruto/elegível/desconto/líquido, regra e configuração de comissão. Alterações posteriores não recalculam reservas antigas.
 - Comissão só após concluído.
 - Status: pendente, paga, cancelada.
+- Comissão percentual incide sobre o valor líquido após desconto; comissão fixa é congelada no snapshot e não é reduzida pelo desconto.
+- Influencer desativado ou alteração posterior da taxa não invalida atribuição/comissão já congelada.
+- Histórico de uso deve ser auditável em `cupons_utilizacoes` e seus limites devem ser garantidos em transação no banco. Cancelamento e não comparecimento liberam uso reservado/consumido sem gerar comissão.
+- Regras de cupom são configuráveis por prioridade, histórico anterior, escopo `BARBEARIA` ou `GLOBAL_BARZZO`, benefício, serviços elegíveis, valor mínimo e limites.
+
+### Revisão da Task 08
+
+As decisões documentadas na Task 08 sobre atribuição persistente por `?ref`, `@barzzo:atribuicao_influenciador`, `cupom_padrao_id` como vínculo principal, cálculo sobre o total bruto e consulta da configuração atual do influencer foram **superseded** pela Task 11. A migration histórica e os registros antigos permanecem preservados; novas reservas devem seguir as regras acima.
 
 ## Aplicações
 - Um único repositório deve conter três aplicações fisicamente separadas: `apps/cliente`, `apps/parceiro` e `apps/admin`.
