@@ -180,12 +180,64 @@ export async function buscarSugestoesEndereco(
 }
 
 /**
- * Obtém o endereço formatado a partir de coordenadas de GPS (geocodificação reversa via BigDataCloud).
+ * Obtém o endereço completo a partir de coordenadas de GPS (geocodificação reversa).
+ * Usa Nominatim (OpenStreetMap) como fonte primária — retorna logradouro, bairro, cidade e estado.
+ * BigDataCloud como fallback caso o Nominatim não responda.
  */
 export async function obterEnderecoPorCoordenadas(
   lat: number,
   lng: number
 ): Promise<InfoEnderecoReverso | null> {
+  // 1. Tentativa primária: Nominatim (OSM) — retorna endereço completo com logradouro
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=pt-BR&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Barzzo/1.0 (app.barzzo.com.br)" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const addr = data.address || {};
+
+      const logradouro =
+        addr.road || addr.pedestrian || addr.footway || addr.path || "";
+      const numero = addr.house_number ? `, ${addr.house_number}` : "";
+      const bairro =
+        addr.suburb || addr.neighbourhood || addr.quarter || addr.district || "";
+      const cidade =
+        addr.city || addr.town || addr.village || addr.municipality || "";
+      const estado = addr.state_code
+        ? addr.state_code.replace("BR-", "")
+        : addr.state || "";
+      const cep = addr.postcode || undefined;
+
+      // Monta endereço completo priorizando logradouro
+      const partes = [
+        logradouro ? `${logradouro}${numero}` : null,
+        bairro && bairro !== logradouro ? bairro : null,
+        cidade ? (estado ? `${cidade} - ${estado}` : cidade) : null,
+      ].filter(Boolean);
+
+      const enderecoCompleto =
+        partes.length > 0
+          ? partes.join(", ")
+          : data.display_name?.split(",").slice(0, 3).join(",").trim() ||
+            "Localização Atual";
+
+      return {
+        enderecoCompleto,
+        titulo: logradouro || bairro || cidade || "Localização Atual",
+        subtitulo: [bairro, cidade, estado].filter(Boolean).join(", "),
+        bairro: bairro || undefined,
+        cidade: cidade || undefined,
+        estado: estado || undefined,
+        cep,
+      };
+    }
+  } catch {
+    // Fallback para BigDataCloud
+  }
+
+  // 2. Fallback: BigDataCloud
   try {
     const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=pt`;
     const res = await fetch(url);
