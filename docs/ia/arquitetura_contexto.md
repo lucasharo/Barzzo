@@ -23,15 +23,26 @@ ARQUIVOS LOCAIS ATUAIS
     +--> apps/ e packages/
     +--> supabase/ e testes
     |
-    v
-IA trabalha a partir daqui
-    |
-    +--> Codex/OpenAI
-    +--> Gemini
-    +--> Claude
-    +--> Cursor
-    +--> GitHub Copilot
+    +--------------------+
+    |                    |
+    v                    v
+ INDEXADOR RAG       LEITURA DIRETA
+    |                    |
+    v                    |
+ ÍNDICE LOCAL           |
+    |                    |
+    +---------+----------+
+              v
+        IA localiza candidatos
+              |
+              v
+        IA abre arquivos originais
+              |
+              v
+        IA analisa / modifica
 ```
+
+O mesmo fluxo é usado por Codex/OpenAI, Gemini, Claude, Cursor e GitHub Copilot. Os adaptadores apenas carregam `AGENTS.md`; não existem implementações RAG divergentes por fornecedor.
 
 ## Fonte central
 

@@ -21,6 +21,8 @@ A arquitetura de contexto está documentada em [docs/ia/arquitetura_contexto.md]
 
 Os arquivos locais são a fonte de verdade operacional. Ao iniciar uma sessão, o agente verifica a sincronização com `git fetch` e comparação local/remoto, executando `git pull --ff-only` somente se houver atualização remota e for seguro. Depois disso, trabalha localmente. O Git é usado para sincronização, versionamento, histórico, colaboração e recuperação de mudanças; não é a memória operacional do projeto.
 
+O RAG local para agentes está documentado em [docs/ia/rag.md](docs/ia/rag.md). Ele localiza candidatos no código e na documentação; a IA deve sempre abrir os arquivos originais antes de decidir ou alterar.
+
 Depois do contrato universal, siga [REGRAS_GERAIS.md](REGRAS_GERAIS.md), [AGENTES.md](AGENTES.md), [WORKFLOW.md](WORKFLOW.md) e [STATUS.md](STATUS.md).
 
 ## Stack definida

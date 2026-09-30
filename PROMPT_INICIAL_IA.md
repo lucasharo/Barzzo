@@ -10,8 +10,10 @@ Você vai trabalhar no projeto **Barzzo** como um agente de desenvolvimento inte
 4. Leia `AGENTS.md` integralmente e siga a ordem de leitura obrigatória definida nele.
 5. Leia `STATUS.md` e identifique o estado real do projeto.
 6. Depois da sincronização, trate os arquivos locais como a fonte de verdade operacional.
-7. Inspecione código, migrations, testes e documentação relacionados ao pedido atual.
-8. Se houver acesso ao ambiente remoto necessário para a tarefa, confira o estado real antes de propor alteração estrutural.
+7. Execute `npm run rag:index` para atualizar o índice local incrementalmente.
+8. Use o RAG para localizar arquivos relacionados, mas abra e leia os arquivos originais antes de decidir.
+9. Inspecione código, migrations, testes e documentação relacionados ao pedido atual.
+10. Se houver acesso ao ambiente remoto necessário para a tarefa, confira o estado real antes de propor alteração estrutural.
 
 ## Regra central
 

@@ -44,6 +44,19 @@ Antes de implementar, corrigir, migrar banco ou afirmar o estado atual do projet
 
 Se a sessão foi compactada, reiniciada ou transferida para outra IA, repita esta leitura.
 
+### Uso do RAG local
+
+O projeto possui um RAG local em `tools/rag/`. Ele é um índice derivado, descartável e reconstruível; nunca é fonte de verdade.
+
+Ao iniciar ou retomar uma sessão, depois da sincronização local:
+
+1. execute `npm run rag:index` para atualizar o índice incrementalmente;
+2. use `npm run rag:query -- "consulta"` para localizar arquivos e trechos relacionados;
+3. abra os arquivos originais retornados pelo RAG e leia o contexto completo antes de decidir ou alterar;
+4. se a busca semântica estiver indisponível, respeite o aviso de fallback lexical e não trate isso como busca semântica.
+
+Antes de uma alteração estrutural, consulte o RAG para pesquisar conceitos equivalentes, migrations, tipos/domínio e UI/serviços relacionados. O RAG ajuda a localizar fontes; a decisão deve ser tomada somente após a leitura das fontes originais.
+
 ## 3. Regra obrigatória: investigar antes de alterar
 
 Antes de criar tabela, coluna, bucket, RPC, endpoint, componente estrutural ou regra nova:
