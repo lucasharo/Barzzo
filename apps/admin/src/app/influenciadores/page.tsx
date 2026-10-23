@@ -23,7 +23,7 @@ export default function PaginaInfluenciadoresAdmin() {
       try {
         setCarregando(true);
         setErro(null);
-        const supabase = criarClienteSupabaseBrowser();
+        const supabase = criarClienteSupabaseBrowser("admin");
 
         const { data: infDb, error: erroDb } = await (supabase.from("influenciadores") as any)
           .select("*, barbearias(nome)")

@@ -14,6 +14,7 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro, formatarData } from "@barzzo/utilitarios";
@@ -585,12 +586,11 @@ export default function PaginaGaleriaParceiro() {
               </div>
 
               {/* Destaque de Capa */}
-              <label className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
-                <input
-                  type="checkbox"
-                  checked={destaqueCapa}
-                  onChange={(e) => setDestaqueCapa(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]"
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
+                <Switch
+                  marcado={destaqueCapa}
+                  aoMudar={setDestaqueCapa}
+                  aria-label="Definir imagem como foto de capa"
                 />
                 <div>
                   <span className="text-sm font-bold block flex items-center gap-1">
@@ -601,7 +601,7 @@ export default function PaginaGaleriaParceiro() {
                     Esta imagem será a imagem principal da barbearia no marketplace
                   </span>
                 </div>
-              </label>
+              </div>
 
               {/* Ações */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">

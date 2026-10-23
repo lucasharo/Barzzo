@@ -9,16 +9,19 @@ import {
   CardTitle,
   CardDescription,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Seletor,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { formatarData, formatarDataDigitada, traduzirErro } from "@barzzo/utilitarios";
 import { esquemaCupom } from "@barzzo/dominio";
-import type { Cupom, Servico } from "@barzzo/tipos";
+import type { Cupom, CupomRegra, Servico } from "@barzzo/tipos";
 import {
   Tag,
   ChevronLeft,
@@ -26,9 +29,18 @@ import {
   Save,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
   Scissors,
 } from "lucide-react";
+
+function converterDataParaIso(valor: string): string | null {
+  const partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(valor);
+  if (!partes) return null;
+
+  const [, dia, mes, ano] = partes;
+  const iso = `${ano}-${mes}-${dia}`;
+  const data = new Date(`${iso}T00:00:00.000Z`);
+  return !Number.isNaN(data.getTime()) && data.toISOString().slice(0, 10) === iso ? iso : null;
+}
 
 export default function PaginaFormularioCampanha() {
   const params = useParams();
@@ -37,6 +49,7 @@ export default function PaginaFormularioCampanha() {
   const isNovo = id === "novo";
 
   const [carregando, setCarregando] = React.useState(true);
+  const [edicaoRestritaAoAdmin, setEdicaoRestritaAoAdmin] = React.useState(false);
   const [salvando, setSalvando] = React.useState(false);
   const [excluindo, setExcluindo] = React.useState(false);
   const [confirmarExclusao, setConfirmarExclusao] = React.useState(false);
@@ -53,19 +66,20 @@ export default function PaginaFormularioCampanha() {
   const [valorMinimo, setValorMinimo] = React.useState("0");
   const [limiteTotal, setLimiteTotal] = React.useState("");
   const [limitePorCliente, setLimitePorCliente] = React.useState("1");
+  const [limitePorClienteSeguinte, setLimitePorClienteSeguinte] = React.useState("");
   const [apenasPrimeiraReserva, setApenasPrimeiraReserva] = React.useState(false);
-  const [dataInicio, setDataInicio] = React.useState(new Date().toISOString().split("T")[0]);
-  const [dataFim, setDataFim] = React.useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
-  );
+  const [dataInicio, setDataInicio] = React.useState(() => formatarData(new Date()));
+  const [dataFim, setDataFim] = React.useState(() => {
+    const prazo = new Date();
+    prazo.setDate(prazo.getDate() + 30);
+    return formatarData(prazo);
+  });
+  const [erroDataInicio, setErroDataInicio] = React.useState<string | null>(null);
+  const [erroDataFim, setErroDataFim] = React.useState<string | null>(null);
   const [servicosSelecionados, setServicosSelecionados] = React.useState<string[]>([]);
   const [ativo, setAtivo] = React.useState(true);
-  const [origemCupom, setOrigemCupom] = React.useState<"BARBEARIA" | "INFLUENCIADOR" | "BARZZO_GLOBAL">("BARBEARIA");
+  const [origemCupom, setOrigemCupom] = React.useState<"BARBEARIA" | "INFLUENCIADOR">("BARBEARIA");
   const [influenciadorId, setInfluenciadorId] = React.useState("");
-  const [escopoHistorico, setEscopoHistorico] = React.useState<"BARBEARIA" | "GLOBAL_BARZZO">("BARBEARIA");
-  const [minAtendimentos, setMinAtendimentos] = React.useState("");
-  const [maxAtendimentos, setMaxAtendimentos] = React.useState("");
-  const [faixaSeguinteAtiva, setFaixaSeguinteAtiva] = React.useState(false);
   const [tipoDescontoSeguinte, setTipoDescontoSeguinte] = React.useState<"percentual" | "valor_fixo">("percentual");
   const [valorDescontoSeguinte, setValorDescontoSeguinte] = React.useState("");
 
@@ -80,6 +94,7 @@ export default function PaginaFormularioCampanha() {
     try {
       setCarregando(true);
       setErro(null);
+      setEdicaoRestritaAoAdmin(false);
       const supabase = criarClienteSupabaseBrowser();
       const {
         data: { session },
@@ -139,28 +154,44 @@ export default function PaginaFormularioCampanha() {
         setValorDesconto(cupom.valor_desconto.toString());
         setValorMinimo(cupom.valor_minimo_reserva.toString());
         setLimiteTotal(cupom.limite_usos_total ? cupom.limite_usos_total.toString() : "");
-        setLimitePorCliente(cupom.limite_usos_por_cliente.toString());
+        setLimitePorCliente(String(cupom.limite_usos_por_cliente));
         setApenasPrimeiraReserva(cupom.apenas_primeira_reserva);
-        setDataInicio(new Date(cupom.data_inicio).toISOString().split("T")[0]);
-        setDataFim(new Date(cupom.data_fim).toISOString().split("T")[0]);
+        setDataInicio(formatarData(cupom.data_inicio.slice(0, 10)));
+        setDataFim(formatarData(cupom.data_fim.slice(0, 10)));
         setServicosSelecionados(cupom.servicos_elegiveis || []);
         setAtivo(cupom.ativo);
-        setOrigemCupom(cupom.origem || "BARBEARIA");
+        if (cupom.origem === "BARZZO_GLOBAL") {
+          setEdicaoRestritaAoAdmin(true);
+          return;
+        }
+        setOrigemCupom(cupom.origem === "INFLUENCIADOR" ? "INFLUENCIADOR" : "BARBEARIA");
         setInfluenciadorId(cupom.influenciador_id || "");
         const { data: regrasDb } = await (supabase.from("cupons_regras") as any)
           .select("*")
           .eq("cupom_id", cupom.id)
           .order("prioridade", { ascending: true });
+        if (regrasDb?.some((regra: { escopo_historico: string }) => regra.escopo_historico === "GLOBAL_BARZZO")) {
+          setEdicaoRestritaAoAdmin(true);
+          return;
+        }
         const regraDb = regrasDb?.[0];
         if (regraDb) {
-          setEscopoHistorico(regraDb.escopo_historico || "BARBEARIA");
-          setMinAtendimentos(regraDb.atendimentos_minimos === null ? "" : String(regraDb.atendimentos_minimos));
-          setMaxAtendimentos(regraDb.atendimentos_maximos === null ? "" : String(regraDb.atendimentos_maximos));
+          setTipoDesconto(regraDb.tipo_desconto);
+          setValorDesconto(String(regraDb.valor_desconto));
+          setLimitePorCliente(regraDb.limite_usos_por_cliente === null ? "1" : String(regraDb.limite_usos_por_cliente));
+          if (regraDb.atendimentos_minimos === 0 && regraDb.atendimentos_maximos === 0 && !regrasDb?.[1]) {
+            setApenasPrimeiraReserva(true);
+          }
         }
         if (regrasDb?.[1]) {
-          setFaixaSeguinteAtiva(true);
           setTipoDescontoSeguinte(regrasDb[1].tipo_desconto || "percentual");
           setValorDescontoSeguinte(String(regrasDb[1].valor_desconto));
+          setLimitePorClienteSeguinte(regrasDb[1].limite_usos_por_cliente === null ? "" : String(regrasDb[1].limite_usos_por_cliente));
+        } else if (regraDb && !cupom.apenas_primeira_reserva && regraDb.atendimentos_minimos === null && regraDb.atendimentos_maximos === null) {
+          // Cupom antigo de regra única: mantém o benefício disponível para retornos ao editar.
+          setTipoDescontoSeguinte(regraDb.tipo_desconto);
+          setValorDescontoSeguinte(String(regraDb.valor_desconto));
+          setLimitePorClienteSeguinte(regraDb.limite_usos_por_cliente === null ? "" : String(regraDb.limite_usos_por_cliente));
         }
       }
     } catch {
@@ -189,41 +220,77 @@ export default function PaginaFormularioCampanha() {
       setErro(null);
       setSucesso(null);
 
+      if (origemCupom === "INFLUENCIADOR" && !influenciadorId) {
+        setErro("Selecione o influenciador associado ao cupom.");
+        setSalvando(false);
+        return;
+      }
+
+      const inicioIso = converterDataParaIso(dataInicio);
+      const fimIso = converterDataParaIso(dataFim);
+      setErroDataInicio(inicioIso ? null : "Informe uma data de início válida no formato DD/MM/AAAA.");
+      setErroDataFim(fimIso ? null : "Informe uma data de término válida no formato DD/MM/AAAA.");
+      if (!inicioIso || !fimIso) {
+        setSalvando(false);
+        return;
+      }
+      if (fimIso < inicioIso) {
+        setErroDataFim("A data de término deve ser igual ou posterior à data de início.");
+        setSalvando(false);
+        return;
+      }
+
       const valorDescontoNum = parseFloat(valorDesconto.replace(",", "."));
       const valorMinimoNum = parseFloat(valorMinimo.replace(",", ".")) || 0;
       const limiteTotalNum = limiteTotal ? parseInt(limiteTotal) : null;
-      const limiteClienteNum = parseInt(limitePorCliente) || 1;
+      const limiteClienteNum = Number(limitePorCliente);
+      const limiteClienteSeguinteNum = limitePorClienteSeguinte.trim() ? Number(limitePorClienteSeguinte) : null;
+      if (!limitePorCliente.trim() || !Number.isInteger(limiteClienteNum) || limiteClienteNum < 1) {
+        setErro("Informe um limite de usos por cliente válido para o primeiro atendimento.");
+        setSalvando(false);
+        return;
+      }
+      if (!apenasPrimeiraReserva && limiteClienteSeguinteNum !== null && (!Number.isInteger(limiteClienteSeguinteNum) || limiteClienteSeguinteNum < 1)) {
+        setErro("Informe um limite de usos por cliente válido para os demais atendimentos.");
+        setSalvando(false);
+        return;
+      }
       const regra = {
         prioridade: 100,
-        escopo_historico: escopoHistorico,
-        atendimentos_minimos: apenasPrimeiraReserva ? 0 : (minAtendimentos ? parseInt(minAtendimentos) : null),
-        atendimentos_maximos: apenasPrimeiraReserva ? 0 : (maxAtendimentos ? parseInt(maxAtendimentos) : null),
+        escopo_historico: "BARBEARIA" as const,
+        atendimentos_minimos: 0,
+        atendimentos_maximos: 0,
         tipo_desconto: tipoDesconto,
         valor_desconto: valorDescontoNum,
         valor_minimo_reserva: valorMinimoNum,
         limite_usos_total: limiteTotalNum,
-        limite_usos_por_cliente: limitePorCliente.trim() ? limiteClienteNum : null,
+        limite_usos_por_cliente: limiteClienteNum,
         servicos_elegiveis: servicosSelecionados,
         ativo,
       };
-      const regras = [regra];
-      if (faixaSeguinteAtiva) {
+      const regras: Array<Omit<CupomRegra, "id" | "cupom_id">> = [regra];
+      if (!apenasPrimeiraReserva) {
         const valorSeguinte = parseFloat(valorDescontoSeguinte.replace(",", "."));
         if (!valorSeguinte || valorSeguinte <= 0) {
           setErro("Informe o desconto da faixa para atendimentos seguintes.");
           setSalvando(false);
           return;
         }
+        if (tipoDescontoSeguinte === "percentual" && valorSeguinte > 100) {
+          setErro("O desconto percentual para os demais atendimentos não pode ultrapassar 100%.");
+          setSalvando(false);
+          return;
+        }
         regras.push({
           prioridade: 200,
-          escopo_historico: escopoHistorico,
+          escopo_historico: "BARBEARIA",
           atendimentos_minimos: 1,
           atendimentos_maximos: null,
           tipo_desconto: tipoDescontoSeguinte,
           valor_desconto: valorSeguinte,
           valor_minimo_reserva: valorMinimoNum,
           limite_usos_total: limiteTotalNum,
-          limite_usos_por_cliente: null,
+          limite_usos_por_cliente: limiteClienteSeguinteNum,
           servicos_elegiveis: servicosSelecionados,
           ativo,
         });
@@ -239,8 +306,8 @@ export default function PaginaFormularioCampanha() {
         limite_usos_por_cliente: limiteClienteNum,
         apenas_primeira_reserva: apenasPrimeiraReserva,
         servicos_elegiveis: servicosSelecionados,
-        data_inicio: new Date(`${dataInicio}T00:00:00.000Z`).toISOString(),
-        data_fim: new Date(`${dataFim}T23:59:59.999Z`).toISOString(),
+        data_inicio: `${inicioIso}T00:00:00.000Z`,
+        data_fim: `${fimIso}T23:59:59.999Z`,
         ativo,
         origem: origemCupom,
         influenciador_id: origemCupom === "INFLUENCIADOR" ? (influenciadorId || null) : null,
@@ -360,6 +427,20 @@ export default function PaginaFormularioCampanha() {
     );
   }
 
+  if (edicaoRestritaAoAdmin) {
+    return (
+      <div className="max-w-2xl mx-auto flex flex-col gap-4">
+        <Link to="/campanhas" className="inline-flex items-center gap-1.5 text-sm font-medium min-h-[44px]">
+          <ChevronLeft className="w-4 h-4" />
+          Voltar para Campanhas e Cupons
+        </Link>
+        <Alert variante="alerta">
+          <AlertDescription>Cupons e regras com abrangência em todo o Barzzo só podem ser administrados pelo Admin.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto flex flex-col gap-6">
       {/* Voltar */}
@@ -473,80 +554,43 @@ export default function PaginaFormularioCampanha() {
             />
           </div>
 
-          {/* Tipo e Valor de Desconto */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="block text-sm font-semibold mb-1.5">
-                Tipo de Desconto <span className="text-[#DC2626]">*</span>
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setTipoDesconto("percentual")}
-                  className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-colors min-h-[44px] ${
-                    tipoDesconto === "percentual"
-                      ? "bg-[#B45A2B] text-white border-[#B45A2B]"
-                      : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                  }`}
-                >
-                  Percentual (%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTipoDesconto("valor_fixo")}
-                  className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-colors min-h-[44px] ${
-                    tipoDesconto === "valor_fixo"
-                      ? "bg-[#B45A2B] text-white border-[#B45A2B]"
-                      : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                  }`}
-                >
-                  Fixo em Reais (R$)
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="valorDesconto" className="block text-sm font-semibold mb-1.5">
-                Valor do Abatimento ({tipoDesconto === "percentual" ? "%" : "R$"}){" "}
-                <span className="text-[#DC2626]">*</span>
-              </Label>
-              <Input
-                id="valorDesconto"
-                type="number"
-                step="0.01"
-                min="0.01"
-                max={tipoDesconto === "percentual" ? "100" : undefined}
-                value={valorDesconto}
-                onChange={(e) => setValorDesconto(e.target.value)}
-                placeholder={tipoDesconto === "percentual" ? "15" : "10.00"}
-                required
-              />
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="origemCupom" className="block text-sm font-semibold mb-1.5">Origem do cupom</Label>
-              <select id="origemCupom" value={origemCupom} onChange={(e) => setOrigemCupom(e.target.value as typeof origemCupom)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
-                <option value="BARBEARIA">Barbearia</option>
-                <option value="INFLUENCIADOR">Influenciador</option>
-                <option value="BARZZO_GLOBAL">Global Barzzo</option>
-              </select>
+              <Seletor
+                id="origemCupom"
+                valor={origemCupom}
+                aoMudar={(valor) => setOrigemCupom(valor as typeof origemCupom)}
+                opcoes={[
+                  { valor: "BARBEARIA", rotulo: "Barbearia" },
+                  { valor: "INFLUENCIADOR", rotulo: "Influenciador" },
+                ]}
+                className="w-full"
+              />
+              <span className="text-[11px] opacity-60 mt-1 block">Campanhas Globais são criadas somente pelo Admin do Barzzo.</span>
             </div>
             {origemCupom === "INFLUENCIADOR" && (
               <div>
                 <Label htmlFor="influenciadorId" className="block text-sm font-semibold mb-1.5">Influenciador associado</Label>
-                <select id="influenciadorId" value={influenciadorId} onChange={(e) => setInfluenciadorId(e.target.value)} required className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
-                  <option value="">Selecione um influencer</option>
-                  {influenciadoresDisponiveis.map((influenciador) => <option key={influenciador.id} value={influenciador.id}>{influenciador.nome}</option>)}
-                </select>
+                <Seletor
+                  id="influenciadorId"
+                  valor={influenciadorId}
+                  aoMudar={setInfluenciadorId}
+                  placeholder="Selecione um influencer"
+                  opcoes={influenciadoresDisponiveis.map((influenciador) => ({
+                    valor: influenciador.id,
+                    rotulo: influenciador.nome,
+                  }))}
+                  className="w-full"
+                  erro={!influenciadorId}
+                />
                 <span className="text-[11px] opacity-60 mt-1 block">Este cupom identifica o influencer; não é necessário usar ref.</span>
               </div>
             )}
           </div>
 
-          {/* Valor Mínimo e Limites */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Condições gerais do cupom */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="valorMinimo" className="block text-sm font-semibold mb-1.5">
                 Valor Mínimo (R$)
@@ -576,19 +620,6 @@ export default function PaginaFormularioCampanha() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="limiteCliente" className="block text-sm font-semibold mb-1.5">
-                Usos por Cliente
-              </Label>
-              <Input
-                id="limiteCliente"
-                type="number"
-                min="1"
-                value={limitePorCliente}
-                onChange={(e) => setLimitePorCliente(e.target.value)}
-                placeholder="1"
-              />
-            </div>
           </div>
 
           {/* Período de Vigência */}
@@ -597,26 +628,50 @@ export default function PaginaFormularioCampanha() {
               <Label htmlFor="dataInicio" className="block text-sm font-semibold mb-1.5">
                 Data de Início <span className="text-[#DC2626]">*</span>
               </Label>
-              <Input
+              <InputMascarado
                 id="dataInicio"
-                type="date"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={10}
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
-                required
+                mascara={formatarDataDigitada}
+                onChangeValor={(valor) => {
+                  setDataInicio(valor);
+                  setErroDataInicio(null);
+                }}
+                onBlur={() => setErroDataInicio(converterDataParaIso(dataInicio) ? null : "Informe uma data de início válida no formato DD/MM/AAAA.")}
+                placeholder="DD/MM/AAAA"
+                aria-invalid={!!erroDataInicio}
+                aria-describedby={erroDataInicio ? "erro-data-inicio" : undefined}
+                erro={!!erroDataInicio}
               />
+              {erroDataInicio && <p id="erro-data-inicio" className="mt-1 text-xs text-[var(--erro)]" role="alert">{erroDataInicio}</p>}
             </div>
 
             <div>
               <Label htmlFor="dataFim" className="block text-sm font-semibold mb-1.5">
                 Data de Término <span className="text-[#DC2626]">*</span>
               </Label>
-              <Input
+              <InputMascarado
                 id="dataFim"
-                type="date"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={10}
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
-                required
+                mascara={formatarDataDigitada}
+                onChangeValor={(valor) => {
+                  setDataFim(valor);
+                  setErroDataFim(null);
+                }}
+                onBlur={() => setErroDataFim(converterDataParaIso(dataFim) ? null : "Informe uma data de término válida no formato DD/MM/AAAA.")}
+                placeholder="DD/MM/AAAA"
+                aria-invalid={!!erroDataFim}
+                aria-describedby={erroDataFim ? "erro-data-fim" : undefined}
+                erro={!!erroDataFim}
               />
+              {erroDataFim && <p id="erro-data-fim" className="mt-1 text-xs text-[var(--erro)]" role="alert">{erroDataFim}</p>}
             </div>
           </div>
 
@@ -638,10 +693,6 @@ export default function PaginaFormularioCampanha() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 rounded-xl border border-neutral-200 dark:border-neutral-800">
                 {servicosDisponiveis.map((s) => {
-                  const marcado =
-                    servicosSelecionados.length === 0 ||
-                    servicosSelecionados.includes(s.id);
-
                   return (
                     <label
                       key={s.id}
@@ -651,11 +702,11 @@ export default function PaginaFormularioCampanha() {
                           : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={servicosSelecionados.includes(s.id)}
-                        onChange={() => alternarServico(s.id)}
-                        className="rounded text-[#B45A2B] focus:ring-[#B45A2B]"
+                      <Switch
+                        marcado={servicosSelecionados.includes(s.id)}
+                        aoMudar={() => alternarServico(s.id)}
+                        tamanho="sm"
+                        aria-label={`Aplicar cupom ao serviço ${s.nome}`}
                       />
                       <Scissors className="w-3.5 h-3.5 opacity-60" />
                       <span className="truncate">{s.nome}</span>
@@ -669,76 +720,72 @@ export default function PaginaFormularioCampanha() {
             </span>
           </div>
 
-          {/* Checkboxes de Regras */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Regras de desconto por faixa */}
+          <p className="text-sm opacity-70">Histórico considerado: apenas atendimentos nesta barbearia.</p>
+          <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-4" aria-labelledby="titulo-primeira-faixa">
             <div>
-              <Label htmlFor="escopoHistorico" className="block text-sm font-semibold mb-1.5">Histórico considerado</Label>
-              <select id="escopoHistorico" value={escopoHistorico} onChange={(e) => setEscopoHistorico(e.target.value as typeof escopoHistorico)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
-                <option value="BARBEARIA">Nesta barbearia</option>
-                <option value="GLOBAL_BARZZO">Em todo o Barzzo</option>
-              </select>
+              <h2 id="titulo-primeira-faixa" className="text-base font-bold">1. Primeiro atendimento</h2>
+              <p className="text-xs opacity-60 mt-1">Válido para cliente sem atendimento concluído nesta barbearia.</p>
             </div>
-            <div>
-              <Label htmlFor="minAtendimentos" className="block text-sm font-semibold mb-1.5">Atendimentos mínimos</Label>
-              <Input id="minAtendimentos" type="number" min="0" value={minAtendimentos} onChange={(e) => setMinAtendimentos(e.target.value)} placeholder="0" />
-            </div>
-            <div>
-              <Label htmlFor="maxAtendimentos" className="block text-sm font-semibold mb-1.5">Atendimentos máximos</Label>
-              <Input id="maxAtendimentos" type="number" min="0" value={maxAtendimentos} onChange={(e) => setMaxAtendimentos(e.target.value)} placeholder="Ilimitado" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <label className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={apenasPrimeiraReserva}
-                onChange={(e) => setApenasPrimeiraReserva(e.target.checked)}
-                className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]"
-              />
-              <div>
-                <span className="text-sm font-bold flex items-center gap-1">
-                  Apenas 1ª Reserva
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                </span>
-                <span className="text-xs opacity-60">Exclusivo para clientes novos na barbearia</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Label className="block text-sm font-semibold mb-1.5">Tipo de desconto *</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setTipoDesconto("percentual")} aria-pressed={tipoDesconto === "percentual"} className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-colors min-h-[44px] ${tipoDesconto === "percentual" ? "bg-[#B45A2B] text-white border-[#B45A2B]" : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}>Percentual (%)</button>
+                  <button type="button" onClick={() => setTipoDesconto("valor_fixo")} aria-pressed={tipoDesconto === "valor_fixo"} className={`py-2.5 px-3 rounded-lg border text-xs font-bold transition-colors min-h-[44px] ${tipoDesconto === "valor_fixo" ? "bg-[#B45A2B] text-white border-[#B45A2B]" : "border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800"}`}>Fixo em Reais (R$)</button>
+                </div>
               </div>
-            </label>
-
-            <label className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={ativo}
-                onChange={(e) => setAtivo(e.target.checked)}
-                className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]"
-              />
               <div>
-                <span className="text-sm font-bold block">Cupom Ativo</span>
-                <span className="text-xs opacity-60">Disponível para validação e resgate</span>
+                <Label htmlFor="valorDesconto" className="block text-sm font-semibold mb-1.5">Valor do desconto ({tipoDesconto === "percentual" ? "%" : "R$"}) *</Label>
+                <Input id="valorDesconto" type="number" step="0.01" min="0.01" max={tipoDesconto === "percentual" ? "100" : undefined} value={valorDesconto} onChange={(e) => setValorDesconto(e.target.value)} placeholder={tipoDesconto === "percentual" ? "10" : "10.00"} required />
               </div>
-            </label>
-          </div>
+              <div>
+                <Label htmlFor="limiteCliente" className="block text-sm font-semibold mb-1.5">Usos por cliente *</Label>
+                <Input id="limiteCliente" type="number" min="1" step="1" value={limitePorCliente} onChange={(e) => setLimitePorCliente(e.target.value)} placeholder="1" required />
+                <span className="text-xs opacity-60 mt-1 block">Limite independente desta faixa.</span>
+              </div>
+            </div>
+          </section>
 
-          <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer min-h-[44px]">
-              <input type="checkbox" checked={faixaSeguinteAtiva} onChange={(e) => setFaixaSeguinteAtiva(e.target.checked)} className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]" />
-              <span className="text-sm font-bold">Criar faixa para atendimentos seguintes</span>
-            </label>
-            {faixaSeguinteAtiva && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="tipoDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Tipo da faixa seguinte</Label>
-                  <select id="tipoDescontoSeguinte" value={tipoDescontoSeguinte} onChange={(e) => setTipoDescontoSeguinte(e.target.value as typeof tipoDescontoSeguinte)} className="w-full min-h-[44px] rounded-lg border border-neutral-200 dark:border-neutral-800 bg-transparent px-3 text-sm">
-                    <option value="percentual">Percentual (%)</option>
-                    <option value="valor_fixo">Fixo em Reais (R$)</option>
-                  </select>
+          <section className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-4" aria-labelledby="titulo-faixa-seguinte">
+            <div>
+              <h2 id="titulo-faixa-seguinte" className="text-base font-bold">2. Demais atendimentos</h2>
+              <p className="text-xs opacity-60 mt-1">Válido a partir de um atendimento concluído nesta barbearia.</p>
+            </div>
+            <div className="flex items-center gap-3 min-h-[44px]">
+              <Switch marcado={apenasPrimeiraReserva} aoMudar={setApenasPrimeiraReserva} aria-label="Aplicar cupom somente na primeira reserva" />
+              <span className="text-sm font-bold">Apenas 1ª Reserva</span>
+            </div>
+            {apenasPrimeiraReserva ? (
+              <div role="status" className="rounded-lg border border-[var(--alerta)] bg-[var(--alerta)]/10 p-3 text-sm">
+                Este cupom será válido somente para a primeira reserva. Não haverá desconto para os demais atendimentos.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <Label htmlFor="tipoDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Tipo de desconto *</Label>
+                  <Seletor id="tipoDescontoSeguinte" valor={tipoDescontoSeguinte} aoMudar={(valor) => setTipoDescontoSeguinte(valor as typeof tipoDescontoSeguinte)} opcoes={[{ valor: "percentual", rotulo: "Percentual (%)" }, { valor: "valor_fixo", rotulo: "Fixo em Reais (R$)" }]} className="w-full" />
                 </div>
                 <div>
-                  <Label htmlFor="valorDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Desconto após a primeira faixa</Label>
-                  <Input id="valorDescontoSeguinte" type="number" min="0.01" step="0.01" value={valorDescontoSeguinte} onChange={(e) => setValorDescontoSeguinte(e.target.value)} placeholder={tipoDescontoSeguinte === "percentual" ? "5" : "8.00"} required />
+                  <Label htmlFor="valorDescontoSeguinte" className="block text-sm font-semibold mb-1.5">Valor do desconto ({tipoDescontoSeguinte === "percentual" ? "%" : "R$"}) *</Label>
+                  <Input id="valorDescontoSeguinte" type="number" min="0.01" max={tipoDescontoSeguinte === "percentual" ? "100" : undefined} step="0.01" value={valorDescontoSeguinte} onChange={(e) => setValorDescontoSeguinte(e.target.value)} placeholder={tipoDescontoSeguinte === "percentual" ? "5" : "8.00"} required />
+                </div>
+                <div>
+                  <Label htmlFor="limiteClienteSeguinte" className="block text-sm font-semibold mb-1.5">Usos por cliente</Label>
+                  <Input id="limiteClienteSeguinte" type="number" min="1" step="1" value={limitePorClienteSeguinte} onChange={(e) => setLimitePorClienteSeguinte(e.target.value)} placeholder="Ilimitado" />
+                  <span className="text-xs opacity-60 mt-1 block">Vazio significa ilimitado nesta faixa.</span>
                 </div>
               </div>
             )}
-            <p className="text-[11px] opacity-60">A prioridade e o histórico determinam a faixa aplicável; a regra é congelada na confirmação.</p>
+            <p className="text-[11px] opacity-60">Os limites por cliente são independentes. O limite total de usos acima vale para o cupom inteiro.</p>
+          </section>
+
+          <div className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
+            <Switch marcado={ativo} aoMudar={setAtivo} aria-label="Ativar cupom" />
+            <div>
+              <span className="text-sm font-bold block">Cupom Ativo</span>
+              <span className="text-xs opacity-60">Disponível para validação e resgate</span>
+            </div>
           </div>
 
           {/* Ações */}

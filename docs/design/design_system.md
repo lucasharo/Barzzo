@@ -76,6 +76,10 @@ Existem quatro cores funcionais:
 
 Essas cores podem ser usadas em alertas, badges, estados, ícones e feedbacks funcionais.
 
+## Campos com máscara
+
+Campos editáveis de data (DD/MM/AAAA), telefone, CPF/CNPJ, CEP e cartão devem usar o `InputMascarado` compartilhado de `@barzzo/ui` com os formatadores de `@barzzo/utilitarios`. A máscara é apenas visual: a edição no meio e o Backspace/Delete sobre separadores preservam a posição do cursor; valores parciais são permitidos durante a digitação e validados antes do envio. Mantenha o `Label` associado ao campo e normalize os dados no envio conforme o contrato existente.
+
 ## Botões
 
 ### Principal

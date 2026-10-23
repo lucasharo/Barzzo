@@ -9,11 +9,13 @@ import {
   CardTitle,
   CardDescription,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
   Avatar,
   LoadingSpinner,
+  Switch,
 } from "@barzzo/ui";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
@@ -212,10 +214,12 @@ export default function PaginaDetalhesProfissional() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input
+                <InputMascarado
                   id="telefone"
+                  type="tel"
                   value={telefone}
-                  onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                  mascara={formatarTelefone}
+                  onChangeValor={setTelefone}
                 />
               </div>
             </div>
@@ -230,14 +234,8 @@ export default function PaginaDetalhesProfissional() {
             </div>
 
             <div className="flex items-center gap-2 pt-2">
-              <input
-                type="checkbox"
-                id="ativo"
-                checked={ativo}
-                onChange={(e) => setAtivo(e.target.checked)}
-                className="h-4 w-4 rounded accent-[#B45A2B]"
-              />
-              <Label htmlFor="ativo" className="cursor-pointer">
+              <Switch marcado={ativo} aoMudar={setAtivo} aria-label="Ativar profissional para agendamentos" />
+              <Label className="cursor-pointer">
                 Profissional ativo para agendamentos
               </Label>
             </div>

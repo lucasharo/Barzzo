@@ -44,6 +44,7 @@ export default function PaginaNotificacoesCliente() {
   const [marcandoTodas, setMarcandoTodas] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucessoPref, setSucessoPref] = React.useState(false);
+  const carregamentoInicialExecutadoRef = React.useRef(false);
 
   const carregarDados = React.useCallback(async () => {
     try {
@@ -91,7 +92,9 @@ export default function PaginaNotificacoesCliente() {
   }, []);
 
   React.useEffect(() => {
-    carregarDados();
+    if (carregamentoInicialExecutadoRef.current) return;
+    carregamentoInicialExecutadoRef.current = true;
+    void carregarDados();
   }, [carregarDados]);
 
   async function handleMarcarLida(id: string) {

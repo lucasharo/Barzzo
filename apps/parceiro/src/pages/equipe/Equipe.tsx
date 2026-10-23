@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -247,12 +248,13 @@ export default function PaginaEquipe() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="telProfissional">Telefone / WhatsApp (opcional)</Label>
-                  <Input
+                  <InputMascarado
                     id="telProfissional"
                     type="tel"
                     placeholder="(11) 98888-7777"
                     value={telefone}
-                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                    mascara={formatarTelefone}
+                    onChangeValor={setTelefone}
                   />
                 </div>
 

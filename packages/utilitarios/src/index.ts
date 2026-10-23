@@ -11,6 +11,7 @@ export {
   formatarCnpj,
   formatarDocumento,
   formatarCep,
+  formatarDataDigitada,
   formatarTelefone,
   limparTelefone,
   extrairPrimeiroNome,

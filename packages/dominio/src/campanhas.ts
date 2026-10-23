@@ -154,6 +154,32 @@ export function calcularDescontoCupom(parametros: {
   };
 }
 
+/** Conta os usos anteriores do cliente que pertencem à faixa atualmente elegível. */
+export function contarUsosCupomClienteNaRegra(
+  usos: Array<{ cupom_regra_snapshot: Partial<CupomRegra> | null }>,
+  cupom: Pick<Cupom, "origem">,
+  regra: CupomRegra,
+): number {
+  const limitePorFaixa =
+    (cupom.origem === "BARBEARIA" || cupom.origem === "INFLUENCIADOR") &&
+    regra.escopo_historico === "BARBEARIA" &&
+    ((regra.atendimentos_minimos === 0 && regra.atendimentos_maximos === 0) ||
+      (regra.atendimentos_minimos === 1 && regra.atendimentos_maximos == null));
+
+  if (!limitePorFaixa) return usos.length;
+
+  return usos.filter(({ cupom_regra_snapshot: anterior }) => {
+    if (!anterior) return true;
+
+    const mesmoEscopo = (anterior.escopo_historico ?? "BARBEARIA") === regra.escopo_historico;
+    const faixaLegada = anterior.atendimentos_minimos == null && anterior.atendimentos_maximos == null;
+    const mesmaFaixa = anterior.atendimentos_minimos === regra.atendimentos_minimos &&
+      anterior.atendimentos_maximos === regra.atendimentos_maximos;
+
+    return mesmoEscopo && (mesmaFaixa || faixaLegada);
+  }).length;
+}
+
 /**
  * Calcula a comissão do influenciador a partir do valor faturado do corte/serviço.
  */

@@ -50,6 +50,8 @@ comissoes_influenciadores
 
 `cupons_regras` representa faixas extensíveis por prioridade, intervalo de atendimentos anteriores, escopo (`BARBEARIA` ou `GLOBAL_BARZZO`), benefício, serviços elegíveis, valor mínimo e limites. `cupons_utilizacoes` registra individualmente os estados `reservado`, `consumido`, `liberado` e `cancelado`, com valores e regra aplicada. A contagem de limites é feita sob lock da linha do cupom na RPC de confirmação, não no frontend.
 
+Na RLS, membros da barbearia só podem criar, alterar ou excluir regras com `escopo_historico = 'BARBEARIA'`; o escopo `GLOBAL_BARZZO` é exclusivo do Admin Barzzo. A mesma restrição administrativa se aplica a cupons de origem `BARZZO_GLOBAL`.
+
 No fluxo atual, uma utilização é criada como `consumido` na confirmação definitiva; cancelamento ou não comparecimento muda o registro para `liberado` e não gera comissão. `reservado` fica disponível para fluxos transacionais intermediários e `cancelado` para invalidações explícitas auditadas.
 
 `comissoes_influenciadores` tem no máximo uma linha por agendamento (`UNIQUE(agendamento_id)`) e usa exclusivamente o snapshot do agendamento. Influencer desativado não impede a comissão de reserva já confirmada.

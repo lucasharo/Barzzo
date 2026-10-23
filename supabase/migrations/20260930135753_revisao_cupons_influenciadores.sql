@@ -170,8 +170,45 @@ WHERE i.agendamento_id = a.id
 -- 4. RLS e helpers
 -- ============================================================================
 
+-- user_metadata e editavel pelo proprio usuario; privilegio administrativo
+-- deve depender somente de identidade verificada ou app_metadata controlado.
+CREATE OR REPLACE FUNCTION public.eh_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT auth.uid() IS NOT NULL AND (
+        auth.jwt() ->> 'email' = 'admin@barzzo.com.br'
+        OR auth.jwt() -> 'app_metadata' ->> 'role' = 'admin'
+        OR COALESCE((auth.jwt() -> 'app_metadata' ->> 'claims_admin')::boolean, false)
+    );
+$$;
+
 ALTER TABLE public.cupons_regras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cupons_utilizacoes ENABLE ROW LEVEL SECURITY;
+
+-- Apenas o Admin do Barzzo pode criar, editar ou excluir cupons globais.
+-- O Parceiro continua limitado aos cupons e ao historico da propria barbearia.
+DROP POLICY IF EXISTS "Membros da equipe gerenciam cupons da barbearia" ON public.cupons;
+CREATE POLICY "Membros da equipe gerenciam cupons da barbearia"
+    ON public.cupons
+    FOR ALL TO authenticated
+    USING (
+        public.eh_admin()
+        OR (
+            origem <> 'BARZZO_GLOBAL'
+            AND public.usuario_eh_membro_equipe(barbearia_id, auth.uid())
+        )
+    )
+    WITH CHECK (
+        public.eh_admin()
+        OR (
+            origem <> 'BARZZO_GLOBAL'
+            AND public.usuario_eh_membro_equipe(barbearia_id, auth.uid())
+        )
+    );
 
 CREATE POLICY "Leitura pública das regras de cupons ativos"
     ON public.cupons_regras FOR SELECT TO anon, authenticated
@@ -184,18 +221,29 @@ CREATE POLICY "Membros gerenciam regras de cupons da barbearia"
     ON public.cupons_regras FOR ALL TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.cupons c
-        WHERE c.id = cupom_id AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid())
+        WHERE c.id = cupom_id AND (
+            public.eh_admin()
+            OR (c.origem <> 'BARZZO_GLOBAL' AND escopo_historico = 'BARBEARIA'
+                AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid()))
+        )
     ))
     WITH CHECK (EXISTS (
         SELECT 1 FROM public.cupons c
-        WHERE c.id = cupom_id AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid())
+        WHERE c.id = cupom_id AND (
+            public.eh_admin()
+            OR (c.origem <> 'BARZZO_GLOBAL' AND escopo_historico = 'BARBEARIA'
+                AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid()))
+        )
     ));
 
 CREATE POLICY "Membros visualizam utilizações da barbearia"
     ON public.cupons_utilizacoes FOR SELECT TO authenticated
     USING (EXISTS (
         SELECT 1 FROM public.cupons c
-        WHERE c.id = cupom_id AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid())
+        WHERE c.id = cupom_id AND (
+            public.eh_admin()
+            OR (c.origem <> 'BARZZO_GLOBAL' AND public.usuario_eh_membro_equipe(c.barbearia_id, auth.uid()))
+        )
     ));
 
 -- ============================================================================
@@ -370,7 +418,7 @@ BEGIN
     ) VALUES (
         p_barbearia_id, v_cupom.influenciador_id, v_cupom.id, p_agendamento_id,
         p_cliente_id, v_cupom.codigo, 'pendente'
-    ) ON CONFLICT (agendamento_id) DO NOTHING;
+    ) ON CONFLICT (agendamento_id) WHERE agendamento_id IS NOT NULL DO NOTHING;
 
     UPDATE public.cupons SET usos_atuais = (
         SELECT COUNT(*) FROM public.cupons_utilizacoes u

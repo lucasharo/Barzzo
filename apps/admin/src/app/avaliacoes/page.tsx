@@ -25,7 +25,7 @@ export default function PaginaAvaliacoesAdmin() {
     try {
       setCarregando(true);
       setErro(null);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
 
       const { data: avDb, error: erroDb } = await (supabase.from("avaliacoes") as any)
         .select("*, barbearias(nome), usuarios(nome)")

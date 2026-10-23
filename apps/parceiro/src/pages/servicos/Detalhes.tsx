@@ -13,6 +13,7 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { esquemaServico } from "@barzzo/validacoes";
@@ -438,15 +439,7 @@ export default function PaginaEdicaoServico() {
                 </span>
               </div>
 
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={ativo}
-                  onChange={(e) => setAtivo(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-neutral-300 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#16A34A]"></div>
-              </label>
+              <Switch marcado={ativo} aoMudar={setAtivo} aria-label="Ativar serviço" />
             </div>
 
             {/* Vínculo de Profissionais */}

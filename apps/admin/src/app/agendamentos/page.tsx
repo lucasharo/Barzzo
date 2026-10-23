@@ -24,7 +24,7 @@ export default function PaginaAgendamentosAdmin() {
       try {
         setCarregando(true);
         setErro(null);
-        const supabase = criarClienteSupabaseBrowser();
+        const supabase = criarClienteSupabaseBrowser("admin");
 
         const { data: agsDb, error: erroDb } = await supabase
           .from("agendamentos")

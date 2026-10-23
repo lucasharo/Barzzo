@@ -9,15 +9,18 @@ import {
   CardTitle,
   CardDescription,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
   Seletor,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { traduzirErro, formatarTelefone, formatarData } from "@barzzo/utilitarios";
+import { obterUrlBaseAppCliente } from "../../utils/url-cliente";
 import {
   esquemaInfluenciador,
   gerarLinkInfluenciador,
@@ -43,6 +46,7 @@ import {
   UserCheck,
   TrendingUp,
   Phone,
+  Pencil,
 } from "lucide-react";
 
 export default function PaginaInfluenciadoresParceiro() {
@@ -53,8 +57,9 @@ export default function PaginaInfluenciadoresParceiro() {
   const [comissoes, setComissoes] = React.useState<ComissaoInfluenciador[]>([]);
   const [cupons, setCupons] = React.useState<Cupom[]>([]);
 
-  // Modal Novo Influenciador
+  // Formulário de cadastro e edição
   const [modalAberto, setModalAberto] = React.useState(false);
+  const [influenciadorEmEdicao, setInfluenciadorEmEdicao] = React.useState<Influenciador | null>(null);
   const [salvando, setSalvando] = React.useState(false);
   const [nome, setNome] = React.useState("");
   const [codigoRef, setCodigoRef] = React.useState("");
@@ -63,6 +68,9 @@ export default function PaginaInfluenciadoresParceiro() {
   const [chavePix, setChavePix] = React.useState("");
   const [tipoComissao, setTipoComissao] = React.useState<"percentual" | "valor_fixo">("percentual");
   const [valorComissao, setValorComissao] = React.useState("10");
+  const [ativo, setAtivo] = React.useState(true);
+  const [erroModal, setErroModal] = React.useState<string | null>(null);
+  const gatilhoModalRef = React.useRef<HTMLButtonElement | null>(null);
 
   // Estado de cópia de link
   const [copiadoId, setCopiadoId] = React.useState<string | null>(null);
@@ -165,13 +173,13 @@ export default function PaginaInfluenciadoresParceiro() {
     }
   }
 
-  async function cadastrarInfluenciador(e: React.FormEvent) {
+  async function salvarInfluenciador(e: React.FormEvent) {
     e.preventDefault();
     if (!barbearia) return;
 
     try {
       setSalvando(true);
-      setErro(null);
+      setErroModal(null);
 
       const dadosValidados = esquemaInfluenciador.safeParse({
         nome: nome.trim(),
@@ -181,46 +189,59 @@ export default function PaginaInfluenciadoresParceiro() {
         chave_pix: chavePix.trim() ? chavePix.trim() : null,
         tipo_comissao: tipoComissao,
         valor_comissao: parseFloat(valorComissao.replace(",", ".")) || 0,
-        ativo: true,
+        ativo,
       });
 
       if (!dadosValidados.success) {
-        setErro(dadosValidados.error.errors[0]?.message || "Dados inválidos.");
-        setSalvando(false);
+        setErroModal(dadosValidados.error.errors[0]?.message || "Dados inválidos.");
         return;
       }
 
       const supabase = criarClienteSupabaseBrowser();
-      const { data: novoInf, error: erroInsert } = await (supabase.from("influenciadores") as any)
-        .insert({
-          barbearia_id: barbearia.id,
-          nome: dadosValidados.data.nome,
-          codigo_ref: dadosValidados.data.codigo_ref,
-          email: dadosValidados.data.email,
-          telefone: dadosValidados.data.telefone,
-          chave_pix: dadosValidados.data.chave_pix,
-          tipo_comissao: dadosValidados.data.tipo_comissao,
-          valor_comissao: dadosValidados.data.valor_comissao,
-          ativo: true,
-        })
-        .select()
-        .single();
+      const dados = {
+        nome: dadosValidados.data.nome,
+        codigo_ref: dadosValidados.data.codigo_ref,
+        email: dadosValidados.data.email,
+        telefone: dadosValidados.data.telefone,
+        chave_pix: dadosValidados.data.chave_pix,
+        tipo_comissao: dadosValidados.data.tipo_comissao,
+        valor_comissao: dadosValidados.data.valor_comissao,
+        ativo: dadosValidados.data.ativo,
+      };
+      const { data: influenciadorSalvo, error: erroSalvar } = influenciadorEmEdicao
+        ? await (supabase.from("influenciadores") as any)
+            .update({ ...dados, updated_at: new Date().toISOString() })
+            .eq("id", influenciadorEmEdicao.id)
+            .eq("barbearia_id", barbearia.id)
+            .select()
+            .single()
+        : await (supabase.from("influenciadores") as any)
+            .insert({ ...dados, barbearia_id: barbearia.id })
+            .select()
+            .single();
 
-      if (erroInsert || !novoInf) {
-        if (erroInsert?.message?.includes("influenciadores_codigo_barbearia_unique")) {
-          setErro("Já existe um influenciador com este código nesta barbearia.");
+      if (erroSalvar || !influenciadorSalvo) {
+        if (erroSalvar?.code === "23505" || erroSalvar?.message?.includes("influenciadores_codigo_barbearia_unique")) {
+          setErroModal("Já existe um influenciador com este código nesta barbearia.");
         } else {
-          setErro(traduzirErro(erroInsert, "Erro ao cadastrar influenciador. Tente novamente."));
+          setErroModal(traduzirErro(erroSalvar, "Não foi possível salvar o influenciador. Verifique o vínculo com a barbearia e tente novamente."));
         }
-        setSalvando(false);
         return;
       }
 
-      setSucesso(`Influenciador ${dadosValidados.data.nome} cadastrado com sucesso!`);
-      setInfluenciadores((ant) => [novoInf as Influenciador, ...ant]);
+      if (influenciadorEmEdicao) {
+        setInfluenciadores((ant) => ant.map((item) => item.id === influenciadorSalvo.id ? influenciadorSalvo as Influenciador : item));
+        setComissoes((ant) => ant.map((item) => item.influenciador_id === influenciadorSalvo.id
+          ? { ...item, influenciadores: { nome: influenciadorSalvo.nome, codigo_ref: influenciadorSalvo.codigo_ref, chave_pix: influenciadorSalvo.chave_pix } }
+          : item));
+        setSucesso(`Influenciador ${dadosValidados.data.nome} atualizado com sucesso!`);
+      } else {
+        setInfluenciadores((ant) => [influenciadorSalvo as Influenciador, ...ant]);
+        setSucesso(`Influenciador ${dadosValidados.data.nome} cadastrado com sucesso!`);
+      }
       fecharModal();
     } catch {
-      setErro("Erro ao salvar influenciador.");
+      setErroModal("Erro ao salvar influenciador. Tente novamente.");
     } finally {
       setSalvando(false);
     }
@@ -228,6 +249,9 @@ export default function PaginaInfluenciadoresParceiro() {
 
   function fecharModal() {
     setModalAberto(false);
+    requestAnimationFrame(() => gatilhoModalRef.current?.focus());
+    setInfluenciadorEmEdicao(null);
+    setErroModal(null);
     setNome("");
     setCodigoRef("");
     setEmail("");
@@ -235,17 +259,41 @@ export default function PaginaInfluenciadoresParceiro() {
     setChavePix("");
     setTipoComissao("percentual");
     setValorComissao("10");
+    setAtivo(true);
+  }
+
+  function abrirNovoInfluenciador(evento: React.MouseEvent<HTMLButtonElement>) {
+    gatilhoModalRef.current = evento.currentTarget;
+    setModalAberto(true);
+  }
+
+  function editarInfluenciador(inf: Influenciador, evento: React.MouseEvent<HTMLButtonElement>) {
+    gatilhoModalRef.current = evento.currentTarget;
+    setInfluenciadorEmEdicao(inf);
+    setNome(inf.nome);
+    setCodigoRef(inf.codigo_ref);
+    setEmail(inf.email || "");
+    setTelefone(formatarTelefone(inf.telefone || ""));
+    setChavePix(inf.chave_pix || "");
+    setTipoComissao(inf.tipo_comissao);
+    setValorComissao(String(inf.valor_comissao));
+    setAtivo(inf.ativo);
+    setErroModal(null);
+    setModalAberto(true);
   }
 
   function copiarLink(inf: Influenciador) {
     if (!barbearia) return;
+    if (!inf.ativo) {
+      setErro("Ative o influenciador antes de divulgar seu cupom.");
+      return;
+    }
     const cupom = cupons.find((item) => item.influenciador_id === inf.id);
     if (!cupom) {
       setErro("Este influencer ainda não possui cupom ativo para divulgação. Crie um cupom associado antes de copiar o link.");
       return;
     }
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://barzzo.com.br";
-    const link = gerarLinkInfluenciador(origin, barbearia.slug, cupom.codigo);
+    const link = gerarLinkInfluenciador(obterUrlBaseAppCliente(), barbearia.slug, cupom.codigo);
 
     navigator.clipboard.writeText(link);
     setCopiadoId(inf.id);
@@ -318,7 +366,7 @@ export default function PaginaInfluenciadoresParceiro() {
         </div>
 
         <Button
-          onClick={() => setModalAberto(true)}
+          onClick={abrirNovoInfluenciador}
           className="bg-[#B45A2B] hover:bg-[#C46632] text-white gap-2 min-h-[44px]"
         >
           <Plus className="w-4 h-4" />
@@ -389,7 +437,7 @@ export default function PaginaInfluenciadoresParceiro() {
               Cadastre parceiros para gerar links e comissões automáticas em cortes realizados.
             </p>
             <Button
-              onClick={() => setModalAberto(true)}
+              onClick={abrirNovoInfluenciador}
               className="bg-[#B45A2B] hover:bg-[#C46632] text-white min-h-[44px]"
             >
               <Plus className="w-4 h-4 mr-1.5" /> Cadastrar Primeiro Parceiro
@@ -415,7 +463,7 @@ export default function PaginaInfluenciadoresParceiro() {
                           CUPOM: {cupons.find((cupom) => cupom.influenciador_id === inf.id)?.codigo || "Nenhum cupom ativo"}
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] border border-[#16A34A]/20">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${inf.ativo ? "bg-[#16A34A]/10 text-[#16A34A] border-[#16A34A]/20" : "bg-neutral-200 text-neutral-700 border-neutral-300 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700"}`}>
                         {inf.ativo ? "Ativo" : "Inativo"}
                       </span>
                     </div>
@@ -455,7 +503,17 @@ export default function PaginaInfluenciadoresParceiro() {
                     </div>
                   </div>
 
-                  <div className="pt-3 mt-3 border-t border-neutral-100 dark:border-neutral-800">
+                  <div className="pt-3 mt-3 border-t border-neutral-100 dark:border-neutral-800 flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      variante="fantasma"
+                      onClick={(evento) => editarInfluenciador(inf, evento)}
+                      className="w-full min-h-[44px] gap-1.5 border border-[#B45A2B]/30"
+                      aria-label={`Editar influenciador ${inf.nome}`}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Editar Influenciador
+                    </Button>
                     <Button
                       type="button"
                       variante="secundario"
@@ -584,31 +642,52 @@ export default function PaginaInfluenciadoresParceiro() {
         )}
       </div>
 
-      {/* Modal Novo Influenciador */}
+      {/* Cadastro e edição de influenciador */}
       {modalAberto && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="titulo-modal-influenciador"
+          onKeyDown={(evento) => {
+            if (evento.key !== "Escape" || salvando) return;
+            const alvo = evento.target;
+            if (alvo instanceof HTMLElement && (
+              alvo.closest('[aria-haspopup="listbox"][aria-expanded="true"]') || alvo.closest('[role="listbox"]')
+            )) return;
+            fecharModal();
+          }}
+        >
           <Card className="w-full max-w-lg bg-white dark:bg-[#111113] p-6 shadow-2xl border-neutral-200 dark:border-neutral-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
-              <h2 className="text-lg font-bold flex items-center gap-2">
+              <h2 id="titulo-modal-influenciador" className="text-lg font-bold flex items-center gap-2">
                 <Share2 className="w-5 h-5 text-[#B45A2B]" />
-                Novo Influenciador Parceiro
+                {influenciadorEmEdicao ? "Editar Influenciador" : "Novo Influenciador Parceiro"}
               </h2>
               <button
                 type="button"
                 onClick={fecharModal}
+                disabled={salvando}
+                aria-label="Fechar formulário de influenciador"
                 className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 dark:hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={cadastrarInfluenciador} className="space-y-4 pt-4">
+            <form onSubmit={salvarInfluenciador} className="space-y-4 pt-4">
+              {erroModal && (
+                <Alert variante="erro">
+                  <AlertDescription>{erroModal}</AlertDescription>
+                </Alert>
+              )}
               <div>
                 <Label htmlFor="nomeInf" className="block text-sm font-semibold mb-1.5">
                   Nome do Influenciador / Promotor <span className="text-[#DC2626]">*</span>
                 </Label>
                 <Input
                   id="nomeInf"
+                  autoFocus
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   placeholder="Ex: Carlos Barba VIP"
@@ -639,9 +718,10 @@ export default function PaginaInfluenciadoresParceiro() {
                     Tipo de Comissão
                   </Label>
                   <Seletor
+                    id="tipoCom"
                     className="w-full"
                     valor={tipoComissao}
-                    aoMudar={(val) => setTipoComissao(val as any)}
+                    aoMudar={(val) => setTipoComissao(val as typeof tipoComissao)}
                     opcoes={[
                       { valor: "percentual", rotulo: "Percentual (%)" },
                       { valor: "valor_fixo", rotulo: "Fixo por corte (R$)" },
@@ -696,12 +776,22 @@ export default function PaginaInfluenciadoresParceiro() {
                   <Label htmlFor="telInf" className="block text-sm font-semibold mb-1.5">
                     Telefone / WhatsApp (opcional)
                   </Label>
-                  <Input
+                  <InputMascarado
                     id="telInf"
                     value={telefone}
-                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                    type="tel"
+                    mascara={formatarTelefone}
+                    onChangeValor={setTelefone}
                     placeholder="(11) 98888-7777"
                   />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3.5 min-h-[44px]">
+                <Switch marcado={ativo} aoMudar={setAtivo} disabled={salvando} aria-label="Influenciador ativo" />
+                <div>
+                  <span className="text-sm font-bold block">Influenciador Ativo</span>
+                  <span className="text-xs opacity-60">{ativo ? "Disponível para novas atribuições por cupom" : "Sem novas atribuições; comissões anteriores são preservadas"}</span>
                 </div>
               </div>
 
@@ -721,7 +811,7 @@ export default function PaginaInfluenciadoresParceiro() {
                   carregando={salvando}
                   className="bg-[#B45A2B] hover:bg-[#C46632] text-white min-h-[44px] px-6"
                 >
-                  Cadastrar Parceiro
+                  {influenciadorEmEdicao ? "Salvar Alterações" : "Cadastrar Parceiro"}
                 </Button>
               </div>
             </form>

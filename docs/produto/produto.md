@@ -18,11 +18,15 @@ Própria agenda, atendimentos, clientes necessários, disponibilidade, perfil e 
 ## Influenciador
 Cupons associados, campanhas, reservas atribuídas, concluídos, comissão pendente/paga. Links novos divulgam diretamente `?cupom=CODIGO`; `ref` é apenas compatibilidade de navegação e não cria atribuição.
 
+No Parceiro, os dados do influenciador e seu status ativo/inativo podem ser editados. Um influenciador inativo não recebe novas atribuições por cupom; alterações de status ou comissão não recalculam comissões já congeladas em agendamentos anteriores.
+
 ## Cupons e atribuição comercial
 - O cupom aplicado na reserva é a única fonte de atribuição comercial.
 - Cada reserva tem no máximo um cupom. Um novo cupom substitui o anterior.
 - O cupom é reaplicado em cada agendamento e não é herdado de reservas anteriores.
 - Cupons podem possuir múltiplas regras/faixas, com prioridade, histórico por barbearia ou global Barzzo, serviços elegíveis, valor mínimo, limites e desconto percentual/fixo.
+- No Parceiro, o histórico considerado é sempre o da própria barbearia; cupons globais e regras com histórico de todo o Barzzo são exclusivos do Admin.
+- No formulário do Parceiro, `Apenas 1ª Reserva` fica na seção de demais atendimentos: quando ligado, seus campos ficam ocultos e um aviso informa que não haverá desconto nessa faixa; quando desligado, os campos são exibidos. Os limites por cliente são independentes entre faixas, enquanto o limite total permanece compartilhado pelo cupom.
 - O agendamento congela o snapshot comercial no momento da confirmação; comissão percentual usa o líquido e comissão fixa usa o valor congelado.
 
 ## Admin

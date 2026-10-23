@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardDescription,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -494,11 +495,13 @@ export default function PaginaNovoAgendamentoManual() {
 
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="clienteTelefone">Telefone / WhatsApp</Label>
-                  <Input
+                  <InputMascarado
                     id="clienteTelefone"
+                    type="tel"
                     placeholder="(11) 98765-4321"
                     value={clienteTelefone}
-                    onChange={(e) => setClienteTelefone(formatarTelefone(e.target.value))}
+                    mascara={formatarTelefone}
+                    onChangeValor={setClienteTelefone}
                   />
                 </div>
               </div>

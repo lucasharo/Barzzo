@@ -29,9 +29,12 @@ export default function PaginaFavoritosCliente() {
   const [favoritos, setFavoritos] = React.useState<FavoritoBarbearia[]>([]);
   const [erro, setErro] = React.useState<string | null>(null);
   const [removendoId, setRemovendoId] = React.useState<string | null>(null);
+  const carregamentoInicialExecutadoRef = React.useRef(false);
 
   React.useEffect(() => {
-    carregarFavoritos();
+    if (carregamentoInicialExecutadoRef.current) return;
+    carregamentoInicialExecutadoRef.current = true;
+    void carregarFavoritos();
   }, []);
 
   async function carregarFavoritos() {

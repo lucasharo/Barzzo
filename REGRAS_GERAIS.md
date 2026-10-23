@@ -68,6 +68,8 @@
 - Influencer desativado ou alteração posterior da taxa não invalida atribuição/comissão já congelada.
 - Histórico de uso deve ser auditável em `cupons_utilizacoes` e seus limites devem ser garantidos em transação no banco. Cancelamento e não comparecimento liberam uso reservado/consumido sem gerar comissão.
 - Regras de cupom são configuráveis por prioridade, histórico anterior, escopo `BARBEARIA` ou `GLOBAL_BARZZO`, benefício, serviços elegíveis, valor mínimo e limites.
+- No formulário do Parceiro, as faixas de primeiro e demais atendimentos têm limites de uso por cliente independentes; o limite total continua valendo para o cupom inteiro. O switch `Apenas 1ª Reserva` fica na seção de demais atendimentos e, ligado, oculta seus campos e exibe o aviso de que não haverá desconto nessa faixa.
+- O Parceiro cria e gerencia cupons e regras apenas da própria barbearia: origem `BARZZO_GLOBAL` e histórico `GLOBAL_BARZZO` são exclusivos do Admin Barzzo, inclusive pela API/RLS.
 
 ### Revisão da Task 08
 

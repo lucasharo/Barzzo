@@ -14,6 +14,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { gerarLinkInfluenciador } from "@barzzo/dominio";
+import { obterUrlBaseAppCliente } from "../../utils/url-cliente";
 import { formatarData } from "@barzzo/utilitarios";
 import type {
   Influenciador,
@@ -126,8 +127,7 @@ export default function PaginaPainelInfluenciador() {
 
   function copiarLink() {
     if (!barbearia || !influenciador) return;
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://barzzo.com.br";
-    const link = gerarLinkInfluenciador(origin, barbearia.slug, influenciador.codigo_ref);
+    const link = gerarLinkInfluenciador(obterUrlBaseAppCliente(), barbearia.slug, influenciador.codigo_ref);
 
     navigator.clipboard.writeText(link);
     setCopiado(true);
@@ -164,8 +164,7 @@ export default function PaginaPainelInfluenciador() {
 
   if (!influenciador || !barbearia) return null;
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://barzzo.com.br";
-  const linkDivulgacao = gerarLinkInfluenciador(origin, barbearia.slug, influenciador.codigo_ref);
+  const linkDivulgacao = gerarLinkInfluenciador(obterUrlBaseAppCliente(), barbearia.slug, influenciador.codigo_ref);
 
   const totalPendente = comissoes
     .filter((c) => c.status === "pendente")

@@ -46,7 +46,7 @@ export default function PaginaBarbeariasAdmin() {
     try {
       setCarregando(true);
       setErro(null);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
 
       const { data: bDb, error: erroDb } = await supabase
         .from("barbearias")
@@ -73,7 +73,7 @@ export default function PaginaBarbeariasAdmin() {
       setSalvandoBeneficio(true);
       setErro(null);
       setSucesso(null);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
 
       const { error: erroRpc } = await (supabase.rpc as any)("conceder_extensao_trial", {
         p_barbearia_id: barbeariaSelecionada.id,
@@ -105,7 +105,7 @@ export default function PaginaBarbeariasAdmin() {
     if (!confirmacao) return;
 
     try {
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
       await (supabase.from("barbearias") as any)
         .update({ status_assinatura: novoStatus })
         .eq("id", barbearia.id);

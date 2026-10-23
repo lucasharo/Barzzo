@@ -13,6 +13,7 @@ export interface SeletorProps {
   valor: string;
   aoMudar: (valor: string) => void;
   opcoes: OpcaoSeletor[];
+  id?: string;
   icone?: React.ReactNode;
   placeholder?: string;
   desabilitado?: boolean;
@@ -25,6 +26,7 @@ export function Seletor({
   valor,
   aoMudar,
   opcoes,
+  id,
   icone,
   placeholder = "Selecione uma opção",
   desabilitado = false,
@@ -68,10 +70,11 @@ export function Seletor({
   }[tamanho];
 
   return (
-    <div ref={containerRef} className={cn("relative inline-block text-left w-full sm:w-auto", className)}>
+    <div ref={containerRef} className={cn("relative block w-full min-w-0 text-left", className)}>
       {/* Botão Trigger Customizado */}
       <button
         type="button"
+        id={id}
         disabled={desabilitado}
         onClick={() => !desabilitado && setAberto((prev) => !prev)}
         aria-haspopup="listbox"
@@ -115,7 +118,7 @@ export function Seletor({
         <div
           role="listbox"
           className={cn(
-            "absolute z-50 mt-1.5 w-full min-w-[220px] max-h-64 overflow-y-auto rounded-xl p-1.5 shadow-xl",
+            "absolute z-50 mt-1.5 w-full max-h-64 overflow-y-auto rounded-xl shadow-xl",
             "bg-white border border-neutral-200/90 text-black",
             "dark:bg-[#141416] dark:border-[#252529] dark:text-white",
             "animate-in fade-in-0 zoom-in-95 duration-150 right-0 sm:left-0 sm:right-auto"
@@ -124,8 +127,9 @@ export function Seletor({
           {opcoes.map((opcao) => {
             const selecionado = opcao.valor === valor;
             return (
-              <div
+              <button
                 key={opcao.valor}
+                type="button"
                 role="option"
                 aria-selected={selecionado}
                 onClick={() => {
@@ -133,10 +137,10 @@ export function Seletor({
                   setAberto(false);
                 }}
                 className={cn(
-                  "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-xs sm:text-sm transition-colors cursor-pointer select-none",
+                  "flex min-h-11 w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left text-xs sm:text-sm transition-colors cursor-pointer select-none",
                   selecionado
-                    ? "bg-[#B45A2B]/10 text-[#B45A2B] font-bold dark:bg-[#B45A2B]/20 dark:text-[#E07A4B]"
-                    : "hover:bg-neutral-100 text-neutral-700 dark:text-neutral-200 dark:hover:bg-[#1C1C1F]"
+                    ? "bg-[var(--primaria)] text-white font-bold"
+                    : "hover:bg-[#EEEEF0] text-black dark:text-white dark:hover:bg-[#1C1C1F]"
                 )}
               >
                 <div className="flex items-center gap-2.5 truncate">
@@ -151,8 +155,8 @@ export function Seletor({
                   </div>
                 </div>
 
-                {selecionado && <Check className="h-4 w-4 shrink-0 text-[#B45A2B] dark:text-[#E07A4B]" />}
-              </div>
+                {selecionado && <Check className="h-4 w-4 shrink-0 text-white" />}
+              </button>
             );
           })}
         </div>

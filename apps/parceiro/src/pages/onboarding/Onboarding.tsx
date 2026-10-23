@@ -8,13 +8,14 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaCriarBarbearia } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import { formatarDocumento, formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { CheckCircle2, Store, MapPin, Users, ArrowRight, LogIn, UserPlus } from "lucide-react";
 
@@ -379,12 +380,14 @@ export default function PaginaOnboarding() {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="documento">CNPJ ou CPF (opcional)</Label>
-                <Input
+                <InputMascarado
                   id="documento"
                   type="text"
+                  inputMode="numeric"
                   placeholder="00.000.000/0001-00"
                   value={documento}
-                  onChange={(e) => setDocumento(e.target.value)}
+                  mascara={formatarDocumento}
+                  onChangeValor={setDocumento}
                 />
               </div>
 
@@ -418,12 +421,13 @@ export default function PaginaOnboarding() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="telefone">Telefone / WhatsApp</Label>
-                  <Input
+                  <InputMascarado
                     id="telefone"
                     type="tel"
                     placeholder="(11) 99999-9999"
                     value={telefone}
-                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                    mascara={formatarTelefone}
+                    onChangeValor={setTelefone}
                   />
                 </div>
 

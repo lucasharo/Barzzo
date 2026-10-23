@@ -159,6 +159,7 @@ export default defineConfig(({ mode }) => {
     },
     envPrefix: ["VITE_", "NEXT_PUBLIC_"],
     define: {
+      "__BARZZO_APP_ID__": JSON.stringify("parceiro"),
       "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "process.env.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA": JSON.stringify(supabaseKey),
       "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(supabaseKey),

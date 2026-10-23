@@ -188,6 +188,27 @@ export function formatarCep(valor: string | null | undefined): string {
   return `${digitos.slice(0, 5)}-${digitos.slice(5, 8)}`;
 }
 
+/** Máscara progressiva DD/MM/AAAA que preserva os segmentos ao editar no meio. */
+export function formatarDataDigitada(valor: string | null | undefined): string {
+  const entrada = (valor || "").trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(entrada);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+
+  const partes = entrada.replace(/[^\d/]/g, "").split("/");
+  if (partes.length > 1) {
+    const dia = partes[0].slice(0, 2);
+    const mesBruto = partes[0].slice(2) + (partes[1] || "");
+    const mes = mesBruto.slice(0, 2);
+    const ano = (mesBruto.slice(2) + partes.slice(2).join("")).slice(0, 4);
+    return `${dia}/${mes}${partes.length > 2 || mesBruto.length > 2 ? `/${ano}` : ""}`;
+  }
+
+  const digitos = entrada.replace(/\D/g, "").slice(0, 8);
+  if (digitos.length <= 2) return digitos;
+  if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+  return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+}
+
 /**
  * Formata uma data no formato padrão brasileiro `dd/MM/yyyy`.
  * Suporta strings no formato ISO, YYYY-MM-DD, instâncias de Date e timestamps numéricos.

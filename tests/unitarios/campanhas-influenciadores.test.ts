@@ -8,6 +8,7 @@ import {
 import {
   calcularDescontoCupom,
   calcularValorComissao,
+  contarUsosCupomClienteNaRegra,
   gerarLinkInfluenciador,
 } from "@barzzo/dominio";
 import type { Cupom } from "@barzzo/tipos";
@@ -412,6 +413,28 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
     it("permite cupom ilimitado quando os limites são nulos", () => {
       const cupom = { ...cupomComFaixas, regras: [{ ...cupomComFaixas.regras![1], limite_usos_total: null, limite_usos_por_cliente: null }] };
       expect(calcularDescontoCupom({ cupom, valorTotal: 100, usosCupom: 999, usosCupomCliente: 999, historicoPorEscopo: { barbearia: 1, global: 1 }, agora: new Date("2026-06-01") }).valido).toBe(true);
+    });
+
+    it("conta os usos da faixa aplicável sem misturar primeiro e demais atendimentos", () => {
+      const usos = [
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 0, atendimentos_maximos: 0 } },
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+        { cupom_regra_snapshot: { escopo_historico: "GLOBAL_BARZZO" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+      ];
+      const regraDemais = { ...cupomComFaixas.regras![1], escopo_historico: "BARBEARIA" as const };
+
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "BARBEARIA" }, regraDemais)).toBe(1);
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "BARZZO_GLOBAL" }, regraDemais)).toBe(3);
+    });
+
+    it("considera usos legados sem snapshot de faixa na regra correspondente", () => {
+      const regraPrimeiro = { ...cupomComFaixas.regras![0], escopo_historico: "BARBEARIA" as const };
+      const usos = [
+        { cupom_regra_snapshot: null },
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+      ];
+
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "INFLUENCIADOR" }, regraPrimeiro)).toBe(1);
     });
 
     it("comissão percentual usa o valor líquido após desconto", () => {

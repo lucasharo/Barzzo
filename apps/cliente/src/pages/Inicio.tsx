@@ -8,6 +8,7 @@ import {
   geocodificarEndereco,
   salvarEnderecoBuscaSessao,
   obterEnderecoBuscaSessao,
+  obterEnderecoPorCoordenadas,
   obterEnderecoPerfilLocal,
   formatarEnderecoConta,
   type SugestaoEndereco,
@@ -28,7 +29,9 @@ import {
 export default function PaginaInicialCliente() {
   const navigate = useNavigate();
   const [termoBusca, setTermoBusca] = React.useState("");
-  const [localidadeBusca, setLocalidadeBusca] = React.useState("São Paulo, SP");
+  const [localidadeBusca, setLocalidadeBusca] = React.useState("");
+  const origemBuscaRef = React.useRef<"manual" | "conta" | "gps">("manual");
+  const enderecoAlteradoManualmenteRef = React.useRef(false);
   const [coordenadasBusca, setCoordenadasBusca] = React.useState<{ lat: number; lng: number } | null>(null);
   const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
   const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
@@ -39,9 +42,12 @@ export default function PaginaInicialCliente() {
 
   // Inicializar endereço: 1º Sessão ativa, 2º Endereço da conta do usuário autenticado
   React.useEffect(() => {
+    let cancelado = false;
+
     async function inicializarEndereco() {
       const enderecoSessao = obterEnderecoBuscaSessao();
       if (enderecoSessao && enderecoSessao.texto) {
+        origemBuscaRef.current = enderecoSessao.origem;
         setLocalidadeBusca(enderecoSessao.texto);
         if (enderecoSessao.lat && enderecoSessao.lng) {
           setCoordenadasBusca({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
@@ -49,17 +55,63 @@ export default function PaginaInicialCliente() {
         return;
       }
 
+      // Sem endereço salvo, usa a localização atual antes do endereço do perfil.
+      if (typeof navigator !== "undefined" && navigator.geolocation) {
+        const posicao = await new Promise<GeolocationPosition | null>((resolver) => {
+          navigator.geolocation.getCurrentPosition(
+            (resultado) => resolver(resultado),
+            () => resolver(null),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+          );
+        });
+
+        if (posicao && !cancelado && !enderecoAlteradoManualmenteRef.current) {
+          const lat = posicao.coords.latitude;
+          const lng = posicao.coords.longitude;
+          let enderecoTexto = "";
+          let bairro = "";
+          let cidade = "";
+
+          try {
+            const info = await obterEnderecoPorCoordenadas(lat, lng);
+            enderecoTexto = info?.enderecoCompleto || info?.titulo || "";
+            bairro = info?.bairro || "";
+            cidade = info?.cidade || "";
+          } catch {
+            // Fallback para as coordenadas caso a busca reversa falhe.
+          }
+
+          enderecoTexto ||= [bairro, cidade].filter(Boolean).join(", ") || "Minha Localização Atual";
+          origemBuscaRef.current = "gps";
+          setLocalidadeBusca(enderecoTexto);
+          setCoordenadasBusca({ lat, lng });
+          salvarEnderecoBuscaSessao({
+            texto: enderecoTexto,
+            lat,
+            lng,
+            bairro: bairro || null,
+            cidade: cidade || null,
+            origem: "gps",
+          });
+          return;
+        }
+      }
+
+      if (cancelado || enderecoAlteradoManualmenteRef.current) return;
+
       try {
         const supabase = criarClienteSupabaseBrowser();
         const {
           data: { user },
         } = await supabase.auth.getUser();
+        if (cancelado || enderecoAlteradoManualmenteRef.current) return;
 
         if (user) {
           const localPerfil = obterEnderecoPerfilLocal(user.id);
           const metaCombinada = { ...(localPerfil || {}), ...(user.user_metadata || {}) };
           const enderecoConta = formatarEnderecoConta(metaCombinada);
           if (enderecoConta && enderecoConta.texto) {
+            origemBuscaRef.current = "conta";
             setLocalidadeBusca(enderecoConta.texto);
             if (enderecoConta.lat && enderecoConta.lng) {
               setCoordenadasBusca({ lat: enderecoConta.lat, lng: enderecoConta.lng });
@@ -94,6 +146,9 @@ export default function PaginaInicialCliente() {
     }
 
     inicializarEndereco();
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   React.useEffect(() => {
@@ -211,7 +266,7 @@ export default function PaginaInicialCliente() {
         texto: loc,
         lat: coordenadasBusca?.lat ?? null,
         lng: coordenadasBusca?.lng ?? null,
-        origem: "manual",
+        origem: origemBuscaRef.current,
       });
     }
 
@@ -271,7 +326,10 @@ export default function PaginaInicialCliente() {
                 }
               }}
               onChange={(e) => {
+                enderecoAlteradoManualmenteRef.current = true;
+                origemBuscaRef.current = "manual";
                 setLocalidadeBusca(e.target.value);
+                setCoordenadasBusca(null);
                 setDropdownAberto(true);
               }}
               className="w-full bg-transparent text-sm focus:outline-none placeholder:opacity-50"
@@ -295,6 +353,8 @@ export default function PaginaInicialCliente() {
                       type="button"
                       onClick={() => {
                         const texto = sug.enderecoCompleto || sug.titulo;
+                        enderecoAlteradoManualmenteRef.current = true;
+                        origemBuscaRef.current = "manual";
                         setLocalidadeBusca(texto);
                         setCoordenadasBusca({ lat: sug.lat, lng: sug.lng });
                         salvarEnderecoBuscaSessao({
@@ -410,11 +470,6 @@ export default function PaginaInicialCliente() {
                   <div>
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-lg font-bold">{b.nome}</h3>
-                      {b.bairro && (
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 shrink-0">
-                          {b.bairro}
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs opacity-70 flex items-center gap-1 mt-1.5">
                       <MapPin className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
