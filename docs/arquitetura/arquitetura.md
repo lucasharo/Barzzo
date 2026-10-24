@@ -49,6 +49,8 @@ Devem existir futuramente dois pacotes mobile independentes:
 
 Admin permanece web.
 
+Implementação Android (Capacitor 7, `com.barzzo.cliente` e `com.barzzo.parceiro`): ver [mobile-android.md](mobile-android.md).
+
 ## PWA
 Mobile-first. Offline total não é requisito; reserva exige conexão. Abstrair câmera, geolocalização e push para adaptação ao Capacitor.
 

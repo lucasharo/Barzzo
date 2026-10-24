@@ -15,7 +15,12 @@ import {
 } from "@barzzo/ui";
 import { esquemaRecuperarSenha } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { origemWeb, traduzirErro } from "@barzzo/utilitarios";
+
+// Endereço público do Cliente na web, usado nos links de e-mail enviados a partir do app Android.
+const URL_WEB_CLIENTE: string =
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_WEB_URL ??
+  "https://barzzo-cliente-dev.vercel.app";
 
 export default function PaginaRecuperarSenha() {
   const [email, setEmail] = React.useState("");
@@ -39,7 +44,7 @@ export default function PaginaRecuperarSenha() {
       const supabase = criarClienteSupabaseBrowser();
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+        redirectTo: `${origemWeb(URL_WEB_CLIENTE)}/redefinir-senha`,
       });
 
       if (error) {

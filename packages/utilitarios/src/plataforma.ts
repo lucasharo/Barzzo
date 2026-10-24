@@ -21,3 +21,12 @@ export function plataformaAtual(): Plataforma {
 export function ehAppNativo(): boolean {
   return plataformaAtual() !== "web";
 }
+
+/**
+ * Origem web usada em links que saem do app (recuperação de senha, convites). No navegador é a própria origem;
+ * no app nativo a origem é https://localhost, então vale o endereço público informado.
+ */
+export function origemWeb(urlPublica: string): string {
+  if (!ehAppNativo() && typeof window !== "undefined") return window.location.origin;
+  return urlPublica.replace(/\/+$/, "");
+}

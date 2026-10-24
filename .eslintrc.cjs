@@ -9,6 +9,7 @@ module.exports = {
     "**/out/**",
     ".barzzo/**",
     ".vercel/**",
+    "**/android/**",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {

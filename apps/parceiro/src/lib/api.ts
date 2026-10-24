@@ -9,6 +9,9 @@ const API_NATIVA: string =
   ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_API_BASE_URL ??
     "https://barzzo-parceiro-dev.vercel.app").replace(/\/$/, "");
 
+/** Endereço público do Parceiro na web (links de convite e recuperação de senha enviados a partir do app). */
+export const URL_WEB_PARCEIRO = API_NATIVA;
+
 export function urlApi(caminho: string): string {
   return ehAppNativo() ? `${API_NATIVA}${caminho}` : caminho;
 }

@@ -1,4 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { RuntimeNativo } from "@barzzo/nativo";
+import { CapturaCupomIndicado } from "./components/captura-cupom-indicado";
 import { NavegacaoCliente } from "./components/navegacao-cliente";
 import PaginaInicialCliente from "./pages/Inicio";
 import PaginaListagemBarbearias from "./pages/Barbearias";
@@ -18,6 +20,8 @@ import PaginaConfirmacaoReservaPosLogin from "./pages/ConfirmarReserva";
 export default function App() {
   return (
     <>
+      <RuntimeNativo esquemaHost="cliente" rotasRaiz={["/"]} />
+      <CapturaCupomIndicado />
       <NavegacaoCliente />
       <main className="flex-1 flex flex-col max-w-6xl w-full mx-auto px-3 sm:px-4 py-4 sm:py-6 pb-28 md:pb-6 min-w-0 overflow-x-hidden">
         <Routes>

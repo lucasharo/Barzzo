@@ -14,7 +14,8 @@ import {
 } from "@barzzo/ui";
 import { esquemaRecuperarSenha } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { traduzirErro } from "@barzzo/utilitarios";
+import { origemWeb, traduzirErro } from "@barzzo/utilitarios";
+import { URL_WEB_PARCEIRO } from "../../lib/api";
 import { Store } from "lucide-react";
 
 export default function PaginaRecuperarSenhaParceiro() {
@@ -39,7 +40,7 @@ export default function PaginaRecuperarSenhaParceiro() {
       const supabase = criarClienteSupabaseBrowser();
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/redefinir-senha`,
+        redirectTo: `${origemWeb(URL_WEB_PARCEIRO)}/redefinir-senha`,
       });
 
       if (error) {
