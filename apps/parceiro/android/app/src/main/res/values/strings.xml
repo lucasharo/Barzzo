@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Barzzo Parceiro</string>
+    <string name="title_activity_main">Barzzo Parceiro</string>
+    <string name="package_name">com.barzzo.parceiro</string>
+    <string name="custom_url_scheme">com.barzzo.parceiro</string>
+</resources>

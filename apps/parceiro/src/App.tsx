@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { RuntimeNativo } from "@barzzo/nativo";
 import { NavegacaoParceiro } from "./components/navegacao-parceiro";
 import PaginaBloqueios from "./pages/agenda/Bloqueios";
 import PaginaAgenda from "./pages/agenda/Agenda";
@@ -37,6 +38,7 @@ import PaginaRecuperarSenhaParceiro from "./pages/auth/RecuperarSenha";
 export default function App() {
   return (
     <>
+      <RuntimeNativo esquemaHost="parceiro" rotasRaiz={["/", "/painel", "/entrar"]} />
       <NavegacaoParceiro />
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10">
         <Routes>

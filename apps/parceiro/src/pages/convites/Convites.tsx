@@ -15,7 +15,8 @@ import {
   Seletor,
 } from "@barzzo/ui";
 import { esquemaCriarConvite } from "@barzzo/validacoes";
-import { traduzirErro, formatarData } from "@barzzo/utilitarios";
+import { origemWeb, traduzirErro, formatarData } from "@barzzo/utilitarios";
+import { URL_WEB_PARCEIRO } from "../../lib/api";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { ConviteProfissional, Profissional } from "@barzzo/tipos";
@@ -152,7 +153,7 @@ export default function PaginaConvites() {
   };
 
   const copiarLinkConvite = (token: string) => {
-    const link = `${window.location.origin}/convite/${token}`;
+    const link = `${origemWeb(URL_WEB_PARCEIRO)}/convite/${token}`;
     navigator.clipboard.writeText(link);
     setCopiadoToken(token);
     setTimeout(() => setCopiadoToken(null), 2500);

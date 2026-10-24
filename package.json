@@ -17,7 +17,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "rag:index": "node tools/rag/cli.mjs index",
     "rag:rebuild": "node tools/rag/cli.mjs rebuild",
-    "rag:query": "node tools/rag/cli.mjs query"
+    "rag:query": "node tools/rag/cli.mjs query",
+    "android:cliente": "npm run android:debug --workspace=apps/cliente",
+    "android:parceiro": "npm run android:debug --workspace=apps/parceiro",
+    "android:cliente:release": "npm run android:release --workspace=apps/cliente",
+    "android:parceiro:release": "npm run android:release --workspace=apps/parceiro"
   },
   "devDependencies": {
     "@huggingface/transformers": "3.8.1",

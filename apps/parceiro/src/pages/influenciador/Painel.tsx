@@ -50,6 +50,7 @@ export default function PaginaPainelInfluenciador() {
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
   const [comissoes, setComissoes] = React.useState<ComissaoInfluenciador[]>([]);
   const [copiado, setCopiado] = React.useState(false);
+  const [copiadoLink, setCopiadoLink] = React.useState(false);
   const [codigoCupom, setCodigoCupom] = React.useState<string | null>(null);
   const [cupomBarzzo, setCupomBarzzo] = React.useState<CupomBarzzo | null>(null);
   const [novoCodigo, setNovoCodigo] = React.useState("");
@@ -165,6 +166,20 @@ export default function PaginaPainelInfluenciador() {
     navigator.clipboard.writeText(cupomBarzzo.codigo);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2500);
+  }
+
+  // O link abre o Cliente guardando o cupom: ele vale na primeira barbearia que aceitou os influenciadores do Barzzo.
+  function linkDoCupomBarzzo(): string | null {
+    if (!cupomBarzzo) return null;
+    return `${obterUrlBaseAppCliente()}/?cupom=${encodeURIComponent(cupomBarzzo.codigo)}`;
+  }
+
+  function copiarLinkBarzzo() {
+    const link = linkDoCupomBarzzo();
+    if (!link) return;
+    navigator.clipboard.writeText(link);
+    setCopiadoLink(true);
+    setTimeout(() => setCopiadoLink(false), 2500);
   }
 
   async function trocarCodigo(evento: React.FormEvent) {
@@ -323,6 +338,24 @@ export default function PaginaPainelInfluenciador() {
                       <>
                         <Copy className="w-4 h-4" />
                         Copiar cupom
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={copiarLinkBarzzo}
+                    disabled={cupomBarzzo.status_aprovacao !== "aprovado" || !cupomBarzzo.ativo}
+                    variante="secundario"
+                    className="gap-2 min-h-[44px] px-6 text-sm font-bold"
+                  >
+                    {copiadoLink ? (
+                      <>
+                        <Check className="w-4 h-4" />
+                        Link copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-4 h-4" />
+                        Copiar link de divulgação
                       </>
                     )}
                   </Button>

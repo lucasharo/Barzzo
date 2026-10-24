@@ -26,6 +26,7 @@ import {
   contarUsosCupomClienteNaRegra,
 } from "@barzzo/dominio";
 import { formatarData, traduzirErro } from "@barzzo/utilitarios";
+import { lerCupomIndicado } from "../lib/cupom-indicado";
 import type {
   Barbearia,
   Servico,
@@ -58,7 +59,7 @@ function ConteudoWizardReservaCliente() {
   const [searchParams] = useSearchParams();
   const slug = params.slug as string;
   const servicoIdUrl = searchParams.get("servico_id");
-  const cupomParamUrl = searchParams.get("cupom");
+  const cupomParamUrl = searchParams.get("cupom") ?? lerCupomIndicado();
 
   const [carregando, setCarregando] = React.useState(true);
   const [salvando, setSalvando] = React.useState(false);
