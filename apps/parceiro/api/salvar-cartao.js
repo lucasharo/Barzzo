@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { aplicarCors, exigirGestorDaBarbearia } from './_seguranca.js';
 
 export default async function handler(req, res) {
+  if (aplicarCors(req, res)) return;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
@@ -21,6 +24,9 @@ export default async function handler(req, res) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseSecretKey);
+
+    const usuario = await exigirGestorDaBarbearia(req, res, supabase, barbearia_id);
+    if (!usuario) return;
 
     // 1. Obter dados da barbearia
     const { data: barbearia, error: errBarb } = await supabase

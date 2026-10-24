@@ -1,4 +1,8 @@
+import { aplicarCors, criarClienteServico, exigirGestorDaBarbearia } from './_seguranca.js';
+
 export default async function handler(req, res) {
+  if (aplicarCors(req, res)) return;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
@@ -9,6 +13,13 @@ export default async function handler(req, res) {
     if (!barbearia_id || !plano_id || !valor) {
       return res.status(400).json({ error: 'Parâmetros obrigatórios ausentes' });
     }
+
+    const supabase = criarClienteServico();
+    if (!supabase) {
+      return res.status(500).json({ error: 'Configuração de ambiente incompleta' });
+    }
+    const usuario = await exigirGestorDaBarbearia(req, res, supabase, barbearia_id);
+    if (!usuario) return;
 
     const mpAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
     if (!mpAccessToken) {

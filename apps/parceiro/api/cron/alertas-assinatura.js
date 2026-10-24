@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { exigirSegredoDeCron } from '../_seguranca.js';
 
 export default async function handler(req, res) {
+  if (!exigirSegredoDeCron(req, res)) return;
+
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseSecretKey = process.env.SUPABASE_CHAVE_SECRETA;
