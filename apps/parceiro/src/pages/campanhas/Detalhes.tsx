@@ -19,6 +19,7 @@ import {
   Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { formatarData, formatarDataDigitada, traduzirErro } from "@barzzo/utilitarios";
 import { esquemaCupom } from "@barzzo/dominio";
 import type { Cupom, CupomRegra, Servico } from "@barzzo/tipos";
@@ -69,11 +70,8 @@ export default function PaginaFormularioCampanha() {
   const [limitePorClienteSeguinte, setLimitePorClienteSeguinte] = React.useState("");
   const [apenasPrimeiraReserva, setApenasPrimeiraReserva] = React.useState(false);
   const [dataInicio, setDataInicio] = React.useState(() => formatarData(new Date()));
-  const [dataFim, setDataFim] = React.useState(() => {
-    const prazo = new Date();
-    prazo.setDate(prazo.getDate() + 30);
-    return formatarData(prazo);
-  });
+  // Opcional: em branco, o cupom vale até alguém desativá-lo.
+  const [dataFim, setDataFim] = React.useState("");
   const [erroDataInicio, setErroDataInicio] = React.useState<string | null>(null);
   const [erroDataFim, setErroDataFim] = React.useState<string | null>(null);
   const [servicosSelecionados, setServicosSelecionados] = React.useState<string[]>([]);
@@ -105,12 +103,7 @@ export default function PaginaFormularioCampanha() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");
@@ -157,7 +150,7 @@ export default function PaginaFormularioCampanha() {
         setLimitePorCliente(String(cupom.limite_usos_por_cliente));
         setApenasPrimeiraReserva(cupom.apenas_primeira_reserva);
         setDataInicio(formatarData(cupom.data_inicio.slice(0, 10)));
-        setDataFim(formatarData(cupom.data_fim.slice(0, 10)));
+        setDataFim(cupom.data_fim ? formatarData(cupom.data_fim.slice(0, 10)) : "");
         setServicosSelecionados(cupom.servicos_elegiveis || []);
         setAtivo(cupom.ativo);
         if (cupom.origem === "BARZZO_GLOBAL") {
@@ -227,14 +220,15 @@ export default function PaginaFormularioCampanha() {
       }
 
       const inicioIso = converterDataParaIso(dataInicio);
-      const fimIso = converterDataParaIso(dataFim);
+      const semDataFim = dataFim.trim() === "";
+      const fimIso = semDataFim ? null : converterDataParaIso(dataFim);
       setErroDataInicio(inicioIso ? null : "Informe uma data de início válida no formato DD/MM/AAAA.");
-      setErroDataFim(fimIso ? null : "Informe uma data de término válida no formato DD/MM/AAAA.");
-      if (!inicioIso || !fimIso) {
+      setErroDataFim(semDataFim || fimIso ? null : "Informe uma data de término válida no formato DD/MM/AAAA ou deixe em branco.");
+      if (!inicioIso || (!semDataFim && !fimIso)) {
         setSalvando(false);
         return;
       }
-      if (fimIso < inicioIso) {
+      if (fimIso && fimIso < inicioIso) {
         setErroDataFim("A data de término deve ser igual ou posterior à data de início.");
         setSalvando(false);
         return;
@@ -307,7 +301,7 @@ export default function PaginaFormularioCampanha() {
         apenas_primeira_reserva: apenasPrimeiraReserva,
         servicos_elegiveis: servicosSelecionados,
         data_inicio: `${inicioIso}T00:00:00.000Z`,
-        data_fim: `${fimIso}T23:59:59.999Z`,
+        data_fim: fimIso ? `${fimIso}T23:59:59.999Z` : null,
         ativo,
         origem: origemCupom,
         influenciador_id: origemCupom === "INFLUENCIADOR" ? (influenciadorId || null) : null,
@@ -651,7 +645,7 @@ export default function PaginaFormularioCampanha() {
 
             <div>
               <Label htmlFor="dataFim" className="block text-sm font-semibold mb-1.5">
-                Data de Término <span className="text-[#DC2626]">*</span>
+                Data de Término <span className="text-xs font-normal opacity-60">(opcional)</span>
               </Label>
               <InputMascarado
                 id="dataFim"
@@ -665,13 +659,17 @@ export default function PaginaFormularioCampanha() {
                   setDataFim(valor);
                   setErroDataFim(null);
                 }}
-                onBlur={() => setErroDataFim(converterDataParaIso(dataFim) ? null : "Informe uma data de término válida no formato DD/MM/AAAA.")}
+                onBlur={() => setErroDataFim(dataFim.trim() === "" || converterDataParaIso(dataFim) ? null : "Informe uma data de término válida no formato DD/MM/AAAA ou deixe em branco.")}
                 placeholder="DD/MM/AAAA"
                 aria-invalid={!!erroDataFim}
                 aria-describedby={erroDataFim ? "erro-data-fim" : undefined}
                 erro={!!erroDataFim}
               />
-              {erroDataFim && <p id="erro-data-fim" className="mt-1 text-xs text-[var(--erro)]" role="alert">{erroDataFim}</p>}
+              {erroDataFim ? (
+                <p id="erro-data-fim" className="mt-1 text-xs text-[var(--erro)]" role="alert">{erroDataFim}</p>
+              ) : (
+                <p className="mt-1 text-[11px] opacity-60">Em branco, o cupom fica ativo até você desativá-lo.</p>
+              )}
             </div>
           </div>
 

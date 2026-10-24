@@ -18,6 +18,8 @@ export interface Plano {
   nome: string;
   descricao: string | null;
   limite_profissionais: number | null; // null = ilimitado
+  /** Filiais além da matriz: 0 = nenhuma; null = ilimitadas. */
+  limite_filiais?: number | null;
   preco_mensal: number;
   preco_semestral: number;
   ativo: boolean;

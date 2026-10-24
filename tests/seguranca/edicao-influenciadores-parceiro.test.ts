@@ -15,7 +15,6 @@ describe("Edição de influenciadores pelo Parceiro", () => {
   it("aceita cadastro inativo e mantém a validação dos dados editáveis", () => {
     const validacao = esquemaInfluenciador.safeParse({
       nome: "Magro",
-      codigo_ref: "MAGRO",
       email: "contato@exemplo.com",
       telefone: "(11) 98888-7777",
       chave_pix: null,

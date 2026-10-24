@@ -82,7 +82,6 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
         nome: "Barba & Estilo Blog",
         email: "contato@barbaestilo.com.br",
         telefone: "11988887777",
-        codigo_ref: "BARBAESTILO",
         tipo_comissao: "percentual",
         valor_comissao: 10,
         chave_pix: "contato@barbaestilo.com.br",
@@ -91,7 +90,7 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
 
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.data.codigo_ref).toBe("BARBAESTILO");
+        expect(res.data).not.toHaveProperty("codigo_ref");
         expect(res.data.valor_comissao).toBe(10);
       }
     });
@@ -99,7 +98,6 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
     it("deve aceitar comissão em valor fixo por atendimento", () => {
       const res = esquemaInfluenciador.safeParse({
         nome: "Canal do Navalha",
-        codigo_ref: "NAVALHA5",
         tipo_comissao: "valor_fixo",
         valor_comissao: 7.5,
       });

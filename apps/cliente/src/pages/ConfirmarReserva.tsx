@@ -175,7 +175,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
 
       const { data: profsDb } = await supabase
         .from("profissionais")
-        .select("*")
+        .select("id, barbearia_id, nome, foto_url, bio, ativo")
         .eq("barbearia_id", draft.barbearia_id)
         .eq("ativo", true);
 
@@ -316,17 +316,8 @@ export default function PaginaConfirmacaoReservaPosLogin() {
 
       // Se houver cupom/influenciador utilizado, registrar uso atomicamente via RPC
       if (codigoCupomLimpo) {
-        let cupomId: string | null = null;
-
-        const { data: cupDb } = await (supabase.from("cupons") as any)
-          .select("id")
-          .eq("barbearia_id", draft.barbearia_id)
-          .ilike("codigo", codigoCupomLimpo)
-          .maybeSingle();
-
-        if (cupDb) {
-          cupomId = cupDb.id;
-        }
+        // A RPC localiza o cupom pelo código dentro da barbearia da reserva.
+        const cupomId: string | null = null;
 
         const { error: erroUsoCupom } = await supabase.rpc("registrar_uso_cupom", {
           p_barbearia_id: draft.barbearia_id,

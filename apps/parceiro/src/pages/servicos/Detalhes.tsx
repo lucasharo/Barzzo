@@ -16,6 +16,7 @@ import {
   Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { esquemaServico } from "@barzzo/validacoes";
 import type { Profissional, Barbearia } from "@barzzo/tipos";
 import {
@@ -72,12 +73,7 @@ export default function PaginaEdicaoServico() {
       }
 
       // Buscar barbearia
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (!membro || !membro.barbearia_id) {
         setErro("Nenhuma barbearia vinculada.");

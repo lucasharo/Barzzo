@@ -23,7 +23,8 @@ export interface Campanha {
 
 export interface Cupom {
   id: string;
-  barbearia_id: string;
+  /** Nulo nos cupons de influenciadores do Barzzo (BARZZO_GLOBAL). */
+  barbearia_id: string | null;
   campanha_id: string | null;
   codigo: string;
   descricao: string | null;
@@ -36,10 +37,13 @@ export interface Cupom {
   apenas_primeira_reserva: boolean;
   servicos_elegiveis?: string[];
   origem?: OrigemCupom;
+  /** Cupons globais só valem depois de aprovados pelo Admin. */
+  status_aprovacao?: "pendente" | "aprovado" | "rejeitado";
   influenciador_id?: string | null;
   regras?: CupomRegra[];
   data_inicio: string;
-  data_fim: string;
+  /** Sem data de término, o cupom vale até ser desativado. */
+  data_fim: string | null;
   ativo: boolean;
   created_at: string;
   updated_at: string;
@@ -83,10 +87,12 @@ export interface CupomUtilizacao {
 
 export interface Influenciador {
   id: string;
-  barbearia_id: string;
+  /** Nulo nos influenciadores do Barzzo (sem barbearia, com conta própria). */
+  barbearia_id: string | null;
   usuario_id: string | null;
   nome: string;
-  codigo_ref: string;
+  /** Legado: não é mais preenchido; a divulgação e a atribuição usam o cupom. */
+  codigo_ref?: string | null;
   email: string | null;
   telefone: string | null;
   chave_pix: string | null;
@@ -133,7 +139,6 @@ export interface ComissaoInfluenciador {
   // Joins opcionais
   influenciadores?: {
     nome: string;
-    codigo_ref: string;
     chave_pix: string | null;
   } | null;
 }

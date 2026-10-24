@@ -324,7 +324,7 @@ function calcularHorariosDisponiveis(opcoes) {
     bloqueios = [],
     data,
     profissionalIdFiltro,
-    passoMinutos = 30,
+    passoMinutos = 15,
   } = opcoes;
 
   if (!servico.ativo || servico.duracao_minutos <= 0) return [];

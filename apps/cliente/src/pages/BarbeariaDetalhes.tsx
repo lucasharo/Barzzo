@@ -91,7 +91,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
       // 1. Barbearia por slug
       const { data: bDb, error: erroB } = await (supabase.from("barbearias") as any)
-        .select("*")
+        .select("id, nome, slug, telefone, email, endereco, bairro, cidade, estado, cep, latitude, longitude, logo_url, foto_capa_url, status_assinatura, trial_fim, ativa, criado_em, atualizado_em")
         .eq("slug", slug)
         .eq("ativa", true)
         .single();
@@ -126,7 +126,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
       // 3. Profissionais da barbearia
       const { data: pDb } = await (supabase.from("profissionais") as any)
-        .select("*")
+        .select("id, barbearia_id, nome, foto_url, bio, ativo")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
         .order("nome", { ascending: true });
@@ -144,7 +144,7 @@ function ConteudoPerfilPublicoBarbearia() {
       // 5. Avaliações públicas da barbearia
       const { data: avDb } = await (supabase.from("avaliacoes") as any)
         .select(`
-          *,
+          id, barbearia_id, cliente_nome, profissional_id, nota, comentario, resposta_barbearia, respondido_em, created_at, updated_at,
           profissionais (
             nome
           )

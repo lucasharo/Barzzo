@@ -15,6 +15,7 @@ import {
   InputMascarado,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
 import {
   traduzirErro,
@@ -91,12 +92,7 @@ export default function PaginaAssinaturaParceiro() {
       if (!session) return;
 
       // 1. Obter barbearia
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id, papel")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
       if (!membro?.barbearia_id) {
         setBarbearia(null);
@@ -124,7 +120,7 @@ export default function PaginaAssinaturaParceiro() {
       // 3. Carregar assinatura atual se existir
       const { data: assDb } = await (supabase.from("assinaturas") as any)
         .select("*, planos(*)")
-        .eq("barbearia_id", membro.barbearia_id)
+        .eq("barbearia_id", (bDb as Barbearia | null)?.matriz_id ?? membro.barbearia_id)
         .eq("status", "ativa")
         .order("criado_em", { ascending: false })
         .limit(1)
@@ -408,6 +404,24 @@ export default function PaginaAssinaturaParceiro() {
       <div className="flex-1 max-w-xl mx-auto py-20 flex flex-col items-center justify-center gap-3">
         <LoadingSpinner tamanho="lg" className="text-[#B45A2B]" />
         <p className="text-sm opacity-70">Carregando planos e assinatura...</p>
+      </div>
+    );
+  }
+
+  // Filial: o plano e a cobrança são da matriz.
+  if (barbearia?.matriz_id) {
+    return (
+      <div className="flex-1 max-w-xl mx-auto py-16 flex flex-col items-center text-center gap-5">
+        <Store className="h-12 w-12 text-[#B45A2B]" />
+        <h1 className="text-2xl font-bold">Esta unidade é uma filial</h1>
+        <p className="text-sm opacity-75">
+          {barbearia.nome} está incluída na assinatura da matriz
+          {assinaturaAtual?.planos?.nome ? ` (plano ${assinaturaAtual.planos.nome})` : ""}. Para ver ou alterar o plano,
+          troque para a matriz.
+        </p>
+        <Link to="/unidades">
+          <Button variante="principal" tamanho="md">Ver unidades da rede</Button>
+        </Link>
       </div>
     );
   }

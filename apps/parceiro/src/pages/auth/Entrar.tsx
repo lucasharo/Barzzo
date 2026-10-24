@@ -14,6 +14,7 @@ import {
 } from "@barzzo/ui";
 import { esquemaLogin } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { traduzirErro } from "@barzzo/utilitarios";
 import { Store } from "lucide-react";
 
@@ -57,18 +58,20 @@ export default function PaginaEntrarParceiro() {
         }
 
         // Verificar se já possui barbearia vinculada
-        const { data: membro } = await supabase
-          .from("membros_barbearia")
-          .select("barbearia_id")
-          .eq("usuario_id", data.session.user.id)
-          .limit(1)
-          .maybeSingle();
+        const { data: membro } = await obterMembroAtual(supabase, data.session.user.id, "barbearia_id");
 
         if (membro?.barbearia_id) {
           navigate("/painel");
-        } else {
-          navigate("/onboarding");
+          return;
         }
+
+        // Sem barbearia: quem já é influenciador do Barzzo vai para o próprio painel.
+        const { data: influenciador } = await (supabase.from("influenciadores") as any)
+          .select("id")
+          .eq("usuario_id", data.session.user.id)
+          .is("barbearia_id", null)
+          .maybeSingle();
+        navigate(influenciador ? "/influenciador/painel" : "/onboarding");
       }
     } catch {
       setErro("Ocorreu um erro ao processar seu login. Tente novamente.");

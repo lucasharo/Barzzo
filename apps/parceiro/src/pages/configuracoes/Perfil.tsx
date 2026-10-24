@@ -22,6 +22,7 @@ import {
   traduzirErro,
 } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Barbearia } from "@barzzo/tipos";
 import { Store } from "lucide-react";
 
@@ -54,12 +55,7 @@ export default function PaginaConfiguracoesBarbearia() {
 
         if (!session) return;
 
-        const { data: membro } = await supabase
-          .from("membros_barbearia")
-          .select("barbearia_id, papel")
-          .eq("usuario_id", session.user.id)
-          .limit(1)
-          .maybeSingle();
+        const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
         if (membro?.barbearia_id) {
           const { data: bDb } = await supabase

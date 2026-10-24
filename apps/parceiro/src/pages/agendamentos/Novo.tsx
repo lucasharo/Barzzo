@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -17,8 +17,9 @@ import {
   SeletorData,
   Seletor,
 } from "@barzzo/ui";
-import { formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
+import { dataLocalIso, formatarTelefone, limparTelefone } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { esquemaCriarAgendamentoManual } from "@barzzo/validacoes";
 import {
   calcularHorariosDisponiveis,
@@ -69,10 +70,16 @@ export default function PaginaNovoAgendamentoManual() {
   const [servicoId, setServicoId] = React.useState<string>("");
   const [modoProfissional, setModoProfissional] = React.useState<"qualquer" | "especifico">("qualquer");
   const [profissionalId, setProfissionalId] = React.useState<string>("");
+  // A agenda em calendário abre este formulário já com data, hora e, se couber, profissional
+  // (?data=AAAA-MM-DD&hora=HH:MM&profissional=ID).
+  const [parametros] = useSearchParams();
+  const horaPreSelecionada = parametros.get("hora");
   const [dataAgendamento, setDataAgendamento] = React.useState<string>(() => {
-    return new Date().toISOString().split("T")[0];
+    const data = parametros.get("data");
+    return data && /^\d{4}-\d{2}-\d{2}$/.test(data) && data >= dataLocalIso() ? data : dataLocalIso();
   });
   const [slotSelecionado, setSlotSelecionado] = React.useState<string | null>(null);
+  const [horaIndisponivel, setHoraIndisponivel] = React.useState<string | null>(null);
 
   // Slots calculados
   const [slotsDisponiveis, setSlotsDisponiveis] = React.useState<SlotDisponivel[]>([]);
@@ -95,12 +102,7 @@ export default function PaginaNovoAgendamentoManual() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (!membro || !membro.barbearia_id) {
         setErro("Nenhuma barbearia vinculada.");
@@ -138,7 +140,9 @@ export default function PaginaNovoAgendamentoManual() {
       const listaProfs = (pDb || []) as Profissional[];
       setProfissionais(listaProfs);
       if (listaProfs.length > 0) {
-        setProfissionalId(listaProfs[0].id);
+        const preSelecionado = listaProfs.find((p) => p.id === parametros.get("profissional"));
+        setProfissionalId((preSelecionado ?? listaProfs[0]).id);
+        if (preSelecionado) setModoProfissional("especifico");
       }
 
       // Horários barbearia
@@ -149,13 +153,20 @@ export default function PaginaNovoAgendamentoManual() {
       });
       setHorariosBarbearia(mapaHb);
 
-      // Jornadas profissionais
-      const { data: jpDb } = await supabase.from("jornadas_profissionais").select("*");
-      setJornadasProfissionais((jpDb || []) as JornadaProfissional[]);
+      // Jornadas e vínculos só dos profissionais desta barbearia (sem filtro, o
+      // PostgREST trunca em 1000 linhas e os horários somem à medida que o Barzzo cresce).
+      const idsProfs = listaProfs.map((p) => p.id);
+      if (idsProfs.length > 0) {
+        const { data: jpDb } = await supabase.from("jornadas_profissionais").select("*").in("profissional_id", idsProfs);
+        setJornadasProfissionais((jpDb || []) as JornadaProfissional[]);
 
-      // Vínculos de serviços
-      const { data: psDb } = await supabase.from("profissionais_servicos").select("profissional_id, servico_id").eq("ativo", true);
-      setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
+        const { data: psDb } = await supabase
+          .from("profissionais_servicos")
+          .select("profissional_id, servico_id")
+          .eq("ativo", true)
+          .in("profissional_id", idsProfs);
+        setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
+      }
     } catch {
       setErro("Erro ao inicializar formulário de novo agendamento.");
     } finally {
@@ -164,10 +175,24 @@ export default function PaginaNovoAgendamentoManual() {
   }
 
   // Recalcular slots disponíveis quando mudar o serviço, a data ou o profissional
+  // Inclui os dados carregados de forma assíncrona (horários, jornadas, vínculos):
+  // sem eles o cálculo rodava com listas vazias e a tela ficava sem horários até o usuário mexer em algum filtro.
+  const calculoAtual = React.useRef(0);
   React.useEffect(() => {
     if (!servicoId || !dataAgendamento || !barbearia) return;
     recalcularSlots();
-  }, [servicoId, dataAgendamento, modoProfissional, profissionalId, barbearia]);
+  }, [
+    servicoId,
+    dataAgendamento,
+    modoProfissional,
+    profissionalId,
+    barbearia,
+    servicos,
+    profissionais,
+    horariosBarbearia,
+    jornadasProfissionais,
+    vinculosServicos,
+  ]);
 
   function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
     const [ano, mes, dia] = dataStr.split("-").map(Number);
@@ -177,6 +202,7 @@ export default function PaginaNovoAgendamentoManual() {
   }
 
   async function recalcularSlots() {
+    const execucao = ++calculoAtual.current;
     try {
       setCalculandoSlots(true);
       setSlotSelecionado(null);
@@ -208,6 +234,9 @@ export default function PaginaNovoAgendamentoManual() {
         .not("status", "in", '("cancelado","nao_compareceu")')
         .gte("inicio_previsto", dataInicio)
         .lte("inicio_previsto", dataFim);
+
+      // Uma consulta mais nova já assumiu: descarta esta resposta antiga.
+      if (execucao !== calculoAtual.current) return;
 
       const agendamentosExistentes = (agsDb || []).map((ag: any) => ({
         profissional_id: ag.profissional_id,
@@ -245,13 +274,17 @@ export default function PaginaNovoAgendamentoManual() {
       });
 
       setSlotsDisponiveis(slots);
+      const veioDaAgenda = !!horaPreSelecionada && dataAgendamento === parametros.get("data");
+      const preSelecionado = veioDaAgenda ? slots.find((slot) => slot.horario === horaPreSelecionada) : undefined;
+      // Se o horário clicado na agenda não comporta este serviço, avisa em vez de trocar em silêncio.
+      setHoraIndisponivel(veioDaAgenda && !preSelecionado ? horaPreSelecionada : null);
       if (slots.length > 0) {
-        setSlotSelecionado(slots[0].horario);
+        setSlotSelecionado((preSelecionado ?? slots[0]).horario);
       }
     } catch {
       setErro("Falha ao calcular slots disponíveis.");
     } finally {
-      setCalculandoSlots(false);
+      if (execucao === calculoAtual.current) setCalculandoSlots(false);
     }
   }
 
@@ -617,7 +650,7 @@ export default function PaginaNovoAgendamentoManual() {
                     rotulo="Data do Atendimento *"
                     valor={dataAgendamento}
                     aoMudar={(novaData) => setDataAgendamento(novaData)}
-                    min={new Date().toISOString().split("T")[0]}
+                    min={dataLocalIso()}
                   />
                   <span className="text-xs opacity-60 mt-1 block">
                     O sistema verifica jornada, pausas e bloqueios para a data.
@@ -634,6 +667,15 @@ export default function PaginaNovoAgendamentoManual() {
                 </h3>
                 {calculandoSlots && <LoadingSpinner tamanho="sm" />}
               </div>
+
+              {horaIndisponivel && !calculandoSlots && (
+                <Alert variante="alerta">
+                  <AlertDescription>
+                    O horário das {horaIndisponivel} escolhido na agenda não comporta este serviço com o profissional
+                    selecionado. Escolha outro horário abaixo.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {calculandoSlots ? (
                 <div className="py-6 text-center text-xs opacity-70">

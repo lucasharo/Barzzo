@@ -44,7 +44,8 @@ export function calcularDescontoCupom(parametros: {
   // 2. Vigência de data
   const dataAtual = agora.getTime();
   const inicio = new Date(cupom.data_inicio).getTime();
-  const fim = new Date(cupom.data_fim).getTime();
+  // Sem data de término o cupom vale até ser desativado.
+  const fim = cupom.data_fim ? new Date(cupom.data_fim).getTime() : Infinity;
 
   if (dataAtual < inicio) {
     return { valido: false, motivo_invalido: "Esta promoção ainda não iniciou." };

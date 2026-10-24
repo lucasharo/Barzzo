@@ -40,6 +40,11 @@ export interface Agendamento {
   duracao_total_minutos: number;
   criado_em: string;
   atualizado_em: string;
+  // Snapshot comercial gravado ao confirmar o cupom (Task 11); nulos em reservas sem cupom.
+  codigo_cupom_snapshot?: string | null;
+  influenciador_nome_snapshot?: string | null;
+  valor_bruto_servicos_snapshot?: number | null;
+  desconto_snapshot?: number | null;
 }
 
 export interface AgendamentoComDetalhes extends Agendamento {

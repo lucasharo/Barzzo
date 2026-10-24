@@ -17,6 +17,7 @@ import {
   Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { traduzirErro, formatarData } from "@barzzo/utilitarios";
 import {
   esquemaFotoGaleria,
@@ -80,12 +81,7 @@ export default function PaginaGaleriaParceiro() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");

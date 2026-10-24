@@ -19,6 +19,7 @@ import {
   Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { traduzirErro, formatarTelefone, formatarData } from "@barzzo/utilitarios";
 import { obterUrlBaseAppCliente } from "../../utils/url-cliente";
 import {
@@ -56,13 +57,14 @@ export default function PaginaInfluenciadoresParceiro() {
   const [influenciadores, setInfluenciadores] = React.useState<Influenciador[]>([]);
   const [comissoes, setComissoes] = React.useState<ComissaoInfluenciador[]>([]);
   const [cupons, setCupons] = React.useState<Cupom[]>([]);
+  const [aceitaBarzzo, setAceitaBarzzo] = React.useState(false);
+  const [salvandoAceite, setSalvandoAceite] = React.useState(false);
 
   // Formulário de cadastro e edição
   const [modalAberto, setModalAberto] = React.useState(false);
   const [influenciadorEmEdicao, setInfluenciadorEmEdicao] = React.useState<Influenciador | null>(null);
   const [salvando, setSalvando] = React.useState(false);
   const [nome, setNome] = React.useState("");
-  const [codigoRef, setCodigoRef] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [telefone, setTelefone] = React.useState("");
   const [chavePix, setChavePix] = React.useState("");
@@ -99,12 +101,7 @@ export default function PaginaInfluenciadoresParceiro() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");
@@ -117,7 +114,10 @@ export default function PaginaInfluenciadoresParceiro() {
         .eq("id", membro.barbearia_id)
         .single();
 
-      if (bDb) setBarbearia(bDb as Barbearia);
+      if (bDb) {
+        setBarbearia(bDb as Barbearia);
+        setAceitaBarzzo(!!bDb.aceita_influenciadores_barzzo);
+      }
 
       await carregarDados(membro.barbearia_id);
     } catch {
@@ -158,7 +158,6 @@ export default function PaginaInfluenciadoresParceiro() {
           *,
           influenciadores (
             nome,
-            codigo_ref,
             chave_pix
           )
         `)
@@ -183,7 +182,6 @@ export default function PaginaInfluenciadoresParceiro() {
 
       const dadosValidados = esquemaInfluenciador.safeParse({
         nome: nome.trim(),
-        codigo_ref: codigoRef.trim().toUpperCase(),
         email: email.trim() ? email.trim() : null,
         telefone: telefone.trim() ? telefone.trim() : null,
         chave_pix: chavePix.trim() ? chavePix.trim() : null,
@@ -200,7 +198,6 @@ export default function PaginaInfluenciadoresParceiro() {
       const supabase = criarClienteSupabaseBrowser();
       const dados = {
         nome: dadosValidados.data.nome,
-        codigo_ref: dadosValidados.data.codigo_ref,
         email: dadosValidados.data.email,
         telefone: dadosValidados.data.telefone,
         chave_pix: dadosValidados.data.chave_pix,
@@ -221,18 +218,14 @@ export default function PaginaInfluenciadoresParceiro() {
             .single();
 
       if (erroSalvar || !influenciadorSalvo) {
-        if (erroSalvar?.code === "23505" || erroSalvar?.message?.includes("influenciadores_codigo_barbearia_unique")) {
-          setErroModal("Já existe um influenciador com este código nesta barbearia.");
-        } else {
-          setErroModal(traduzirErro(erroSalvar, "Não foi possível salvar o influenciador. Verifique o vínculo com a barbearia e tente novamente."));
-        }
+        setErroModal(traduzirErro(erroSalvar, "Não foi possível salvar o influenciador. Verifique o vínculo com a barbearia e tente novamente."));
         return;
       }
 
       if (influenciadorEmEdicao) {
         setInfluenciadores((ant) => ant.map((item) => item.id === influenciadorSalvo.id ? influenciadorSalvo as Influenciador : item));
         setComissoes((ant) => ant.map((item) => item.influenciador_id === influenciadorSalvo.id
-          ? { ...item, influenciadores: { nome: influenciadorSalvo.nome, codigo_ref: influenciadorSalvo.codigo_ref, chave_pix: influenciadorSalvo.chave_pix } }
+          ? { ...item, influenciadores: { nome: influenciadorSalvo.nome, chave_pix: influenciadorSalvo.chave_pix } }
           : item));
         setSucesso(`Influenciador ${dadosValidados.data.nome} atualizado com sucesso!`);
       } else {
@@ -247,13 +240,38 @@ export default function PaginaInfluenciadoresParceiro() {
     }
   }
 
+  async function alternarAceiteBarzzo(valor: boolean) {
+    if (!barbearia) return;
+    try {
+      setSalvandoAceite(true);
+      const supabase = criarClienteSupabaseBrowser();
+      const { error: erroAceite } = await (supabase.from("barbearias") as any)
+        .update({ aceita_influenciadores_barzzo: valor })
+        .eq("id", barbearia.id);
+
+      if (erroAceite) {
+        setErro(traduzirErro(erroAceite, "Não foi possível atualizar a adesão aos influenciadores do Barzzo."));
+        return;
+      }
+      setAceitaBarzzo(valor);
+      setSucesso(
+        valor
+          ? "Os cupons dos influenciadores do Barzzo agora valem na sua barbearia."
+          : "Os cupons dos influenciadores do Barzzo foram desativados na sua barbearia."
+      );
+    } catch {
+      setErro("Erro de conexão ao atualizar a adesão.");
+    } finally {
+      setSalvandoAceite(false);
+    }
+  }
+
   function fecharModal() {
     setModalAberto(false);
     requestAnimationFrame(() => gatilhoModalRef.current?.focus());
     setInfluenciadorEmEdicao(null);
     setErroModal(null);
     setNome("");
-    setCodigoRef("");
     setEmail("");
     setTelefone("");
     setChavePix("");
@@ -271,7 +289,6 @@ export default function PaginaInfluenciadoresParceiro() {
     gatilhoModalRef.current = evento.currentTarget;
     setInfluenciadorEmEdicao(inf);
     setNome(inf.nome);
-    setCodigoRef(inf.codigo_ref);
     setEmail(inf.email || "");
     setTelefone(formatarTelefone(inf.telefone || ""));
     setChavePix(inf.chave_pix || "");
@@ -385,6 +402,29 @@ export default function PaginaInfluenciadoresParceiro() {
           <AlertDescription>{sucesso}</AlertDescription>
         </AlertaTemporizado>
       )}
+
+      {/* Influenciadores do Barzzo */}
+      <Card className="p-4 border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-start gap-3">
+          <Switch
+            marcado={aceitaBarzzo}
+            aoMudar={alternarAceiteBarzzo}
+            disabled={salvandoAceite}
+            aria-label="Aceitar influenciadores do Barzzo"
+          />
+          <div className="space-y-1">
+            <span className="text-sm font-bold block">Aceitar influenciadores do Barzzo</span>
+            <p className="text-xs opacity-70 leading-relaxed">
+              Os cupons dos influenciadores parceiros do Barzzo passam a valer na sua barbearia. O cliente ganha 15% no
+              primeiro atendimento e 5% nos demais, e você paga a comissão do influenciador (5% por padrão) sobre cada
+              atendimento concluído. Você pode desligar quando quiser; o que já foi agendado é mantido.
+            </p>
+            <p className="text-[11px] opacity-50">
+              {aceitaBarzzo ? "Ativado: os cupons aprovados pelo Barzzo valem aqui." : "Desativado: esses cupons são recusados na sua barbearia."}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Métricas */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -576,9 +616,14 @@ export default function PaginaInfluenciadoresParceiro() {
                         <td className="py-3 px-4">
                           <span className="font-bold block">
                             {com.influenciadores?.nome || "Influenciador"}
+                            {com.origem_cupom === "BARZZO_GLOBAL" && (
+                              <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] align-middle">
+                                Barzzo
+                              </span>
+                            )}
                           </span>
                           <span className="text-[11px] opacity-60 font-mono">
-                            {com.influenciadores?.codigo_ref}
+                            {com.codigo_cupom}
                           </span>
                         </td>
                         <td className="py-3 px-4">
@@ -693,23 +738,6 @@ export default function PaginaInfluenciadoresParceiro() {
                   placeholder="Ex: Carlos Barba VIP"
                   required
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="codigoInf" className="block text-sm font-semibold mb-1.5">
-                  Código interno do parceiro <span className="text-[#DC2626]">*</span>
-                </Label>
-                <Input
-                  id="codigoInf"
-                  value={codigoRef}
-                  onChange={(e) => setCodigoRef(e.target.value.toUpperCase())}
-                  placeholder="Ex: CARLOSVIP10"
-                  className="font-mono uppercase font-bold"
-                  required
-                />
-                <span className="text-[11px] opacity-60 mt-1 block">
-                  O link público deve usar um cupom ativo associado a este influencer.
-                </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -161,7 +161,7 @@ function ConteudoWizardReservaCliente() {
       // Buscar Barbearia por Slug
       const { data: bDb, error: erroB } = await supabase
         .from("barbearias")
-        .select("*")
+        .select("id, nome, slug, telefone, email, endereco, bairro, cidade, estado, cep, latitude, longitude, logo_url, foto_capa_url, status_assinatura, trial_fim, ativa, criado_em, atualizado_em")
         .eq("slug", slug)
         .eq("ativa", true)
         .single();
@@ -171,7 +171,7 @@ function ConteudoWizardReservaCliente() {
         return;
       }
 
-      const barb = bDb as Barbearia;
+      const barb = bDb as unknown as Barbearia;
       setBarbearia(barb);
 
       // Serviços Ativos
@@ -188,7 +188,7 @@ function ConteudoWizardReservaCliente() {
       // Profissionais
       const { data: pDb } = await supabase
         .from("profissionais")
-        .select("*")
+        .select("id, barbearia_id, nome, foto_url, bio, ativo")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
         .order("nome", { ascending: true });
@@ -417,26 +417,18 @@ function ConteudoWizardReservaCliente() {
       setDescontoCalculado(0);
       const supabase = criarClienteSupabaseBrowser();
 
-      // 1. Buscar cupom
-      const { data: cupDb } = await (supabase.from("cupons") as any)
-        .select("*")
-        .eq("barbearia_id", barbearia.id)
-        .ilike("codigo", codigoLimpo)
-        .eq("ativo", true)
-        .maybeSingle();
+      // 1. Buscar cupom e regras pelo código (a tabela não é mais listável por visitantes)
+      const { data: cupDb, error: erroRegras } = await (supabase.rpc as any)("obter_cupom_por_codigo", {
+        p_barbearia_id: barbearia.id,
+        p_codigo: codigoLimpo,
+      });
 
-      if (!cupDb) {
+      if (!cupDb && !erroRegras) {
         setCupomAplicado(null);
         setDescontoCalculado(0);
         setMsgCupom({ tipo: "erro", texto: "Cupom não encontrado ou inválido nesta barbearia." });
         return;
       }
-
-      const { data: regrasDb, error: erroRegras } = await (supabase.from("cupons_regras") as any)
-        .select("*")
-        .eq("cupom_id", cupDb.id)
-        .eq("ativo", true)
-        .order("prioridade", { ascending: true });
 
       if (erroRegras) {
         setMsgCupom({
@@ -449,7 +441,7 @@ function ConteudoWizardReservaCliente() {
         return;
       }
 
-      cupDb.regras = regrasDb || [];
+      cupDb.regras = cupDb.regras || [];
 
       // Verificar histórico local para o preview; a RPC revalida tudo na confirmação.
       let totalConcluidos = 0;

@@ -22,6 +22,7 @@ import {
   LogIn,
   Store,
   Home,
+  Building2,
 } from "lucide-react";
 import {
   Button,
@@ -29,14 +30,23 @@ import {
   Drawer,
   BottomNav,
   BottomNavItem,
+  Seletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import {
+  escolherUnidadeAtual,
+  obterUnidades,
+  situacaoFiliais,
+  trocarUnidade,
+  type UnidadeUsuario,
+} from "../lib/unidade-atual";
 
 export function NavegacaoParceiro() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [drawerAberto, setDrawerAberto] = React.useState(false);
   const [usuario, setUsuario] = React.useState<any>(null);
+  const [unidades, setUnidades] = React.useState<UnidadeUsuario[]>([]);
 
   React.useEffect(() => {
     const supabase = criarClienteSupabaseBrowser();
@@ -52,6 +62,29 @@ export function NavegacaoParceiro() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Unidades (matriz e filiais) do usuário logado, para o seletor e o item de menu.
+  React.useEffect(() => {
+    if (!usuario) {
+      setUnidades([]);
+      return;
+    }
+    let ativo = true;
+    obterUnidades().then((lista) => {
+      if (ativo) setUnidades(lista);
+    });
+    return () => {
+      ativo = false;
+    };
+  }, [usuario?.id]);
+
+  const unidadeAtual = escolherUnidadeAtual(unidades);
+  const opcoesUnidades = unidades.map((u) => ({
+    valor: u.id,
+    rotulo: u.matriz_id ? `${u.nome} (filial)` : u.nome,
+  }));
+  // O menu de unidades aparece para quem tem plano com filiais (Growth ou Rede) ou já tem mais de uma unidade.
+  const mostrarUnidades = unidades.length > 1 || situacaoFiliais(unidades).permiteFiliais;
 
   // Fechar drawer ao mudar de rota
   React.useEffect(() => {
@@ -96,6 +129,7 @@ export function NavegacaoParceiro() {
     {
       titulo: "Configurações da Barbearia",
       itens: [
+        ...(mostrarUnidades ? [{ href: "/unidades", rotulo: "Unidades da Rede", icone: Building2 }] : []),
         { href: "/assinatura", rotulo: "Assinatura & Plano", icone: CreditCard },
         { href: "/horarios", rotulo: "Horários de Funcionamento", icone: Clock },
         { href: "/equipe", rotulo: "Profissionais & Equipe", icone: UserCheck },
@@ -118,7 +152,7 @@ export function NavegacaoParceiro() {
   return (
     <>
       {/* Header Parceiro */}
-      <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 lg:gap-6">
             <Link to={usuario ? "/painel" : "/"} className="flex items-center gap-2">
@@ -198,6 +232,19 @@ export function NavegacaoParceiro() {
               </div>
             )}
 
+            {usuario && unidades.length > 1 && unidadeAtual && (
+              <div className="hidden lg:block w-52">
+                <Seletor
+                  valor={unidadeAtual.id}
+                  aoMudar={(id) => trocarUnidade(id)}
+                  opcoes={opcoesUnidades}
+                  icone={<Building2 className="h-4 w-4" />}
+                  tamanho="sm"
+                  className="w-full"
+                />
+              </div>
+            )}
+
             {usuario && (
               <Button
                 variante="fantasma"
@@ -223,6 +270,8 @@ export function NavegacaoParceiro() {
           </div>
         </div>
       </header>
+      {/* Reserva o espaço do header fixo */}
+      <div aria-hidden="true" className="h-16" />
 
       {/* Drawer Completo (Mobile e Tablet, também acessível no desktop via 'Mais') */}
       <Drawer
@@ -261,6 +310,20 @@ export function NavegacaoParceiro() {
       >
         {usuario ? (
           <div className="flex flex-col gap-6 py-1">
+            {unidades.length > 1 && unidadeAtual && (
+              <div className="flex flex-col gap-1.5 px-3">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
+                  Unidade em uso
+                </span>
+                <Seletor
+                  valor={unidadeAtual.id}
+                  aoMudar={(id) => trocarUnidade(id)}
+                  opcoes={opcoesUnidades}
+                  icone={<Building2 className="h-4 w-4" />}
+                  className="w-full"
+                />
+              </div>
+            )}
             {secoesMenu.map((secao) => (
               <div key={secao.titulo} className="flex flex-col gap-1">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 px-3 py-1">

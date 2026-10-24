@@ -19,6 +19,7 @@ import {
 import { esquemaCriarProfissional } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Profissional, MembroBarbearia } from "@barzzo/tipos";
 import { Users, UserPlus, Mail, Shield, UserCheck, Phone, Clock, AlertCircle } from "lucide-react";
 
@@ -50,12 +51,7 @@ export default function PaginaEquipe() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (membro?.barbearia_id) {
         setBarbeariaId(membro.barbearia_id);

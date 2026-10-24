@@ -1,8 +1,37 @@
-import { Link } from "react-router-dom";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription } from "@barzzo/ui";
+import * as React from "react";
+import { Link, Navigate } from "react-router-dom";
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, LoadingSpinner } from "@barzzo/ui";
+import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { Store, Users, Calendar, ArrowRight, LogIn, CheckCircle2 } from "lucide-react";
 
 export default function PaginaInicialParceiro() {
+  // Quem já está logado vai direto para o painel; a página de apresentação é só para visitantes.
+  const [sessao, setSessao] = React.useState<"verificando" | "logado" | "visitante">("verificando");
+
+  React.useEffect(() => {
+    let ativo = true;
+    criarClienteSupabaseBrowser()
+      .auth.getSession()
+      .then(({ data }) => {
+        if (ativo) setSessao(data.session ? "logado" : "visitante");
+      })
+      .catch(() => {
+        if (ativo) setSessao("visitante");
+      });
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  if (sessao === "logado") return <Navigate to="/painel" replace />;
+  if (sessao === "verificando") {
+    return (
+      <div className="py-24 flex justify-center">
+        <LoadingSpinner tamanho="lg" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-10 py-4">
       {/* Hero */}
@@ -27,6 +56,10 @@ export default function PaginaInicialParceiro() {
             </Button>
           </Link>
         </div>
+
+        <Link to="/influenciador/cadastro" className="text-sm font-semibold text-[#B45A2B] hover:underline">
+          Sou influenciador e quero divulgar o Barzzo
+        </Link>
 
         <div className="flex items-center gap-2 text-xs font-semibold text-[#16A34A] pt-1">
           <CheckCircle2 className="h-4 w-4" />

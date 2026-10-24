@@ -17,6 +17,7 @@ import {
 import { esquemaCriarConvite } from "@barzzo/validacoes";
 import { traduzirErro, formatarData } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { ConviteProfissional, Profissional } from "@barzzo/tipos";
 import { Mail, Send, Copy, Check, Clock, CheckCircle } from "lucide-react";
 
@@ -45,12 +46,7 @@ export default function PaginaConvites() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (membro?.barbearia_id) {
         setBarbeariaId(membro.barbearia_id);

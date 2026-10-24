@@ -14,6 +14,7 @@ import {
   Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import {
   NOMES_DIAS_SEMANA,
   NOMES_CURTOS_DIAS_SEMANA,
@@ -76,12 +77,7 @@ export default function PaginaHorariosFuncionamento() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (!membro || !membro.barbearia_id) {
         setErro("Nenhuma barbearia vinculada.");

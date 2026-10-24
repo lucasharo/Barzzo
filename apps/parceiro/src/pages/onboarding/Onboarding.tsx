@@ -15,7 +15,14 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { esquemaCriarBarbearia } from "@barzzo/validacoes";
-import { formatarDocumento, formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import {
+  buscarEnderecoPorCep,
+  formatarCep,
+  formatarDocumento,
+  formatarTelefone,
+  limparTelefone,
+  traduzirErro,
+} from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { CheckCircle2, Store, MapPin, Users, ArrowRight, LogIn, UserPlus } from "lucide-react";
 
@@ -38,10 +45,48 @@ export default function PaginaOnboarding() {
   const [telefone, setTelefone] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [endereco, setEndereco] = React.useState("");
+  const [numero, setNumero] = React.useState("");
   const [bairro, setBairro] = React.useState("");
   const [cidade, setCidade] = React.useState("");
   const [estado, setEstado] = React.useState("SP");
   const [cep, setCep] = React.useState("");
+  const [buscandoCep, setBuscandoCep] = React.useState(false);
+  const [avisoCep, setAvisoCep] = React.useState<string | null>(null);
+
+  // O banco guarda rua e número juntos em `endereco`; na tela são campos separados.
+  const enderecoCompleto = [endereco.trim(), numero.trim()].filter(Boolean).join(", ");
+
+  // Preenche logradouro, bairro, cidade e UF assim que o CEP completo é digitado.
+  React.useEffect(() => {
+    const digitos = cep.replace(/\D/g, "");
+    setAvisoCep(null);
+    if (digitos.length !== 8) {
+      setBuscandoCep(false);
+      return;
+    }
+
+    const controle = new AbortController();
+    setBuscandoCep(true);
+    buscarEnderecoPorCep(digitos, controle.signal).then((resultado) => {
+      if (controle.signal.aborted) return;
+      setBuscandoCep(false);
+      if (!resultado.ok) {
+        setAvisoCep(
+          resultado.motivo === "nao_encontrado"
+            ? "CEP não encontrado. Confira o CEP ou preencha o endereço manualmente."
+            : "Não foi possível consultar o CEP agora. Preencha o endereço manualmente."
+        );
+        return;
+      }
+      const { logradouro, bairro: novoBairro, cidade: novaCidade, estado: novoEstado } = resultado.endereco;
+      if (logradouro) setEndereco(logradouro);
+      if (novoBairro) setBairro(novoBairro);
+      if (novaCidade) setCidade(novaCidade);
+      if (novoEstado) setEstado(novoEstado);
+    });
+
+    return () => controle.abort();
+  }, [cep]);
 
   // Dados Etapa 3 (Primeiro membro / profissional)
   const [primeiroProfissional, setPrimeiroProfissional] = React.useState("");
@@ -120,7 +165,7 @@ export default function PaginaOnboarding() {
       slug,
       telefone: limparTelefone(telefone) || undefined,
       email: email || undefined,
-      endereco,
+      endereco: enderecoCompleto,
       bairro,
       cidade,
       estado,
@@ -158,7 +203,7 @@ export default function PaginaOnboarding() {
           p_slug: slug,
           p_telefone: limparTelefone(telefone) || null,
           p_email: email || null,
-          p_endereco: endereco || null,
+          p_endereco: enderecoCompleto || null,
           p_bairro: bairro || null,
           p_cidade: cidade || null,
           p_estado: estado || null,
@@ -443,15 +488,47 @@ export default function PaginaOnboarding() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="endereco">Endereço Completo</Label>
-                <Input
-                  id="endereco"
+              <div className="flex flex-col gap-1.5 md:w-1/3">
+                <Label htmlFor="cep">CEP</Label>
+                <InputMascarado
+                  id="cep"
                   type="text"
-                  placeholder="Rua Augusta, 1500"
-                  value={endereco}
-                  onChange={(e) => setEndereco(e.target.value)}
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  placeholder="00000-000"
+                  value={cep}
+                  mascara={formatarCep}
+                  onChangeValor={setCep}
+                  aria-describedby="cep-status"
                 />
+                <p id="cep-status" role="status" className="text-xs opacity-70 min-h-4">
+                  {buscandoCep ? "Buscando endereço..." : avisoCep}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex flex-col gap-1.5 col-span-2">
+                  <Label htmlFor="endereco">Endereço</Label>
+                  <Input
+                    id="endereco"
+                    type="text"
+                    autoComplete="address-line1"
+                    placeholder="Rua Augusta"
+                    value={endereco}
+                    onChange={(e) => setEndereco(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="numero">Número</Label>
+                  <Input
+                    id="numero"
+                    type="text"
+                    placeholder="1500"
+                    value={numero}
+                    onChange={(e) => setNumero(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
