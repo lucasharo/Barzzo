@@ -42,6 +42,7 @@ interface AgendamentoCliente {
   barbearias: {
     nome: string;
     slug: string;
+    logo_url: string | null;
     telefone: string | null;
     endereco: string | null;
     bairro: string | null;
@@ -67,9 +68,12 @@ export default function PaginaMeusAgendamentos() {
   const [agendamentos, setAgendamentos] = React.useState<AgendamentoCliente[]>([]);
   const [abaAtiva, setAbaAtiva] = React.useState<"proximos" | "historico">("proximos");
   const [erro, setErro] = React.useState<string | null>(null);
+  const carregamentoInicialExecutadoRef = React.useRef(false);
 
   React.useEffect(() => {
-    carregarAgendamentos();
+    if (carregamentoInicialExecutadoRef.current) return;
+    carregamentoInicialExecutadoRef.current = true;
+    void carregarAgendamentos();
   }, []);
 
   async function carregarAgendamentos() {
@@ -96,6 +100,7 @@ export default function PaginaMeusAgendamentos() {
           barbearias (
             nome,
             slug,
+            logo_url,
             telefone,
             endereco,
             bairro,
@@ -344,23 +349,36 @@ export default function PaginaMeusAgendamentos() {
                 <div className="p-5 sm:p-6 flex flex-col gap-4">
                   {/* Topo do Card: Barbearia e Status */}
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <Link
-                        to={item.barbearias ? `/barbearias/${item.barbearias.slug}` : "#"}
-                        className="text-lg font-bold hover:text-copper-600 dark:hover:text-copper-400 transition-colors"
-                      >
-                        {item.barbearias?.nome || "Barbearia"}
-                      </Link>
-                      {item.barbearias && (
-                        <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
-                          <span>
-                            {[item.barbearias.bairro, item.barbearias.cidade]
-                              .filter(Boolean)
-                              .join(", ") || item.barbearias.endereco || "Local não informado"}
-                          </span>
-                        </p>
-                      )}
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#B45A2B]/20 bg-[#B45A2B]/10 text-sm font-bold text-[#B45A2B] sm:h-14 sm:w-14">
+                        {item.barbearias?.logo_url ? (
+                          <img
+                            src={item.barbearias.logo_url}
+                            alt={item.barbearias.nome || "Barbearia"}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          (item.barbearias?.nome || "BA").slice(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          to={item.barbearias ? `/barbearias/${item.barbearias.slug}` : "#"}
+                          className="block break-words text-lg font-bold hover:text-copper-600 dark:hover:text-copper-400 transition-colors"
+                        >
+                          {item.barbearias?.nome || "Barbearia"}
+                        </Link>
+                        {item.barbearias && (
+                          <p className="text-xs text-neutral-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3.5 h-3.5 text-neutral-400 flex-shrink-0" />
+                            <span>
+                              {[item.barbearias.bairro, item.barbearias.cidade]
+                                .filter(Boolean)
+                                .join(", ") || item.barbearias.endereco || "Local não informado"}
+                            </span>
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div

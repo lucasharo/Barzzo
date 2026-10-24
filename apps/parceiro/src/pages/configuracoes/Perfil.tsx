@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -21,6 +22,7 @@ import {
   traduzirErro,
 } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Barbearia } from "@barzzo/tipos";
 import { Store } from "lucide-react";
 
@@ -53,12 +55,7 @@ export default function PaginaConfiguracoesBarbearia() {
 
         if (!session) return;
 
-        const { data: membro } = await supabase
-          .from("membros_barbearia")
-          .select("barbearia_id, papel")
-          .eq("usuario_id", session.user.id)
-          .limit(1)
-          .maybeSingle();
+        const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
         if (membro?.barbearia_id) {
           const { data: bDb } = await supabase
@@ -198,10 +195,12 @@ export default function PaginaConfiguracoesBarbearia() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="telefone">Telefone / WhatsApp</Label>
-                <Input
+                <InputMascarado
                   id="telefone"
+                  type="tel"
                   value={telefone}
-                  onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                  mascara={formatarTelefone}
+                  onChangeValor={setTelefone}
                 />
               </div>
 
@@ -219,22 +218,26 @@ export default function PaginaConfiguracoesBarbearia() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="documento">CNPJ ou CPF</Label>
-                <Input
+                <InputMascarado
                   id="documento"
+                  inputMode="numeric"
                   value={documento}
                   placeholder="00.000.000/0000-00 ou 000.000.000-00"
-                  onChange={(e) => setDocumento(formatarDocumento(e.target.value))}
+                  mascara={formatarDocumento}
+                  onChangeValor={setDocumento}
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="cep">CEP</Label>
-                <Input
+                <InputMascarado
                   id="cep"
+                  inputMode="numeric"
                   value={cep}
                   placeholder="00000-000"
                   maxLength={9}
-                  onChange={(e) => setCep(formatarCep(e.target.value))}
+                  mascara={formatarCep}
+                  onChangeValor={setCep}
                 />
               </div>
             </div>

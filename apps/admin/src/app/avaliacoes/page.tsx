@@ -25,11 +25,11 @@ export default function PaginaAvaliacoesAdmin() {
     try {
       setCarregando(true);
       setErro(null);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
 
       const { data: avDb, error: erroDb } = await (supabase.from("avaliacoes") as any)
-        .select("*, barbearias(nome), usuarios(nome)")
-        .order("criado_em", { ascending: false });
+        .select("*, barbearias(nome), usuarios!avaliacoes_cliente_id_fkey(nome)")
+        .order("created_at", { ascending: false });
 
       if (erroDb) throw erroDb;
       setAvaliacoes(avDb || []);
@@ -102,7 +102,7 @@ export default function PaginaAvaliacoesAdmin() {
                         {av.comentario || <em className="opacity-50">Sem comentário textual</em>}
                       </td>
                       <td className="p-4 opacity-60">
-                        {formatarData(av.criado_em)}
+                        {formatarData(av.created_at)}
                       </td>
                     </tr>
                   ))

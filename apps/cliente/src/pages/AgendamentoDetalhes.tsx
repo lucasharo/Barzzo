@@ -42,6 +42,7 @@ interface AgendamentoDetalhe {
   observacoes: string | null;
   preco_total?: number;
   duracao_total_minutos?: number;
+  codigo_cupom_snapshot?: string | null;
   criado_em?: string;
   barbearias: {
     nome: string;
@@ -140,7 +141,7 @@ export default function PaginaDetalhesAgendamentoCliente() {
         .limit(1)
         .maybeSingle();
 
-      let cod = indDb?.codigo_ref_usado || null;
+      let cod = data.codigo_cupom_snapshot || indDb?.codigo_ref_usado || null;
       if (!cod && data.observacoes) {
         const match = data.observacoes.match(/\[Cupom:\s*([^\]]+)\]/i);
         if (match) cod = match[1].trim();

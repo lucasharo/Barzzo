@@ -23,8 +23,9 @@ import {
   obterRascunhoReserva,
   limparRascunhoReserva,
   calcularDescontoCupom,
+  contarUsosCupomClienteNaRegra,
 } from "@barzzo/dominio";
-import { formatarData } from "@barzzo/utilitarios";
+import { formatarData, traduzirErro } from "@barzzo/utilitarios";
 import type {
   Barbearia,
   Servico,
@@ -89,6 +90,8 @@ function ConteudoWizardReservaCliente() {
   const [codigoCupom, setCodigoCupom] = React.useState(cupomParamUrl?.toUpperCase() || "");
   const [cupomAplicado, setCupomAplicado] = React.useState<Cupom | null>(null);
   const [descontoCalculado, setDescontoCalculado] = React.useState<number>(0);
+  const [cupomAutoAplicacaoPendente, setCupomAutoAplicacaoPendente] = React.useState(false);
+  const cupomAutoAplicacaoExecutadaRef = React.useRef(false);
   const [validandoCupom, setValidandoCupom] = React.useState<boolean>(false);
   const [msgCupom, setMsgCupom] = React.useState<{ tipo: "sucesso" | "erro"; texto: string } | null>(null);
 
@@ -97,23 +100,44 @@ function ConteudoWizardReservaCliente() {
   const [calculandoSlots, setCalculandoSlots] = React.useState(false);
 
   const [erro, setErro] = React.useState<string | null>(null);
+  const carregamentoInicialParaSlugRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    carregarDadosIniciais();
+    if (!slug || carregamentoInicialParaSlugRef.current === slug) return;
+
+    // O StrictMode repete efeitos de montagem em desenvolvimento.
+    carregamentoInicialParaSlugRef.current = slug;
+    void carregarDadosIniciais();
   }, [slug]);
 
   React.useEffect(() => {
-    if (cupomParamUrl && barbearia && servicoSelecionado && !cupomAplicado && !validandoCupom) {
+    if (
+      !carregando &&
+      cupomAutoAplicacaoPendente &&
+      codigoCupom.trim() &&
+      barbearia &&
+      servicoSelecionado &&
+      !cupomAplicado &&
+      !validandoCupom &&
+      !cupomAutoAplicacaoExecutadaRef.current
+    ) {
+      cupomAutoAplicacaoExecutadaRef.current = true;
+      setCupomAutoAplicacaoPendente(false);
       void aplicarValidarCupom();
     }
-  }, [cupomParamUrl, barbearia, servicoSelecionado]);
+  }, [cupomAutoAplicacaoPendente, codigoCupom, carregando, barbearia, servicoSelecionado, usuarioId, cupomAplicado, validandoCupom]);
 
   async function carregarDadosIniciais() {
     try {
       setCarregando(true);
+      setCupomAutoAplicacaoPendente(false);
+      cupomAutoAplicacaoExecutadaRef.current = false;
       const supabase = criarClienteSupabaseBrowser();
 
-      if (cupomParamUrl) setCodigoCupom(cupomParamUrl.trim().toUpperCase());
+      if (cupomParamUrl?.trim()) {
+        setCodigoCupom(cupomParamUrl.trim().toUpperCase());
+        setCupomAutoAplicacaoPendente(true);
+      }
 
       // Verificar sessão (pode ser anônimo!)
       const {
@@ -137,7 +161,7 @@ function ConteudoWizardReservaCliente() {
       // Buscar Barbearia por Slug
       const { data: bDb, error: erroB } = await supabase
         .from("barbearias")
-        .select("*")
+        .select("id, nome, slug, telefone, email, endereco, bairro, cidade, estado, cep, latitude, longitude, logo_url, foto_capa_url, status_assinatura, trial_fim, ativa, criado_em, atualizado_em")
         .eq("slug", slug)
         .eq("ativa", true)
         .single();
@@ -147,7 +171,7 @@ function ConteudoWizardReservaCliente() {
         return;
       }
 
-      const barb = bDb as Barbearia;
+      const barb = bDb as unknown as Barbearia;
       setBarbearia(barb);
 
       // Serviços Ativos
@@ -164,7 +188,7 @@ function ConteudoWizardReservaCliente() {
       // Profissionais
       const { data: pDb } = await supabase
         .from("profissionais")
-        .select("*")
+        .select("id, barbearia_id, nome, foto_url, bio, ativo")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
         .order("nome", { ascending: true });
@@ -223,12 +247,9 @@ function ConteudoWizardReservaCliente() {
             setObservacoes(draft.observacoes);
           }
 
-          if (draft.codigo_cupom) {
+          if (draft.codigo_cupom && !cupomParamUrl?.trim()) {
             setCodigoCupom(draft.codigo_cupom);
-          }
-
-          if (draft.valor_desconto) {
-            setDescontoCalculado(draft.valor_desconto);
+            setCupomAutoAplicacaoPendente(true);
           }
 
           if (draft.horario) {
@@ -392,56 +413,104 @@ function ConteudoWizardReservaCliente() {
     try {
       setValidandoCupom(true);
       setMsgCupom(null);
+      setCupomAplicado(null);
+      setDescontoCalculado(0);
       const supabase = criarClienteSupabaseBrowser();
 
-      // 1. Buscar cupom
-      const { data: cupDb } = await (supabase.from("cupons") as any)
-        .select("*")
-        .eq("barbearia_id", barbearia.id)
-        .ilike("codigo", codigoLimpo)
-        .eq("ativo", true)
-        .maybeSingle();
+      // 1. Buscar cupom e regras pelo código (a tabela não é mais listável por visitantes)
+      const { data: cupDb, error: erroRegras } = await (supabase.rpc as any)("obter_cupom_por_codigo", {
+        p_barbearia_id: barbearia.id,
+        p_codigo: codigoLimpo,
+      });
 
-      if (!cupDb) {
+      if (!cupDb && !erroRegras) {
         setCupomAplicado(null);
         setDescontoCalculado(0);
         setMsgCupom({ tipo: "erro", texto: "Cupom não encontrado ou inválido nesta barbearia." });
         return;
       }
 
-      const { data: regrasDb } = await (supabase.from("cupons_regras") as any)
-        .select("*")
-        .eq("cupom_id", cupDb.id)
-        .eq("ativo", true)
-        .order("prioridade", { ascending: true });
-      cupDb.regras = regrasDb || [];
+      if (erroRegras) {
+        setMsgCupom({
+          tipo: "erro",
+          texto: traduzirErro(
+            erroRegras,
+            "Não foi possível carregar as regras deste cupom. Verifique sua conexão e tente novamente."
+          ),
+        });
+        return;
+      }
+
+      cupDb.regras = cupDb.regras || [];
 
       // Verificar histórico local para o preview; a RPC revalida tudo na confirmação.
       let totalConcluidos = 0;
       let totalConcluidosGlobal = 0;
       if (usuarioId) {
-        const { count } = await (supabase.from("agendamentos") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("barbearia_id", barbearia.id)
-          .eq("cliente_id", usuarioId)
-          .eq("status", "concluido");
-        totalConcluidos = count || 0;
-        const { count: countGlobal } = await (supabase.from("agendamentos") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("cliente_id", usuarioId)
-          .eq("status", "concluido");
-        totalConcluidosGlobal = countGlobal || 0;
+        const [historicoBarbearia, historicoGlobal] = await Promise.all([
+          (supabase.from("agendamentos") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("barbearia_id", barbearia.id)
+            .eq("cliente_id", usuarioId)
+            .eq("status", "concluido"),
+          (supabase.from("agendamentos") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("cliente_id", usuarioId)
+            .eq("status", "concluido"),
+        ]);
+        const erroHistorico = historicoBarbearia.error || historicoGlobal.error;
+
+        if (erroHistorico || historicoBarbearia.count === null || historicoGlobal.count === null) {
+          setMsgCupom({
+            tipo: "erro",
+            texto: traduzirErro(
+              erroHistorico,
+              "Não foi possível verificar seu histórico de atendimentos. Confira sua conexão e tente aplicar o cupom novamente."
+            ),
+          });
+          return;
+        }
+
+        totalConcluidos = historicoBarbearia.count;
+        totalConcluidosGlobal = historicoGlobal.count;
       }
 
-      // 3. Executar cálculo de domínio
-      const resultado = calcularDescontoCupom({
+      // 3. Pré-selecionar a regra aplicável e validar os usos anteriores deste cupom.
+      const parametrosCalculo = {
         cupom: cupDb as Cupom,
         valorTotal: Number(servicoSelecionado.preco),
         servicosIds: [servicoSelecionado.id],
         servicos: [{ id: servicoSelecionado.id, preco: Number(servicoSelecionado.preco) }],
         totalAgendamentosConcluidosCliente: totalConcluidos,
         historicoPorEscopo: { barbearia: totalConcluidos, global: totalConcluidosGlobal },
-      });
+      };
+      let resultado = calcularDescontoCupom(parametrosCalculo);
+
+      if (resultado.valido && usuarioId && resultado.regra_aplicada) {
+        const { data: usosAnteriores, error: erroUsos } = await (supabase.from("agendamentos") as any)
+          .select("cupom_regra_snapshot")
+          .eq("cliente_id", usuarioId)
+          .eq("cupom_id", cupDb.id)
+          .not("status", "in", '("cancelado","nao_compareceu")');
+
+        if (erroUsos) {
+          setMsgCupom({
+            tipo: "erro",
+            texto: traduzirErro(
+              erroUsos,
+              "Não foi possível verificar os usos anteriores deste cupom. Confira sua conexão e tente novamente."
+            ),
+          });
+          return;
+        }
+
+        const usosCupomCliente = contarUsosCupomClienteNaRegra(
+          usosAnteriores || [],
+          cupDb as Cupom,
+          resultado.regra_aplicada,
+        );
+        resultado = calcularDescontoCupom({ ...parametrosCalculo, usosCupomCliente });
+      }
 
       if (!resultado.valido) {
         setCupomAplicado(null);
@@ -649,7 +718,12 @@ function ConteudoWizardReservaCliente() {
             p_agendamento_id: novoAgendamento.id,
             p_novo_status: "cancelado",
           });
-          setErro(erroCupom.message || "Não foi possível aplicar o cupom nesta reserva.");
+          setCupomAplicado(null);
+          setDescontoCalculado(0);
+          setMsgCupom({
+            tipo: "erro",
+            texto: traduzirErro(erroCupom, "Não foi possível aplicar o cupom nesta reserva."),
+          });
           return;
         }
       }
@@ -1038,7 +1112,7 @@ function ConteudoWizardReservaCliente() {
                     type="button"
                     variante="secundario"
                     tamanho="sm"
-                    disabled={validandoCupom || !codigoCupom.trim()}
+                    disabled={validandoCupom || cupomAutoAplicacaoPendente || !codigoCupom.trim()}
                     carregando={validandoCupom}
                     onClick={aplicarValidarCupom}
                     className="min-h-[44px] text-xs font-semibold px-4"
@@ -1049,6 +1123,7 @@ function ConteudoWizardReservaCliente() {
 
                 {msgCupom && (
                   <span
+                    role={msgCupom.tipo === "erro" ? "alert" : "status"}
                     className={`text-xs font-semibold mt-0.5 ${
                       msgCupom.tipo === "sucesso"
                         ? "text-[#16A34A]"

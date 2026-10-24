@@ -31,6 +31,10 @@ Adicionar tipos `CupomRegra`, `CupomUtilizacao`, estados/origem/escopo e snapsho
 
 - Cliente: query `cupom`, persistência apenas no rascunho da reserva atual, troca substitutiva, preview por serviços/preços, RPC final transacional e remoção de uso legado de `ref`.
 - Parceiro: formulário com origem/influencer, regras de primeiro/seguintes ou faixas, escopo, limites, serviços, mínimo, vigência e ativo; explicações em pt-BR e controles acessíveis.
+- Refinamento PO: usar um único switch `Apenas 1ª Reserva` na seção de faixas; deixar os campos da faixa seguinte visíveis quando desligado e omiti-los da UI e do payload quando ligado. Sem desconto seguinte informado, preservar cupom com regra única.
+- Refinamento PO: separar visualmente primeiro atendimento e demais atendimentos; posicionar o switch `Apenas 1ª Reserva` dentro da segunda seção, ocultando seus campos e apresentando aviso quando ativo. Limites por cliente independentes por faixa, com limite total compartilhado.
+- Parceiro: reutilizar o formulário de cadastro para editar influenciadores da própria barbearia, inclusive comissão e status ativo/inativo; confirmar atualização por ID e barbearia, preservando os snapshots de comissões anteriores.
+- Refinamento PO: no Parceiro, o escopo do histórico é fixo em `BARBEARIA`, sem seletor global; RLS permite `GLOBAL_BARZZO` apenas ao Admin.
 - Admin/relatórios: manter consultas compatíveis com snapshots e status existentes.
 
 ## 5. Testes e gates

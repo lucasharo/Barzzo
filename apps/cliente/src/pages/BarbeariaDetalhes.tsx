@@ -74,9 +74,14 @@ function ConteudoPerfilPublicoBarbearia() {
   const [favoritado, setFavoritado] = React.useState(false);
   const [favoritoId, setFavoritoId] = React.useState<string | null>(null);
   const [alternandoFavorito, setAlternandoFavorito] = React.useState(false);
+  const carregamentoIniciadoParaSlugRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
-    carregarPerfil();
+    if (!slug || carregamentoIniciadoParaSlugRef.current === slug) return;
+
+    // Evita repetir as consultas quando o StrictMode reexecuta efeitos em desenvolvimento.
+    carregamentoIniciadoParaSlugRef.current = slug;
+    void carregarPerfil();
   }, [slug]);
 
   async function carregarPerfil() {
@@ -86,7 +91,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
       // 1. Barbearia por slug
       const { data: bDb, error: erroB } = await (supabase.from("barbearias") as any)
-        .select("*")
+        .select("id, nome, slug, telefone, email, endereco, bairro, cidade, estado, cep, latitude, longitude, logo_url, foto_capa_url, status_assinatura, trial_fim, ativa, criado_em, atualizado_em")
         .eq("slug", slug)
         .eq("ativa", true)
         .single();
@@ -121,7 +126,7 @@ function ConteudoPerfilPublicoBarbearia() {
 
       // 3. Profissionais da barbearia
       const { data: pDb } = await (supabase.from("profissionais") as any)
-        .select("*")
+        .select("id, barbearia_id, nome, foto_url, bio, ativo")
         .eq("barbearia_id", barb.id)
         .eq("ativo", true)
         .order("nome", { ascending: true });
@@ -139,7 +144,7 @@ function ConteudoPerfilPublicoBarbearia() {
       // 5. Avaliações públicas da barbearia
       const { data: avDb } = await (supabase.from("avaliacoes") as any)
         .select(`
-          *,
+          id, barbearia_id, cliente_nome, profissional_id, nota, comentario, resposta_barbearia, respondido_em, created_at, updated_at,
           profissionais (
             nome
           )
@@ -287,99 +292,102 @@ function ConteudoPerfilPublicoBarbearia() {
               className="w-full h-full object-cover opacity-80"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+            <div className="absolute bottom-4 left-6 z-10 flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-[#B45A2B]/20 bg-[#F6F6F7] text-2xl font-bold text-[#B45A2B] md:hidden">
+              {barbearia.logo_url ? (
+                <img src={barbearia.logo_url} alt={barbearia.nome} className="h-full w-full object-cover" />
+              ) : (
+                barbearia.nome.slice(0, 2).toUpperCase()
+              )}
+            </div>
           </div>
         )}
 
-        <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
-        <div className="flex items-start md:items-center gap-5">
-          <div className="h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-[#B45A2B]/10 border border-[#B45A2B]/20 flex items-center justify-center text-[#B45A2B] shrink-0 overflow-hidden font-bold text-2xl">
-            {barbearia.logo_url ? (
-              <img src={barbearia.logo_url} alt={barbearia.nome} className="w-full h-full object-cover" />
-            ) : (
-              barbearia.nome.slice(0, 2).toUpperCase()
-            )}
-          </div>
+        <div className="p-6 md:p-8">
+          <div className="flex items-start gap-5">
+            <div className={`${fotoCapa ? "hidden md:flex" : "flex"} h-20 w-20 md:h-24 md:w-24 rounded-2xl bg-[#B45A2B]/10 border border-[#B45A2B]/20 items-center justify-center text-[#B45A2B] shrink-0 overflow-hidden font-bold text-2xl`}>
+              {barbearia.logo_url ? (
+                <img src={barbearia.logo_url} alt={barbearia.nome} className="w-full h-full object-cover" />
+              ) : (
+                barbearia.nome.slice(0, 2).toUpperCase()
+              )}
+            </div>
 
-          <div className="flex flex-col gap-1.5 flex-1">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl md:text-3xl font-extrabold">{barbearia.nome}</h1>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20">
-                  Ativa no Barzzo
-                </span>
-                {resumoReputacao.total_avaliacoes > 0 ? (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 flex items-center gap-1">
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                    {resumoReputacao.media_nota} ({resumoReputacao.total_avaliacoes})
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <div className="flex items-start gap-2">
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                  <h1 className="min-w-0 max-w-full break-words text-2xl font-extrabold md:text-3xl">
+                    {barbearia.nome}
+                  </h1>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#16A34A]/10 text-[#16A34A] font-semibold border border-[#16A34A]/20">
+                    Ativa no Barzzo
                   </span>
-                ) : (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-500 font-medium">
-                    Novo no Barzzo
-                  </span>
-                )}
+                  {resumoReputacao.total_avaliacoes > 0 ? (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20 flex items-center gap-1">
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                      {resumoReputacao.media_nota} ({resumoReputacao.total_avaliacoes})
+                    </span>
+                  ) : (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-500 font-medium">
+                      Novo no Barzzo
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={alternarFavorito}
+                  disabled={alternandoFavorito}
+                  aria-label={favoritado ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                  aria-pressed={favoritado}
+                  title={favoritado ? "Remover dos favoritos" : "Salvar nos favoritos"}
+                  className={`h-11 w-11 shrink-0 rounded-xl border transition-colors flex items-center justify-center disabled:opacity-60 ${
+                    favoritado
+                      ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/20"
+                      : "border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-red-500 hover:border-red-300 dark:hover:border-red-900"
+                  }`}
+                >
+                  <Heart
+                    className={`h-5 w-5 transition-transform ${
+                      favoritado ? "fill-red-500 text-red-500 scale-110" : ""
+                    }`}
+                  />
+                </button>
               </div>
 
-              {/* Botão de Favoritar */}
-              <button
-                onClick={alternarFavorito}
-                disabled={alternandoFavorito}
-                aria-label={favoritado ? "Remover dos favoritos" : "Salvar nos favoritos"}
-                className={`p-2.5 rounded-xl border transition-all min-h-[44px] min-w-[44px] flex items-center justify-center gap-1.5 text-xs font-semibold ${
-                  favoritado
-                    ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/20"
-                    : "border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:text-red-500 hover:border-red-300 dark:hover:border-red-900"
-                }`}
-              >
-                <Heart
-                  className={`w-4 h-4 transition-transform ${
-                    favoritado ? "fill-red-500 text-red-500 scale-110" : ""
-                  }`}
-                />
-                <span className="hidden sm:inline">
-                  {favoritado ? "Favoritada" : "Favoritar"}
-                </span>
-              </button>
-            </div>
+              <div className="grid grid-cols-1 items-center gap-x-8 gap-y-2 md:grid-cols-[minmax(0,1fr)_auto] md:grid-rows-[auto_auto]">
+                <div className="flex min-w-0 items-center gap-1.5 text-sm opacity-75 md:col-start-1 md:row-start-1">
+                  <MapPin className="h-4 w-4 shrink-0 text-[#B45A2B]" />
+                  <span className="min-w-0 break-words">
+                    {[barbearia.endereco, barbearia.bairro, barbearia.cidade, barbearia.estado]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-sm opacity-75">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
-                {barbearia.endereco ? `${barbearia.endereco}, ` : ""}
-              </span>
-              {barbearia.bairro && (
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20">
-                  {barbearia.bairro}
-                </span>
-              )}
-              <span>
-                {barbearia.cidade}/{barbearia.estado}
-              </span>
-            </div>
+                {barbearia.telefone && (
+                  <p className="flex items-center gap-1.5 text-xs opacity-70 md:col-start-1 md:row-start-2">
+                    <Phone className="h-3.5 w-3.5 shrink-0 text-[#B45A2B]" />
+                    {formatarTelefone(barbearia.telefone)}
+                  </p>
+                )}
 
-            {barbearia.telefone && (
-              <p className="text-xs opacity-70 flex items-center gap-1.5">
-                <Phone className="h-3.5 w-3.5 text-[#B45A2B]" /> {formatarTelefone(barbearia.telefone)}
-              </p>
-            )}
+                <Link
+                  to={`/reservar/${barbearia.slug}${cupomParam ? `?cupom=${encodeURIComponent(cupomParam)}` : ""}`}
+                  className="md:col-start-2 md:row-start-1"
+                >
+                  <Button variante="principal" tamanho="lg" className="w-full text-base font-bold shadow-md">
+                    <Calendar className="h-5 w-5 mr-2" /> Agendar Horário Agora
+                  </Button>
+                </Link>
+
+                <span className="flex items-center justify-center gap-1 text-xs opacity-75 md:col-start-2 md:row-start-2">
+                  <Clock className="h-3.5 w-3.5 text-[#16A34A]" />
+                  {horarioHoje
+                    ? `Hoje: ${horarioHoje.ativo ? `${horarioHoje.hora_abertura.slice(0, 5)} às ${horarioHoje.hora_fechamento.slice(0, 5)}` : "Fechado"}`
+                    : "Consulte horários da semana"}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* CTA Principal de Agendamento */}
-        <div className="flex flex-col sm:flex-row md:flex-col items-stretch gap-2.5 shrink-0">
-          <Link to={`/reservar/${barbearia.slug}${cupomParam ? `?cupom=${encodeURIComponent(cupomParam)}` : ""}`}>
-            <Button variante="principal" tamanho="lg" className="w-full text-base font-bold shadow-md">
-              <Calendar className="h-5 w-5 mr-2" /> Agendar Horário Agora
-            </Button>
-          </Link>
-          {horarioHoje ? (
-            <span className="text-xs text-center opacity-75 flex items-center justify-center gap-1">
-              <Clock className="h-3.5 w-3.5 text-[#16A34A]" />
-              Hoje: {horarioHoje.ativo ? `${horarioHoje.hora_abertura.slice(0, 5)} às ${horarioHoje.hora_fechamento.slice(0, 5)}` : "Fechado"}
-            </span>
-          ) : (
-            <span className="text-xs text-center opacity-50">Consulte horários da semana</span>
-          )}
-        </div>
         </div>
       </div>
 
@@ -722,7 +730,7 @@ function ConteudoPerfilPublicoBarbearia() {
               {barbearia.bairro && (
                 <div className="flex items-center justify-between py-1 border-b border-neutral-200/60 dark:border-neutral-800/60">
                   <span className="opacity-70">Bairro</span>
-                  <span className="font-semibold text-black dark:text-white px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20">
+                  <span className="font-medium">
                     {barbearia.bairro}
                   </span>
                 </div>
@@ -736,9 +744,9 @@ function ConteudoPerfilPublicoBarbearia() {
                 </div>
               )}
               {barbearia.endereco && (
-                <div className="flex flex-col gap-0.5 py-1">
-                  <span className="opacity-70">Logradouro</span>
-                  <span className="font-medium">{barbearia.endereco}</span>
+                <div className="flex items-center justify-between gap-4 py-1">
+                  <span className="opacity-70 shrink-0">Logradouro</span>
+                  <span className="font-medium text-right break-words min-w-0">{barbearia.endereco}</span>
                 </div>
               )}
               {barbearia.cep && (

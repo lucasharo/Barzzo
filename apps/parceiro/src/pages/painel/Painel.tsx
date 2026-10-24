@@ -13,8 +13,17 @@ import {
   CardAgendamento,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { formatarTelefone } from "@barzzo/utilitarios";
-import type { Barbearia, MetricasDashboardHoje, Agendamento } from "@barzzo/tipos";
+import type {
+  AgendamentoComDetalhes,
+  Barbearia,
+  MetricasDashboardHoje,
+  Profissional,
+  StatusAgendamento,
+} from "@barzzo/tipos";
+import { DetalhesAgendamentoModal } from "../../components/detalhes-agendamento-modal";
+import { reagendarAgendamento } from "../../lib/agendamentos";
 import {
   Calendar,
   Clock,
@@ -51,6 +60,8 @@ export default function PaginaPainelParceiro() {
     novos_clientes_hoje: 0,
   });
   const [agendamentosHoje, setAgendamentosHoje] = React.useState<any[]>([]);
+  const [profissionaisAtivos, setProfissionaisAtivos] = React.useState<Profissional[]>([]);
+  const [selecionado, setSelecionado] = React.useState<AgendamentoComDetalhes | null>(null);
   const [possuiHorariosAtivos, setPossuiHorariosAtivos] = React.useState(true);
   const [atualizandoStatusId, setAtualizandoStatusId] = React.useState<string | null>(null);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -73,12 +84,7 @@ export default function PaginaPainelParceiro() {
       setUsuario(session.user);
 
       // 1. Obter vínculo do membro com a barbearia
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id, papel")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
       if (!membro?.barbearia_id) {
         setBarbearia(null);
@@ -141,25 +147,38 @@ export default function PaginaPainelParceiro() {
       }
 
       // 4. Buscar lista de agendamentos de hoje
-      const hojeStr = new Date().toISOString().split("T")[0];
+      // Dia atual no fuso do dispositivo (os instantes são gravados em UTC real).
+      const agoraLocal = new Date();
+      const inicioHoje = new Date(agoraLocal.getFullYear(), agoraLocal.getMonth(), agoraLocal.getDate());
+      const fimHoje = new Date(inicioHoje.getFullYear(), inicioHoje.getMonth(), inicioHoje.getDate() + 1);
       let queryAg = supabase
         .from("agendamentos")
         .select(`
           id,
+          profissional_id,
           inicio_previsto,
           fim_previsto,
+          inicio_real,
+          fim_real,
           status,
+          origem,
           preco_total,
           duracao_total_minutos,
           cliente_nome,
           cliente_telefone,
+          cliente_email,
           observacoes,
+          criado_em,
+          codigo_cupom_snapshot,
+          influenciador_nome_snapshot,
+          valor_bruto_servicos_snapshot,
+          desconto_snapshot,
           profissionais (id, nome),
-          agendamentos_servicos (nome_servico, duracao_minutos, preco)
+          agendamentos_servicos (id, nome_servico, duracao_minutos, preco)
         `)
         .eq("barbearia_id", membro.barbearia_id)
-        .gte("inicio_previsto", `${hojeStr}T00:00:00.000Z`)
-        .lte("inicio_previsto", `${hojeStr}T23:59:59.999Z`)
+        .gte("inicio_previsto", inicioHoje.toISOString())
+        .lt("inicio_previsto", fimHoje.toISOString())
         .order("inicio_previsto", { ascending: true });
 
       if (profFiltroId) {
@@ -168,6 +187,15 @@ export default function PaginaPainelParceiro() {
 
       const { data: agsDb } = await queryAg;
       setAgendamentosHoje(agsDb || []);
+
+      // Profissionais ativos, para trocar o profissional ao reagendar pelo modal
+      const { data: profsDb } = await supabase
+        .from("profissionais")
+        .select("*")
+        .eq("barbearia_id", membro.barbearia_id)
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+      setProfissionaisAtivos((profsDb || []) as Profissional[]);
     } catch {
       setErro("Falha ao carregar métricas operacionais do painel.");
     } finally {
@@ -231,6 +259,57 @@ export default function PaginaPainelParceiro() {
     }
   }
 
+  function abrirDetalhes(ag: any) {
+    setSelecionado({
+      ...ag,
+      profissional_nome: ag.profissionais?.nome || "Profissional",
+      servicos: ag.agendamentos_servicos || [],
+    } as AgendamentoComDetalhes);
+  }
+
+  // Início e conclusão seguem o fluxo rápido do painel; cancelamento e no-show vão pela RPC.
+  async function alterarStatusPeloModal(agendamentoId: string, novoStatus: StatusAgendamento) {
+    if (novoStatus === "em_atendimento" || novoStatus === "concluido") {
+      setSelecionado(null);
+      await handleMudarStatus(agendamentoId, novoStatus);
+      return;
+    }
+
+    try {
+      setAtualizandoStatusId(agendamentoId);
+      setErro(null);
+      const supabase = criarClienteSupabaseBrowser();
+      const { error: erroRpc } = await (supabase.rpc as any)("atualizar_status_agendamento", {
+        p_agendamento_id: agendamentoId,
+        p_novo_status: novoStatus,
+      });
+      if (erroRpc) {
+        setErro("Não foi possível atualizar o status do atendimento.");
+        return;
+      }
+      setSelecionado(null);
+      setSucesso(novoStatus === "cancelado" ? "Atendimento cancelado." : "Atendimento marcado como não compareceu.");
+      await carregarPainel();
+    } catch {
+      setErro("Não foi possível atualizar o status do atendimento.");
+    } finally {
+      setAtualizandoStatusId(null);
+    }
+  }
+
+  async function reagendarPeloModal(
+    agendamentoId: string,
+    novo: { inicioIso: string; fimIso: string; profissionalId: string }
+  ): Promise<string | null> {
+    const erroReagendamento = await reagendarAgendamento(agendamentoId, novo);
+    if (erroReagendamento) return erroReagendamento;
+
+    setSelecionado(null);
+    setSucesso("Agendamento reagendado com sucesso!");
+    await carregarPainel();
+    return null;
+  }
+
   const formatarMoeda = (val: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val || 0);
 
@@ -268,11 +347,16 @@ export default function PaginaPainelParceiro() {
         </div>
 
         {usuario ? (
-          <Link to="/onboarding">
-            <Button variante="principal" tamanho="lg" className="min-h-[48px]">
-              Iniciar Onboarding <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+          <div className="flex flex-col items-center gap-3">
+            <Link to="/onboarding">
+              <Button variante="principal" tamanho="lg" className="min-h-[48px]">
+                Iniciar Onboarding <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+            <Link to="/influenciador/painel" className="text-sm font-semibold text-[#B45A2B] hover:underline">
+              Sou influenciador do Barzzo
+            </Link>
+          </div>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
             <Link to="/entrar" className="w-full sm:w-auto">
@@ -487,21 +571,26 @@ export default function PaginaPainelParceiro() {
                   precoTotal={Number(ag.preco_total)}
                   profissionalNome={ag.profissionais?.nome || "Qualquer"}
                   status={ag.status}
-                  usarUtc={true}
+                  usarUtc={false}
                   carregandoAcao={processando}
                   onIniciar={() => handleMudarStatus(ag.id, "em_atendimento")}
                   onConcluir={() => handleMudarStatus(ag.id, "concluido")}
-                  renderLink={({ href, className, children }) => (
-                    <Link to={href} className={className}>
-                      {children}
-                    </Link>
-                  )}
+                  onDetalhes={() => abrirDetalhes(ag)}
                 />
               );
             })}
           </div>
         )}
       </div>
+
+      <DetalhesAgendamentoModal
+        agendamento={selecionado}
+        aoFechar={() => setSelecionado(null)}
+        carregandoAcao={!!selecionado && atualizandoStatusId === selecionado.id}
+        aoAlterarStatus={alterarStatusPeloModal}
+        profissionais={profissionaisAtivos}
+        aoReagendar={reagendarPeloModal}
+      />
     </div>
   );
 }

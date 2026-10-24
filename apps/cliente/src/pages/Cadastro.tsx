@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -36,11 +37,6 @@ export default function PaginaCadastro() {
   const [carregando, setCarregando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
-
-  const lidarComTelefone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatado = formatarTelefone(e.target.value);
-    setTelefone(formatado);
-  };
 
   const lidarComCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,12 +163,13 @@ export default function PaginaCadastro() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="telefone">Telefone / WhatsApp</Label>
-              <Input
+              <InputMascarado
                 id="telefone"
                 type="tel"
                 placeholder="(11) 99999-9999"
                 value={telefone}
-                onChange={lidarComTelefone}
+                mascara={formatarTelefone}
+                onChangeValor={setTelefone}
                 autoComplete="tel"
                 disabled={carregando}
                 maxLength={15}

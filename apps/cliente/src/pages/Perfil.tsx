@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -57,9 +58,13 @@ export default function PaginaPerfil() {
 
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucesso, setSucesso] = React.useState<string | null>(null);
+  const carregamentoInicialExecutadoRef = React.useRef(false);
 
   // Carregar dados da sessão e perfil
   React.useEffect(() => {
+    if (carregamentoInicialExecutadoRef.current) return;
+    carregamentoInicialExecutadoRef.current = true;
+
     async function carregarPerfil() {
       try {
         setCarregandoInicial(true);
@@ -122,12 +127,8 @@ export default function PaginaPerfil() {
       }
     }
 
-    carregarPerfil();
+    void carregarPerfil();
   }, [navigate]);
-
-  const lidarComTelefone = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTelefone(formatarTelefone(e.target.value));
-  };
 
   // Upload e redimensionamento da foto
   const lidarComMudancaFoto = async (
@@ -203,8 +204,8 @@ export default function PaginaPerfil() {
 
 
   // Busca de endereço automática via CEP
-  const lidarComCep = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valorFormatado = formatarCep(e.target.value);
+  const lidarComCep = async (valor: string) => {
+    const valorFormatado = formatarCep(valor);
     setCep(valorFormatado);
 
     const digitos = valorFormatado.replace(/\D/g, "");
@@ -483,12 +484,13 @@ export default function PaginaPerfil() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="telefone">Telefone / WhatsApp</Label>
-              <Input
+              <InputMascarado
                 id="telefone"
                 type="tel"
                 placeholder="(11) 99999-9999"
                 value={telefone}
-                onChange={lidarComTelefone}
+                mascara={formatarTelefone}
+                onChangeValor={setTelefone}
                 disabled={salvando}
                 maxLength={15}
               />
@@ -512,12 +514,14 @@ export default function PaginaPerfil() {
               <div className="flex flex-col gap-1.5 sm:col-span-1">
                 <Label htmlFor="cep">CEP</Label>
                 <div className="relative">
-                  <Input
+                  <InputMascarado
                     id="cep"
                     type="text"
+                    inputMode="numeric"
                     placeholder="00000-000"
                     value={cep}
-                    onChange={lidarComCep}
+                    mascara={formatarCep}
+                    onChangeValor={lidarComCep}
                     disabled={salvando}
                     maxLength={9}
                   />

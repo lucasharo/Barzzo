@@ -12,8 +12,10 @@ import {
   LoadingSpinner,
   Modal,
   Input,
+  InputMascarado,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
 import {
   traduzirErro,
@@ -90,12 +92,7 @@ export default function PaginaAssinaturaParceiro() {
       if (!session) return;
 
       // 1. Obter barbearia
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id, papel")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
       if (!membro?.barbearia_id) {
         setBarbearia(null);
@@ -123,7 +120,7 @@ export default function PaginaAssinaturaParceiro() {
       // 3. Carregar assinatura atual se existir
       const { data: assDb } = await (supabase.from("assinaturas") as any)
         .select("*, planos(*)")
-        .eq("barbearia_id", membro.barbearia_id)
+        .eq("barbearia_id", (bDb as Barbearia | null)?.matriz_id ?? membro.barbearia_id)
         .eq("status", "ativa")
         .order("criado_em", { ascending: false })
         .limit(1)
@@ -407,6 +404,24 @@ export default function PaginaAssinaturaParceiro() {
       <div className="flex-1 max-w-xl mx-auto py-20 flex flex-col items-center justify-center gap-3">
         <LoadingSpinner tamanho="lg" className="text-[#B45A2B]" />
         <p className="text-sm opacity-70">Carregando planos e assinatura...</p>
+      </div>
+    );
+  }
+
+  // Filial: o plano e a cobrança são da matriz.
+  if (barbearia?.matriz_id) {
+    return (
+      <div className="flex-1 max-w-xl mx-auto py-16 flex flex-col items-center text-center gap-5">
+        <Store className="h-12 w-12 text-[#B45A2B]" />
+        <h1 className="text-2xl font-bold">Esta unidade é uma filial</h1>
+        <p className="text-sm opacity-75">
+          {barbearia.nome} está incluída na assinatura da matriz
+          {assinaturaAtual?.planos?.nome ? ` (plano ${assinaturaAtual.planos.nome})` : ""}. Para ver ou alterar o plano,
+          troque para a matriz.
+        </p>
+        <Link to="/unidades">
+          <Button variante="principal" tamanho="md">Ver unidades da rede</Button>
+        </Link>
       </div>
     );
   }
@@ -873,14 +888,15 @@ export default function PaginaAssinaturaParceiro() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold">Número do Cartão</label>
+                    <label htmlFor="numeroCartaoUpgrade" className="block text-xs font-bold">Número do Cartão</label>
                     {infoBandeira.id !== "outros" && (
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 animate-in fade-in">
                         {infoBandeira.nome}
                       </span>
                     )}
                   </div>
-                  <Input
+                  <InputMascarado
+                    id="numeroCartaoUpgrade"
                     type="text"
                     placeholder={
                       infoBandeira.id === "amex"
@@ -891,20 +907,23 @@ export default function PaginaAssinaturaParceiro() {
                     }
                     maxLength={infoBandeira.id === "amex" ? 17 : infoBandeira.id === "diners" ? 16 : 19}
                     value={numeroCartao}
-                    onChange={(e) => setNumeroCartao(formatarNumeroCartao(e.target.value))}
+                    mascara={formatarNumeroCartao}
+                    onChangeValor={setNumeroCartao}
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
-                    <Input
+                    <label htmlFor="validadeCartaoUpgrade" className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
+                    <InputMascarado
+                      id="validadeCartaoUpgrade"
                       type="text"
                       placeholder="11/30"
                       maxLength={5}
                       value={validadeCartao}
-                      onChange={(e) => setValidadeCartao(formatarValidadeCartao(e.target.value))}
+                      mascara={formatarValidadeCartao}
+                      onChangeValor={setValidadeCartao}
                       required
                     />
                   </div>
@@ -924,13 +943,15 @@ export default function PaginaAssinaturaParceiro() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-1">CPF do Titular</label>
-                  <Input
+                  <label htmlFor="cpfCartaoUpgrade" className="block text-xs font-bold mb-1">CPF do Titular</label>
+                  <InputMascarado
+                    id="cpfCartaoUpgrade"
                     type="text"
                     placeholder="000.000.000-00"
                     maxLength={14}
                     value={cpfCartao}
-                    onChange={(e) => setCpfCartao(formatarCpf(e.target.value))}
+                    mascara={formatarCpf}
+                    onChangeValor={setCpfCartao}
                     required
                   />
                 </div>
@@ -986,14 +1007,15 @@ export default function PaginaAssinaturaParceiro() {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold">Número do Cartão</label>
+              <label htmlFor="numeroCartaoTroca" className="block text-xs font-bold">Número do Cartão</label>
               {infoBandeira.id !== "outros" && (
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 animate-in fade-in">
                   {infoBandeira.nome}
                 </span>
               )}
             </div>
-            <Input
+            <InputMascarado
+              id="numeroCartaoTroca"
               type="text"
               placeholder={
                 infoBandeira.id === "amex"
@@ -1004,20 +1026,23 @@ export default function PaginaAssinaturaParceiro() {
               }
               maxLength={infoBandeira.id === "amex" ? 17 : infoBandeira.id === "diners" ? 16 : 19}
               value={numeroCartao}
-              onChange={(e) => setNumeroCartao(formatarNumeroCartao(e.target.value))}
+              mascara={formatarNumeroCartao}
+              onChangeValor={setNumeroCartao}
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
-              <Input
+              <label htmlFor="validadeCartaoTroca" className="block text-xs font-bold mb-1">Validade (MM/AA)</label>
+              <InputMascarado
+                id="validadeCartaoTroca"
                 type="text"
                 placeholder="11/30"
                 maxLength={5}
                 value={validadeCartao}
-                onChange={(e) => setValidadeCartao(formatarValidadeCartao(e.target.value))}
+                mascara={formatarValidadeCartao}
+                onChangeValor={setValidadeCartao}
                 required
               />
             </div>
@@ -1037,13 +1062,15 @@ export default function PaginaAssinaturaParceiro() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold mb-1">CPF do Titular</label>
-            <Input
+            <label htmlFor="cpfCartaoTroca" className="block text-xs font-bold mb-1">CPF do Titular</label>
+            <InputMascarado
+              id="cpfCartaoTroca"
               type="text"
               placeholder="000.000.000-00"
               maxLength={14}
               value={cpfCartao}
-              onChange={(e) => setCpfCartao(formatarCpf(e.target.value))}
+              mascara={formatarCpf}
+              onChangeValor={setCpfCartao}
               required
             />
           </div>

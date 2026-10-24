@@ -14,8 +14,10 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { traduzirErro } from "@barzzo/utilitarios";
 import {
   esquemaProduto,
@@ -86,12 +88,7 @@ export default function PaginaFormularioProduto() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");
@@ -560,26 +557,16 @@ export default function PaginaFormularioProduto() {
 
           {/* Checkboxes de Ativo e Destaque */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <label className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={ativo}
-                onChange={(e) => setAtivo(e.target.checked)}
-                className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]"
-              />
+            <div className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
+              <Switch marcado={ativo} aoMudar={setAtivo} aria-label="Ativar produto" />
               <div>
                 <span className="text-sm font-bold block">Produto Ativo</span>
                 <span className="text-xs opacity-60">Visível no catálogo para os clientes</span>
               </div>
-            </label>
+            </div>
 
-            <label className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
-              <input
-                type="checkbox"
-                checked={destaque}
-                onChange={(e) => setDestaque(e.target.checked)}
-                className="w-4 h-4 rounded text-[#B45A2B] focus:ring-[#B45A2B]"
-              />
+            <div className="flex items-center gap-3 p-3.5 rounded-xl border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors min-h-[44px]">
+              <Switch marcado={destaque} aoMudar={setDestaque} aria-label="Destacar produto" />
               <div className="flex items-center gap-1.5">
                 <div>
                   <span className="text-sm font-bold flex items-center gap-1">
@@ -589,7 +576,7 @@ export default function PaginaFormularioProduto() {
                   <span className="text-xs opacity-60">Prioridade no topo do catálogo</span>
                 </div>
               </div>
-            </label>
+            </div>
           </div>
 
           {/* Botões de Ação */}

@@ -32,7 +32,7 @@ function FormularioEntrarAdmin() {
 
   // Se já estiver logado, redireciona para o painel
   React.useEffect(() => {
-    const supabase = criarClienteSupabaseBrowser();
+    const supabase = criarClienteSupabaseBrowser("admin");
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.push(retornoUrl);
@@ -52,7 +52,7 @@ function FormularioEntrarAdmin() {
 
     try {
       setCarregando(true);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: senha,

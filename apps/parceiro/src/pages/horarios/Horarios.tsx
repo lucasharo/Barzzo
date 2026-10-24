@@ -11,8 +11,10 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Switch,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import {
   NOMES_DIAS_SEMANA,
   NOMES_CURTOS_DIAS_SEMANA,
@@ -75,12 +77,7 @@ export default function PaginaHorariosFuncionamento() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (!membro || !membro.barbearia_id) {
         setErro("Nenhuma barbearia vinculada.");
@@ -302,15 +299,13 @@ export default function PaginaHorariosFuncionamento() {
                       </span>
                     </div>
 
-                    <label className="relative inline-flex items-center cursor-pointer ml-auto md:ml-2">
-                      <input
-                        type="checkbox"
-                        checked={h.ativo}
-                        onChange={(e) => atualizarDia(dia, { ativo: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-9 h-5 bg-neutral-300 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#16A34A]"></div>
-                    </label>
+                    <Switch
+                      marcado={h.ativo}
+                      aoMudar={(marcado) => atualizarDia(dia, { ativo: marcado })}
+                      tamanho="sm"
+                      aria-label={`Abrir ${NOMES_DIAS_SEMANA[dia]} ao público`}
+                      className="ml-auto md:ml-2"
+                    />
                   </div>
 
                   {/* Horários de Expediente e Almoço */}
@@ -338,15 +333,15 @@ export default function PaginaHorariosFuncionamento() {
 
                       {/* Pausa Almoço */}
                       <div className="flex items-center gap-2 pl-0 sm:pl-3 sm:border-l border-neutral-200 dark:border-neutral-800">
-                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={h.tem_almoco}
-                            onChange={(e) => atualizarDia(dia, { tem_almoco: e.target.checked })}
-                            className="rounded border-neutral-300 dark:border-neutral-700 text-[#B45A2B] focus:ring-[#B45A2B]"
+                        <div className="flex items-center gap-1.5 select-none">
+                          <Switch
+                            marcado={h.tem_almoco}
+                            aoMudar={(marcado) => atualizarDia(dia, { tem_almoco: marcado })}
+                            tamanho="sm"
+                            aria-label={`Ativar almoço de ${NOMES_DIAS_SEMANA[dia]}`}
                           />
                           <span className="opacity-70">Almoço:</span>
-                        </label>
+                        </div>
 
                         {h.tem_almoco ? (
                           <div className="flex items-center gap-1">

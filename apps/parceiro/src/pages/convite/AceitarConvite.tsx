@@ -41,11 +41,10 @@ export default function PaginaAceitarConvite() {
         setEstaAutenticado(!!session);
 
         // Buscar dados do convite
-        const { data, error } = await supabase
-          .from("convites_profissionais")
-          .select("*, profissional:profissionais(*), barbearia:barbearias(*)")
-          .eq("token", token)
-          .single();
+        // Leitura por token via RPC: a tabela de convites não é listável por visitantes.
+        const { data, error } = await (supabase.rpc as any)("obter_convite_por_token", {
+          p_token: token,
+        });
 
         if (error || !data) {
           setErro("Convite não encontrado ou já expirado.");

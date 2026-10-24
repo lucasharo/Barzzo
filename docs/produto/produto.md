@@ -18,11 +18,15 @@ Própria agenda, atendimentos, clientes necessários, disponibilidade, perfil e 
 ## Influenciador
 Cupons associados, campanhas, reservas atribuídas, concluídos, comissão pendente/paga. Links novos divulgam diretamente `?cupom=CODIGO`; `ref` é apenas compatibilidade de navegação e não cria atribuição.
 
+No Parceiro, os dados do influenciador e seu status ativo/inativo podem ser editados. Um influenciador inativo não recebe novas atribuições por cupom; alterações de status ou comissão não recalculam comissões já congeladas em agendamentos anteriores.
+
 ## Cupons e atribuição comercial
 - O cupom aplicado na reserva é a única fonte de atribuição comercial.
 - Cada reserva tem no máximo um cupom. Um novo cupom substitui o anterior.
 - O cupom é reaplicado em cada agendamento e não é herdado de reservas anteriores.
 - Cupons podem possuir múltiplas regras/faixas, com prioridade, histórico por barbearia ou global Barzzo, serviços elegíveis, valor mínimo, limites e desconto percentual/fixo.
+- No Parceiro, o histórico considerado é sempre o da própria barbearia; cupons globais e regras com histórico de todo o Barzzo são exclusivos do Admin.
+- No formulário do Parceiro, `Apenas 1ª Reserva` fica na seção de demais atendimentos: quando ligado, seus campos ficam ocultos e um aviso informa que não haverá desconto nessa faixa; quando desligado, os campos são exibidos. Os limites por cliente são independentes entre faixas, enquanto o limite total permanece compartilhado pelo cupom.
 - O agendamento congela o snapshot comercial no momento da confirmação; comissão percentual usa o líquido e comissão fixa usa o valor congelado.
 
 ## Admin
@@ -63,3 +67,31 @@ As regras de cupons e influencers descritas na Task 08 continuam como histórico
 
 ## Fora do MVP
 Pagamento de serviços no app, multa/sinal, ecommerce, e-mail, WhatsApp, estoque avançado, pontos, repasse automático, DRE, apps nativos publicados.
+
+## Planos e unidades
+
+A única diferença de funcionalidade entre os planos é a quantidade de filiais (cadastradas em **Unidades da Rede**). Os demais recursos do produto são os mesmos em todos os planos; os limites de profissionais continuam como na vitrine.
+
+| Plano | Unidades |
+|---|---|
+| Solo | somente a própria barbearia |
+| Pro | somente a própria barbearia |
+| Growth | matriz + 1 filial |
+| Rede | matriz + filiais ilimitadas |
+
+- A filial nasce ativa e **herda a assinatura da matriz**, sem trial nem cobrança própria. Se a matriz ficar inadimplente, as filiais também ficam.
+- Só o dono da matriz, com assinatura ativa, cadastra filiais. O limite é conferido no banco (`criar_filial`, com a matriz travada para evitar criação simultânea acima do limite; coluna `planos.limite_filiais`, `NULL` = ilimitadas).
+- Cada unidade tem a própria agenda, equipe, serviços, clientes e horários. Quem tem mais de uma unidade escolhe a unidade em uso pelo seletor do menu.
+- Assinatura e vínculo de rede não são editáveis pelo app: só o backend (webhook, chave de serviço) e o Admin alteram essas colunas.
+
+## Influenciadores do Barzzo
+
+Influenciador da plataforma, sem barbearia, que as barbearias podem aceitar.
+
+- **Cadastro próprio:** o influenciador cria a conta no app do Parceiro (`/influenciador/cadastro`), informa nome, WhatsApp, chave Pix e o código do cupom. Cada usuário tem um cadastro de influenciador do Barzzo.
+- **Cupom pendente:** nasce com 5% de comissão e fica pendente até o Admin aprovar. Enquanto não for aprovado, o cupom é recusado em qualquer barbearia. O influenciador pode trocar o código enquanto estiver pendente ou recusado; depois de aprovado, só o Admin altera.
+- **Desconto do cliente:** 15% no primeiro atendimento (histórico global do Barzzo, não só da barbearia) e 5% nos demais.
+- **Admin altera tudo:** comissão (percentual ou valor fixo), os dois descontos, aprovação, recusa e ativação, na tela Rede de Influenciadores. Alterações valem para os próximos atendimentos; o snapshot da reserva preserva as condições do momento.
+- **Aceite da barbearia:** interruptor "Aceitar influenciadores do Barzzo" (Influenciadores & Afiliados). Ligado, vale para todos os influenciadores aprovados, inclusive os futuros. Desligado por padrão.
+- **Quem paga:** a barbearia onde o cupom foi usado paga a comissão (5% por padrão, sobre o valor líquido) e vê o influenciador no extrato.
+- Os influenciadores cadastrados pela própria barbearia continuam como antes.

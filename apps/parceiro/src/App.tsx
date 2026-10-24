@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { NavegacaoParceiro } from "./components/navegacao-parceiro";
 import PaginaBloqueios from "./pages/agenda/Bloqueios";
 import PaginaAgenda from "./pages/agenda/Agenda";
-import PaginaDetalhesAgendamento from "./pages/agendamentos/Detalhes";
 import PaginaNovoAgendamento from "./pages/agendamentos/Novo";
 import PaginaAssinatura from "./pages/assinatura/Assinatura";
 import PaginaAvaliacoes from "./pages/avaliacoes/Avaliacoes";
@@ -19,6 +18,7 @@ import PaginaEquipe from "./pages/equipe/Equipe";
 import PaginaGaleria from "./pages/galeria/Galeria";
 import PaginaHorarios from "./pages/horarios/Horarios";
 import PaginaInfluenciadorPainel from "./pages/influenciador/Painel";
+import PaginaInfluenciadorCadastro from "./pages/influenciador/Cadastro";
 import PaginaInfluenciadores from "./pages/influenciadores/Influenciadores";
 import PaginaNotificacoes from "./pages/notificacoes/Notificacoes";
 import PaginaOnboarding from "./pages/onboarding/Onboarding";
@@ -29,6 +29,7 @@ import PaginaProdutos from "./pages/produtos/Produtos";
 import PaginaRelatorios from "./pages/relatorios/Relatorios";
 import PaginaDetalhesServico from "./pages/servicos/Detalhes";
 import PaginaServicos from "./pages/servicos/Servicos";
+import PaginaUnidades from "./pages/unidades/Unidades";
 import PaginaEntrarParceiro from "./pages/auth/Entrar";
 import PaginaCadastroParceiro from "./pages/auth/Cadastro";
 import PaginaRecuperarSenhaParceiro from "./pages/auth/RecuperarSenha";
@@ -41,7 +42,7 @@ export default function App() {
         <Routes>
           <Route path="/agenda/bloqueios" element={<PaginaBloqueios />} />
           <Route path="/agenda" element={<PaginaAgenda />} />
-          <Route path="/agendamentos/:id" element={<PaginaDetalhesAgendamento />} />
+          <Route path="/agendamentos/:id" element={<Navigate to="/agenda" replace />} />
           <Route path="/agendamentos/novo" element={<PaginaNovoAgendamento />} />
           <Route path="/assinatura" element={<PaginaAssinatura />} />
           <Route path="/avaliacoes" element={<PaginaAvaliacoes />} />
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/equipe" element={<PaginaEquipe />} />
           <Route path="/galeria" element={<PaginaGaleria />} />
           <Route path="/horarios" element={<PaginaHorarios />} />
+          <Route path="/influenciador/cadastro" element={<PaginaInfluenciadorCadastro />} />
           <Route path="/influenciador/painel" element={<PaginaInfluenciadorPainel />} />
           <Route path="/influenciadores" element={<PaginaInfluenciadores />} />
           <Route path="/notificacoes" element={<PaginaNotificacoes />} />
@@ -71,6 +73,7 @@ export default function App() {
           <Route path="/relatorios" element={<PaginaRelatorios />} />
           <Route path="/servicos/:id" element={<PaginaDetalhesServico />} />
           <Route path="/servicos" element={<PaginaServicos />} />
+          <Route path="/unidades" element={<PaginaUnidades />} />
           <Route path="*" element={<Navigate to="/painel" replace />} />
         </Routes>
       </main>

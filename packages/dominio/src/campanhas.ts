@@ -44,7 +44,8 @@ export function calcularDescontoCupom(parametros: {
   // 2. Vigência de data
   const dataAtual = agora.getTime();
   const inicio = new Date(cupom.data_inicio).getTime();
-  const fim = new Date(cupom.data_fim).getTime();
+  // Sem data de término o cupom vale até ser desativado.
+  const fim = cupom.data_fim ? new Date(cupom.data_fim).getTime() : Infinity;
 
   if (dataAtual < inicio) {
     return { valido: false, motivo_invalido: "Esta promoção ainda não iniciou." };
@@ -152,6 +153,32 @@ export function calcularDescontoCupom(parametros: {
     valor_final: valorComDesconto,
     regra_aplicada: regra,
   };
+}
+
+/** Conta os usos anteriores do cliente que pertencem à faixa atualmente elegível. */
+export function contarUsosCupomClienteNaRegra(
+  usos: Array<{ cupom_regra_snapshot: Partial<CupomRegra> | null }>,
+  cupom: Pick<Cupom, "origem">,
+  regra: CupomRegra,
+): number {
+  const limitePorFaixa =
+    (cupom.origem === "BARBEARIA" || cupom.origem === "INFLUENCIADOR") &&
+    regra.escopo_historico === "BARBEARIA" &&
+    ((regra.atendimentos_minimos === 0 && regra.atendimentos_maximos === 0) ||
+      (regra.atendimentos_minimos === 1 && regra.atendimentos_maximos == null));
+
+  if (!limitePorFaixa) return usos.length;
+
+  return usos.filter(({ cupom_regra_snapshot: anterior }) => {
+    if (!anterior) return true;
+
+    const mesmoEscopo = (anterior.escopo_historico ?? "BARBEARIA") === regra.escopo_historico;
+    const faixaLegada = anterior.atendimentos_minimos == null && anterior.atendimentos_maximos == null;
+    const mesmaFaixa = anterior.atendimentos_minimos === regra.atendimentos_minimos &&
+      anterior.atendimentos_maximos === regra.atendimentos_maximos;
+
+    return mesmoEscopo && (mesmaFaixa || faixaLegada);
+  }).length;
 }
 
 /**

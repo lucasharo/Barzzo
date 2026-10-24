@@ -14,6 +14,10 @@ export interface Barbearia {
   longitude: number | null;
   logo_url: string | null;
   foto_capa_url?: string | null;
+  /** Preenchido nas filiais: id da matriz cuja assinatura vale para a unidade. */
+  matriz_id?: string | null;
+  /** Aceita os cupons dos influenciadores do Barzzo e paga a comissão deles. */
+  aceita_influenciadores_barzzo?: boolean;
   status_assinatura: "trial" | "ativa" | "ativo" | "vencida" | "inadimplente" | "suspensa" | "cancelada" | "cancelado";
   trial_inicio: string;
   trial_fim: string;

@@ -56,7 +56,7 @@ export const esquemaCupom = z
     apenas_primeira_reserva: z.boolean().default(false),
     servicos_elegiveis: z.array(z.string().uuid()).default([]),
     data_inicio: z.string().min(1, "Data de início é obrigatória."),
-    data_fim: z.string().min(1, "Data de término é obrigatória."),
+    data_fim: z.string().optional().nullable(),
     ativo: z.boolean().default(true),
     origem: z.enum(["BARBEARIA", "INFLUENCIADOR", "BARZZO_GLOBAL"]).default("BARBEARIA"),
     influenciador_id: z.string().uuid("Influenciador inválido.").optional().nullable(),
@@ -77,8 +77,10 @@ export const esquemaCupom = z
   .refine(
     (dados) => {
       const inicio = new Date(dados.data_inicio).getTime();
+      if (isNaN(inicio)) return false;
+      if (!dados.data_fim) return true;
       const fim = new Date(dados.data_fim).getTime();
-      return !isNaN(inicio) && !isNaN(fim) && inicio <= fim;
+      return !isNaN(fim) && inicio <= fim;
     },
     {
       message: "Data de início não pode ser posterior à data de término.",
@@ -100,16 +102,6 @@ export const esquemaCupom = z
 
 export const esquemaInfluenciador = z.object({
   nome: z.string().min(2, "Nome do influenciador deve ter pelo menos 2 caracteres.").max(100),
-  codigo_ref: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .min(2, "Código de referência deve ter pelo menos 2 caracteres.")
-    .max(30, "Código de referência deve ter no máximo 30 caracteres.")
-    .regex(
-      /^[A-Z0-9_-]+$/,
-      "Código de referência deve conter apenas letras maiúsculas, números, hífens ou sublinhados."
-    ),
   email: z.string().email("E-mail inválido.").optional().nullable().or(z.literal("")),
   telefone: z.string().optional().nullable().or(z.literal("")),
   chave_pix: z.string().max(100).optional().nullable().or(z.literal("")),

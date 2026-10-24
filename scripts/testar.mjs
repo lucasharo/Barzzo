@@ -324,7 +324,7 @@ function calcularHorariosDisponiveis(opcoes) {
     bloqueios = [],
     data,
     profissionalIdFiltro,
-    passoMinutos = 30,
+    passoMinutos = 15,
   } = opcoes;
 
   if (!servico.ativo || servico.duracao_minutos <= 0) return [];
@@ -1230,6 +1230,9 @@ test("Migration Task 11: regras, utilizações, snapshots, RLS e processamento p
   expect(sqlTask11).toContain("status IN ('reservado', 'consumido', 'liberado', 'cancelado')");
   expect(sqlTask11).toContain("v_agendamento.tipo_comissao_snapshot");
   expect(sqlTask11).toContain("REVOKE EXECUTE ON FUNCTION public.registrar_uso_cupom");
+  expect(sqlTask11).toContain("CREATE OR REPLACE FUNCTION public.eh_admin()");
+  expect(sqlTask11.includes("'user_metadata'")).toBe(false);
+  expect(sqlTask11).toContain("ON CONFLICT (agendamento_id) WHERE agendamento_id IS NOT NULL DO NOTHING");
 });
 
 // --- 10. Testes de Notificações, Dashboard e Relatórios (Task 09) ---

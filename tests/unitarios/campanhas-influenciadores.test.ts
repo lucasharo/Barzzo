@@ -8,6 +8,7 @@ import {
 import {
   calcularDescontoCupom,
   calcularValorComissao,
+  contarUsosCupomClienteNaRegra,
   gerarLinkInfluenciador,
 } from "@barzzo/dominio";
 import type { Cupom } from "@barzzo/tipos";
@@ -81,7 +82,6 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
         nome: "Barba & Estilo Blog",
         email: "contato@barbaestilo.com.br",
         telefone: "11988887777",
-        codigo_ref: "BARBAESTILO",
         tipo_comissao: "percentual",
         valor_comissao: 10,
         chave_pix: "contato@barbaestilo.com.br",
@@ -90,7 +90,7 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
 
       expect(res.success).toBe(true);
       if (res.success) {
-        expect(res.data.codigo_ref).toBe("BARBAESTILO");
+        expect(res.data).not.toHaveProperty("codigo_ref");
         expect(res.data.valor_comissao).toBe(10);
       }
     });
@@ -98,7 +98,6 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
     it("deve aceitar comissão em valor fixo por atendimento", () => {
       const res = esquemaInfluenciador.safeParse({
         nome: "Canal do Navalha",
-        codigo_ref: "NAVALHA5",
         tipo_comissao: "valor_fixo",
         valor_comissao: 7.5,
       });
@@ -412,6 +411,28 @@ describe("Task 08 — Campanhas, Cupons e Influenciadores", () => {
     it("permite cupom ilimitado quando os limites são nulos", () => {
       const cupom = { ...cupomComFaixas, regras: [{ ...cupomComFaixas.regras![1], limite_usos_total: null, limite_usos_por_cliente: null }] };
       expect(calcularDescontoCupom({ cupom, valorTotal: 100, usosCupom: 999, usosCupomCliente: 999, historicoPorEscopo: { barbearia: 1, global: 1 }, agora: new Date("2026-06-01") }).valido).toBe(true);
+    });
+
+    it("conta os usos da faixa aplicável sem misturar primeiro e demais atendimentos", () => {
+      const usos = [
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 0, atendimentos_maximos: 0 } },
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+        { cupom_regra_snapshot: { escopo_historico: "GLOBAL_BARZZO" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+      ];
+      const regraDemais = { ...cupomComFaixas.regras![1], escopo_historico: "BARBEARIA" as const };
+
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "BARBEARIA" }, regraDemais)).toBe(1);
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "BARZZO_GLOBAL" }, regraDemais)).toBe(3);
+    });
+
+    it("considera usos legados sem snapshot de faixa na regra correspondente", () => {
+      const regraPrimeiro = { ...cupomComFaixas.regras![0], escopo_historico: "BARBEARIA" as const };
+      const usos = [
+        { cupom_regra_snapshot: null },
+        { cupom_regra_snapshot: { escopo_historico: "BARBEARIA" as const, atendimentos_minimos: 1, atendimentos_maximos: null } },
+      ];
+
+      expect(contarUsosCupomClienteNaRegra(usos, { origem: "INFLUENCIADOR" }, regraPrimeiro)).toBe(1);
     });
 
     it("comissão percentual usa o valor líquido após desconto", () => {

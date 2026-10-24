@@ -27,7 +27,7 @@ export default function PaginaUsuariosAdmin() {
       try {
         setCarregando(true);
         setErro(null);
-        const supabase = criarClienteSupabaseBrowser();
+        const supabase = criarClienteSupabaseBrowser("admin");
 
         const { data: uDb, error: erroDb } = await supabase
           .from("usuarios")

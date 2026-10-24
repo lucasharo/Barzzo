@@ -11,7 +11,11 @@ export interface ModalProps {
   descricao?: string;
   children: React.ReactNode;
   rodape?: React.ReactNode;
+  /** Conteúdo extra no cabeçalho, ao lado do botão de fechar (ex.: um badge de status). */
+  acaoCabecalho?: React.ReactNode;
   tamanho?: "sm" | "md" | "lg" | "xl";
+  /** "responsivo" (padrão): bottom sheet no celular e card centralizado no desktop. "centralizado": sempre card centralizado. */
+  posicao?: "responsivo" | "centralizado";
   className?: string;
 }
 
@@ -22,7 +26,9 @@ export function Modal({
   descricao,
   children,
   rodape,
+  acaoCabecalho,
   tamanho = "md",
+  posicao = "responsivo",
   className,
 }: ModalProps) {
   React.useEffect(() => {
@@ -48,6 +54,8 @@ export function Modal({
 
   if (!aberto) return null;
 
+  const centralizado = posicao === "centralizado";
+
   const tamanhos = {
     sm: "max-w-sm",
     md: "max-w-md",
@@ -57,7 +65,10 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className={cn(
+        "fixed inset-0 z-50 flex justify-center",
+        centralizado ? "items-center p-4" : "items-end sm:items-center p-0 sm:p-4"
+      )}
       role="dialog"
       aria-modal="true"
       aria-label={titulo || "Modal de diálogo"}
@@ -72,13 +83,16 @@ export function Modal({
       {/* Janela do Modal (BottomSheet no mobile, card centralizado no desktop) */}
       <div
         className={cn(
-          "relative z-50 w-full rounded-t-3xl sm:rounded-2xl bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200",
+          "relative z-50 w-full bg-white dark:bg-[#141416] border border-neutral-200 dark:border-neutral-800 shadow-2xl flex flex-col overflow-hidden animate-in duration-200",
+          centralizado
+            ? "rounded-2xl max-h-[85vh] zoom-in-95 fade-in"
+            : "rounded-t-3xl sm:rounded-2xl max-h-[90vh] sm:max-h-[85vh] slide-in-from-bottom sm:zoom-in-95",
           tamanhos[tamanho],
           className
         )}
       >
         {/* Indicador de arrasto no mobile */}
-        <div className="sm:hidden flex justify-center pt-3 pb-1">
+        <div className={cn("flex justify-center pt-3 pb-1", centralizado ? "hidden" : "sm:hidden")}>
           <div className="w-12 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700" />
         </div>
 
@@ -96,6 +110,8 @@ export function Modal({
               </p>
             )}
           </div>
+          <div className="flex items-center gap-2">
+          {acaoCabecalho}
           <button
             type="button"
             onClick={aoFechar}
@@ -104,10 +120,11 @@ export function Modal({
           >
             <X className="h-5 w-5" />
           </button>
+          </div>
         </div>
 
         {/* Corpo rolável */}
-        <div className="flex-1 overflow-y-auto p-5">{children}</div>
+        <div className="flex-1 overflow-y-auto p-5 max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">{children}</div>
 
         {/* Rodapé de Ações */}
         {rodape && (

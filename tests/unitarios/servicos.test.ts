@@ -192,7 +192,7 @@ describe("TASK-03: Serviços, Jornadas e Disponibilidade", () => {
       expect(slots).toEqual([]);
     });
 
-    it("deve gerar slots a cada 30min entre 09:00 e 12:00", () => {
+    it("deve gerar slots a cada 15min entre 09:00 e 12:00 (passo padrão)", () => {
       const slots = calcularHorariosDisponiveis({
         servico: servicoPadrao, // 30 min
         horarioBarbearia: horarioBarbeariaSegunda, // 09:00 às 12:00
@@ -200,18 +200,28 @@ describe("TASK-03: Serviços, Jornadas e Disponibilidade", () => {
         data: "2026-10-05",
       });
 
-      // 09:00 (até 09:30), 09:30 (até 10:00), 10:00 (até 10:30), 10:30 (até 11:00), 11:00 (até 11:30), 11:30 (até 12:00)
+      // Serviço de 30 min com passo de 15: o último início possível é 11:30 (termina às 12:00)
       const horarios = slots.map((s) => s.horario);
-      expect(horarios).toEqual(["09:00", "09:30", "10:00", "10:30", "11:00", "11:30"]);
+      expect(horarios).toEqual([
+        "09:00", "09:15", "09:30", "09:45", "10:00", "10:15",
+        "10:30", "10:45", "11:00", "11:15", "11:30",
+      ]);
+    });
+
+    it("deve aceitar um passo diferente do padrão", () => {
+      const slots = calcularHorariosDisponiveis({
+        servico: servicoPadrao,
+        horarioBarbearia: horarioBarbeariaSegunda,
+        profissionais: [profissionalApto],
+        data: "2026-10-05",
+        passoMinutos: 30,
+      });
+      expect(slots.map((s) => s.horario)).toEqual(["09:00", "09:30", "10:00", "10:30", "11:00", "11:30"]);
     });
 
     it("deve impedir slots cuja duração cruza o fechamento", () => {
-      // Serviço de 45 minutos com passos de 30 minutos
-      // 09:00 (até 09:45) -> OK
-      // 09:30 (até 10:15) -> OK
-      // 10:00 (até 10:45) -> OK
-      // 10:30 (até 11:15) -> OK
-      // 11:00 (até 11:45) -> OK
+      // Serviço de 45 minutos com passos de 15 minutos
+      // 11:15 (até 12:00) -> último início possível
       // 11:30 (até 12:15) -> Ultrapassa 12:00! NÃO DEVE SER OFERECIDO
       const slots = calcularHorariosDisponiveis({
         servico: { ...servicoPadrao, duracao_minutos: 45 },
@@ -221,7 +231,10 @@ describe("TASK-03: Serviços, Jornadas e Disponibilidade", () => {
       });
 
       const horarios = slots.map((s) => s.horario);
-      expect(horarios).toEqual(["09:00", "09:30", "10:00", "10:30", "11:00"]);
+      expect(horarios).toEqual([
+        "09:00", "09:15", "09:30", "09:45", "10:00",
+        "10:15", "10:30", "10:45", "11:00", "11:15",
+      ]);
       expect(horarios.includes("11:30")).toBe(false);
     });
 

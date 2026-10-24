@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -18,6 +19,7 @@ import {
 import { esquemaCriarProfissional } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Profissional, MembroBarbearia } from "@barzzo/tipos";
 import { Users, UserPlus, Mail, Shield, UserCheck, Phone, Clock, AlertCircle } from "lucide-react";
 
@@ -49,12 +51,7 @@ export default function PaginaEquipe() {
 
       if (!session) return;
 
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (membro?.barbearia_id) {
         setBarbeariaId(membro.barbearia_id);
@@ -247,12 +244,13 @@ export default function PaginaEquipe() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="telProfissional">Telefone / WhatsApp (opcional)</Label>
-                  <Input
+                  <InputMascarado
                     id="telProfissional"
                     type="tel"
                     placeholder="(11) 98888-7777"
                     value={telefone}
-                    onChange={(e) => setTelefone(formatarTelefone(e.target.value))}
+                    mascara={formatarTelefone}
+                    onChangeValor={setTelefone}
                   />
                 </div>
 

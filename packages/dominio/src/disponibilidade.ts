@@ -31,7 +31,7 @@ export interface OpcoesCalculoDisponibilidade {
   agendamentosExistentes?: AgendamentoExistente[];
   data: string; // "YYYY-MM-DD"
   profissionalIdFiltro?: string | null;
-  passoMinutos?: number; // padrão: 30
+  passoMinutos?: number; // padrão: 15
   agora?: Date;
 }
 
@@ -80,7 +80,7 @@ export function calcularHorariosDisponiveis(
     agendamentosExistentes = [],
     data,
     profissionalIdFiltro,
-    passoMinutos = 30,
+    passoMinutos = 15,
     agora = new Date()
   } = opcoes;
 
@@ -115,7 +115,12 @@ export function calcularHorariosDisponiveis(
   const slotsEncontrados: SlotDisponivel[] = [];
 
   // Data de referência para checar passado
-  const dataHojeStr = agora.toISOString().split("T")[0];
+  // Data local: `toISOString()` é UTC e viraria o dia seguinte a partir das 21h em Brasília.
+  const dataHojeStr = [
+    agora.getFullYear(),
+    String(agora.getMonth() + 1).padStart(2, "0"),
+    String(agora.getDate()).padStart(2, "0"),
+  ].join("-");
   const ehHoje = data === dataHojeStr;
   const agoraMinutos = agora.getHours() * 60 + agora.getMinutes();
 

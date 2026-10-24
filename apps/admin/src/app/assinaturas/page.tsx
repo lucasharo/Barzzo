@@ -25,7 +25,7 @@ export default function PaginaAssinaturasAdmin() {
       try {
         setCarregando(true);
         setErro(null);
-        const supabase = criarClienteSupabaseBrowser();
+        const supabase = criarClienteSupabaseBrowser("admin");
 
         const { data: assDb, error: erroDb } = await (supabase.from("assinaturas") as any)
           .select("*, barbearias(nome, slug), planos(nome, identificador)")

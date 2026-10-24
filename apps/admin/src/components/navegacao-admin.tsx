@@ -32,7 +32,7 @@ export function NavegacaoAdmin() {
   const [autenticado, setAutenticado] = React.useState<boolean | null>(null);
 
   React.useEffect(() => {
-    const supabase = criarClienteSupabaseBrowser();
+    const supabase = criarClienteSupabaseBrowser("admin");
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAutenticado(!!session);
     });
@@ -52,7 +52,7 @@ export function NavegacaoAdmin() {
   }, [pathname]);
 
   const lidarComLogout = async () => {
-    const supabase = criarClienteSupabaseBrowser();
+    const supabase = criarClienteSupabaseBrowser("admin");
     await supabase.auth.signOut();
     setDrawerAberto(false);
     setAutenticado(false);

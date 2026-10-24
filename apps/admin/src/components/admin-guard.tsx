@@ -19,7 +19,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const supabase = criarClienteSupabaseBrowser();
+    const supabase = criarClienteSupabaseBrowser("admin");
     
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {

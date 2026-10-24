@@ -50,7 +50,7 @@ export default function PaginaPainelAdmin() {
       try {
         setCarregando(true);
         setErro(null);
-        const supabase = criarClienteSupabaseBrowser();
+        const supabase = criarClienteSupabaseBrowser("admin");
 
         // 1. Obter métricas globais via RPC
         const { data: mRpc, error: erroRpc } = await (supabase.rpc as any)(

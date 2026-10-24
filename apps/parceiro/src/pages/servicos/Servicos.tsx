@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type { Servico, Barbearia } from "@barzzo/tipos";
 import {
   Scissors,
@@ -58,12 +59,7 @@ export default function PaginaServicosParceiro() {
       }
 
       // Buscar barbearia do usuário
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (!membro || !membro.barbearia_id) {
         return;

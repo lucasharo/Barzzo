@@ -1,5 +1,6 @@
 export * from "./button";
 export * from "./input";
+export * from "./input-mascarado";
 export * from "./label";
 export * from "./card";
 export * from "./alert";
@@ -11,5 +12,6 @@ export * from "./bottom-nav";
 export * from "./seletor-data";
 export * from "./alerta-temporizado";
 export * from "./modal";
+export * from "./switch";
 export { Seletor, type OpcaoSeletor, type SeletorProps } from "./seletor";
 export * from "./card-agendamento";

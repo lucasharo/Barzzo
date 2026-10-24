@@ -17,6 +17,7 @@ import {
   type OpcaoSeletor,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import type {
   Barbearia,
   PeriodoFiltro,
@@ -85,12 +86,7 @@ export default function PaginaRelatoriosParceiro() {
       if (!session) return;
 
       // 1. Obter barbearia
-      const { data: membro } = await supabase
-        .from("membros_barbearia")
-        .select("barbearia_id, papel")
-        .eq("usuario_id", session.user.id)
-        .limit(1)
-        .maybeSingle();
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id, papel");
 
       if (!membro?.barbearia_id) {
         setBarbearia(null);
@@ -223,7 +219,7 @@ export default function PaginaRelatoriosParceiro() {
         .eq("barbearia_id", membro.barbearia_id);
 
       const { data: comissoesDb } = await (supabase.from("comissoes_influenciadores") as any)
-        .select("*, influenciadores(nome, codigo_ref)")
+        .select("*, influenciadores(nome)")
         .eq("barbearia_id", membro.barbearia_id);
 
       const { data: indicacoesDb } = await (supabase.from("indicacoes") as any)
@@ -273,12 +269,13 @@ export default function PaginaRelatoriosParceiro() {
       // Agrupar comissões por influenciador
       const mapaInf = new Map<string, DesempenhoMarketingItem>();
       (comissoesDb || []).forEach((com: any) => {
-        const cod = com.influenciadores?.codigo_ref || "REF";
+        // Agrupa por influenciador; o identificador exibido é o cupom usado na comissão.
+        const cod = com.influenciador_id || com.codigo_cupom || "influenciador";
         const nome = com.influenciadores?.nome || "Influenciador";
         if (!mapaInf.has(cod)) {
           mapaInf.set(cod, {
             tipo: "influenciador",
-            identificador: cod,
+            identificador: com.codigo_cupom || "Cupom",
             nome_parceiro: nome,
             total_utilizacoes: 0,
             faturamento_gerado: 0,

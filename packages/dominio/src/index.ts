@@ -10,3 +10,4 @@ export * from "./notificacoes";
 export * from "./relatorios";
 export * from "./assinaturas";
 export * from "./admin";
+export * from "./agenda-calendario";

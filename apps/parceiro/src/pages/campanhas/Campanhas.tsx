@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { formatarData } from "@barzzo/utilitarios";
 import type { Campanha, Cupom } from "@barzzo/tipos";
 import {
@@ -65,12 +66,7 @@ export default function PaginaCampanhasParceiro() {
         return;
       }
 
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");
@@ -262,7 +258,7 @@ export default function PaginaCampanhasParceiro() {
           {/* Cupons e Campanhas */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {todosOsCupons.map((cupom) => {
-              const expirado = new Date(cupom.data_fim).getTime() < Date.now();
+              const expirado = cupom.data_fim ? new Date(cupom.data_fim).getTime() < Date.now() : false;
               const limiteAtingido =
                 cupom.limite_usos_total !== null &&
                 cupom.usos_atuais >= cupom.limite_usos_total;
@@ -358,7 +354,7 @@ export default function PaginaCampanhasParceiro() {
 
                       <p className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-[#B45A2B]" />
-                        Até {formatarData(cupom.data_fim)}
+                        {cupom.data_fim ? `Até ${formatarData(cupom.data_fim)}` : "Sem data de término"}
                       </p>
                     </div>
                   </div>

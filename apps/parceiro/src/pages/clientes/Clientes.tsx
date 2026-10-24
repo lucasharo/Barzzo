@@ -12,8 +12,10 @@ import {
   AlertaTemporizado,
   AlertDescription,
   LoadingSpinner,
+  InputMascarado,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { esquemaCriarClienteManual } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, formatarData } from "@barzzo/utilitarios";
 import type { ClienteBarbearia } from "@barzzo/tipos";
@@ -66,12 +68,7 @@ export default function PaginaClientesCRM() {
       }
 
       // Buscar membro ativo para obter a barbearia do usuário
-      const { data: membro, error: erroMembro } = await (supabase.from("membros_barbearia") as any)
-        .select("barbearia_id")
-        .eq("usuario_id", session.user.id)
-        .eq("ativo", true)
-        .limit(1)
-        .single();
+      const { data: membro, error: erroMembro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
 
       if (erroMembro || !membro) {
         setErro("Você não possui vínculo ativo com nenhuma barbearia.");
@@ -332,13 +329,15 @@ export default function PaginaClientesCRM() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold block mb-1">
+                <label htmlFor="novoTelefoneCliente" className="text-xs font-semibold block mb-1">
                   Telefone / WhatsApp
                 </label>
-                <input
-                  type="text"
+                <InputMascarado
+                  id="novoTelefoneCliente"
+                  type="tel"
                   value={novoTelefone}
-                  onChange={(e) => setNovoTelefone(e.target.value)}
+                  mascara={formatarTelefone}
+                  onChangeValor={setNovoTelefone}
                   placeholder="(11) 98765-4321"
                   className="w-full text-sm p-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#B45A2B]"
                 />

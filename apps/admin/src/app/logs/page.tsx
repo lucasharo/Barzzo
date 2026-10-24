@@ -35,7 +35,7 @@ export default function PaginaLogsAdmin() {
     try {
       setCarregando(true);
       setErro(null);
-      const supabase = criarClienteSupabaseBrowser();
+      const supabase = criarClienteSupabaseBrowser("admin");
 
       const { data, error: erroDb } = await (supabase.from("logs_auditoria") as any)
         .select(

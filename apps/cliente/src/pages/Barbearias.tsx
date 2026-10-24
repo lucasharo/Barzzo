@@ -30,6 +30,7 @@ import {
   limparEnderecoBuscaSessao,
   obterEnderecoPerfilLocal,
   formatarEnderecoConta,
+  traduzirErro,
   type SugestaoEndereco,
 } from "@barzzo/utilitarios";
 import type { Barbearia } from "@barzzo/tipos";
@@ -58,6 +59,46 @@ interface BarbeariaComDistancia extends Barbearia {
   total_avaliacoes?: number;
 }
 
+const TAMANHO_PAGINA_BARBEARIAS = 10;
+const DURACAO_CACHE_RPC_BUSCA_MS = 1000;
+const cacheRpcBuscaBarbearias = new Map<
+  string,
+  { requisicao: Promise<{ data: unknown; error: unknown }>; expiraEm: number }
+>();
+
+function buscarBarbeariasComCache(
+  supabase: ReturnType<typeof criarClienteSupabaseBrowser>,
+  parametros: Record<string, unknown>,
+) {
+  const chave = JSON.stringify(parametros);
+  const agora = Date.now();
+  for (const [chaveExpirada, entradaExpirada] of cacheRpcBuscaBarbearias) {
+    if (entradaExpirada.expiraEm <= agora) cacheRpcBuscaBarbearias.delete(chaveExpirada);
+  }
+  const existente = cacheRpcBuscaBarbearias.get(chave);
+  if (existente && existente.expiraEm > agora) return existente.requisicao;
+
+  const requisicao = Promise.resolve(
+    supabase.rpc("buscar_barbearias_com_distancia", parametros),
+  ).then(({ data, error }) => {
+    if (error) throw error;
+    return { data, error: null };
+  });
+  const entrada = { requisicao, expiraEm: Number.POSITIVE_INFINITY };
+  cacheRpcBuscaBarbearias.set(chave, entrada);
+  void requisicao.then(
+    () => {
+      entrada.expiraEm = Date.now() + DURACAO_CACHE_RPC_BUSCA_MS;
+    },
+    () => {
+      if (cacheRpcBuscaBarbearias.get(chave) === entrada) {
+        cacheRpcBuscaBarbearias.delete(chave);
+      }
+    },
+  );
+  return requisicao;
+}
+
 function normalizarTexto(texto: string): string {
   return texto
     .toLowerCase()
@@ -78,12 +119,23 @@ function ConteudoListagemBarbearias() {
   const [localidade, setLocalidade] = React.useState(localidadeParam);
   const [carregando, setCarregando] = React.useState(true);
   const [barbearias, setBarbearias] = React.useState<BarbeariaComDistancia[]>([]);
+  const [carregandoMais, setCarregandoMais] = React.useState(false);
+  const [temMaisBarbearias, setTemMaisBarbearias] = React.useState(true);
+  const [rolagemIniciada, setRolagemIniciada] = React.useState(false);
+  const [erroBusca, setErroBusca] = React.useState<string | null>(null);
+  const fimListaRef = React.useRef<HTMLDivElement>(null);
+  const requisicaoBuscaRef = React.useRef(0);
+  const carregamentoLoteRef = React.useRef(false);
+  const ultimaBuscaInicialRef = React.useRef<string | null>(null);
   const [localizacaoUsuario, setLocalizacaoUsuario] = React.useState<{ lat: number; lng: number } | null>(null);
   const [obtendoLocalizacao, setObtendoLocalizacao] = React.useState(false);
   const [erroLocalizacao, setErroLocalizacao] = React.useState<string | null>(null);
-  const [mensagemLocalizacao, setMensagemLocalizacao] = React.useState<string | null>(null);
   const [coordenadasEndereco, setCoordenadasEndereco] = React.useState<{ lat: number; lng: number } | null>(null);
+  const enderecoAlteradoDuranteLocalizacaoRef = React.useRef(false);
   const [geocodificando, setGeocodificando] = React.useState(false);
+  const [inicializacaoEnderecoConcluida, setInicializacaoEnderecoConcluida] = React.useState(false);
+  const inicializacaoEnderecoIniciadaRef = React.useRef<string | null>(null);
+  const geocodificacaoConcluidaRef = React.useRef<string | null>(null);
   const [sugestoesEndereco, setSugestoesEndereco] = React.useState<SugestaoEndereco[]>([]);
   const [buscandoSugestoes, setBuscandoSugestoes] = React.useState(false);
 
@@ -92,23 +144,31 @@ function ConteudoListagemBarbearias() {
   // 2. Endereço salvo na sessão ativa
   // 3. Endereço cadastrado na conta do usuário autenticado
   React.useEffect(() => {
+    // O StrictMode repete efeitos de montagem em desenvolvimento. A inicialização
+    // pode pedir permissão de GPS e deve acontecer uma única vez por montagem.
+    if (inicializacaoEnderecoIniciadaRef.current === localidadeParam) return;
+    inicializacaoEnderecoIniciadaRef.current = localidadeParam;
+    setInicializacaoEnderecoConcluida(false);
+
     async function inicializarEnderecoBusca() {
       // Se veio parâmetro na URL, já foi atribuído e salva na sessão
       if (localidadeParam) {
+        const enderecoSessao = obterEnderecoBuscaSessao();
+        if (enderecoSessao?.texto === localidadeParam) {
+          setLocalidade(enderecoSessao.texto);
+          if (enderecoSessao.lat != null && enderecoSessao.lng != null) {
+            setCoordenadasEndereco({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+            geocodificacaoConcluidaRef.current = localidadeParam.trim();
+            if (enderecoSessao.origem === "gps") {
+              setLocalizacaoUsuario({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+            }
+          }
+          return;
+        }
+
         salvarEnderecoBuscaSessao({
           texto: localidadeParam,
           origem: "manual",
-        });
-        geocodificarEndereco(localidadeParam).then((coords) => {
-          if (coords) {
-            setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
-            salvarEnderecoBuscaSessao({
-              texto: localidadeParam,
-              lat: coords.lat,
-              lng: coords.lng,
-              origem: "manual",
-            });
-          }
         });
         return;
       }
@@ -117,26 +177,18 @@ function ConteudoListagemBarbearias() {
       const enderecoSessao = obterEnderecoBuscaSessao();
       if (enderecoSessao && enderecoSessao.texto) {
         setLocalidade(enderecoSessao.texto);
-        if (enderecoSessao.lat && enderecoSessao.lng) {
+        if (enderecoSessao.lat != null && enderecoSessao.lng != null) {
           setCoordenadasEndereco({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
+          geocodificacaoConcluidaRef.current = enderecoSessao.texto.trim();
           if (enderecoSessao.origem === "gps") {
             setLocalizacaoUsuario({ lat: enderecoSessao.lat, lng: enderecoSessao.lng });
           }
-        } else {
-          // Geocodifica imediatamente caso a sessão não tenha lat/lng gravados
-          geocodificarEndereco(enderecoSessao.texto).then((coords) => {
-            if (coords) {
-              setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
-              salvarEnderecoBuscaSessao({
-                ...enderecoSessao,
-                lat: coords.lat,
-                lng: coords.lng,
-              });
-            }
-          });
         }
         return;
       }
+
+      // Sem endereço na sessão, prioriza a localização atual do dispositivo.
+      if (await obterLocalizacaoAtual() || enderecoAlteradoDuranteLocalizacaoRef.current) return;
 
       // Se não há na sessão, verifica conta do usuário logado
       try {
@@ -151,8 +203,9 @@ function ConteudoListagemBarbearias() {
           const enderecoConta = formatarEnderecoConta(metaCombinada);
           if (enderecoConta && enderecoConta.texto) {
             setLocalidade(enderecoConta.texto);
-            if (enderecoConta.lat && enderecoConta.lng) {
+            if (enderecoConta.lat != null && enderecoConta.lng != null) {
               setCoordenadasEndereco({ lat: enderecoConta.lat, lng: enderecoConta.lng });
+              geocodificacaoConcluidaRef.current = enderecoConta.texto.trim();
               salvarEnderecoBuscaSessao({
                 texto: enderecoConta.texto,
                 lat: enderecoConta.lat,
@@ -162,18 +215,11 @@ function ConteudoListagemBarbearias() {
                 origem: "conta",
               });
             } else {
-              geocodificarEndereco(enderecoConta.texto).then((coords) => {
-                if (coords) {
-                  setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
-                  salvarEnderecoBuscaSessao({
-                    texto: enderecoConta.texto,
-                    lat: coords.lat,
-                    lng: coords.lng,
-                    bairro: enderecoConta.bairro,
-                    cidade: enderecoConta.cidade,
-                    origem: "conta",
-                  });
-                }
+              salvarEnderecoBuscaSessao({
+                texto: enderecoConta.texto,
+                bairro: enderecoConta.bairro,
+                cidade: enderecoConta.cidade,
+                origem: "conta",
               });
             }
           }
@@ -183,7 +229,11 @@ function ConteudoListagemBarbearias() {
       }
     }
 
-    inicializarEnderecoBusca();
+    void inicializarEnderecoBusca().finally(() => {
+      if (inicializacaoEnderecoIniciadaRef.current === localidadeParam) {
+        setInicializacaoEnderecoConcluida(true);
+      }
+    });
   }, [localidadeParam]);
 
   // Novos estados para filtros de Preço, Distância, Nota e Ordenação
@@ -248,6 +298,18 @@ function ConteudoListagemBarbearias() {
   React.useEffect(() => {
     const termo = localidade.trim();
 
+    if (!inicializacaoEnderecoConcluida) return;
+
+    if (localizacaoUsuario) {
+      setGeocodificando(false);
+      return;
+    }
+
+    if (geocodificacaoConcluidaRef.current === termo) {
+      setGeocodificando(false);
+      return;
+    }
+
     if (!termo) {
       setCoordenadasEndereco(null);
       setGeocodificando(false);
@@ -268,6 +330,7 @@ function ConteudoListagemBarbearias() {
       try {
         const coords = await geocodificarEndereco(termo);
         if (!cancelado) {
+          geocodificacaoConcluidaRef.current = termo;
           if (coords) {
             setCoordenadasEndereco({ lat: coords.lat, lng: coords.lng });
             salvarEnderecoBuscaSessao({
@@ -282,6 +345,7 @@ function ConteudoListagemBarbearias() {
         }
       } catch {
         if (!cancelado) {
+          geocodificacaoConcluidaRef.current = termo;
           setCoordenadasEndereco(null);
         }
       } finally {
@@ -295,7 +359,7 @@ function ConteudoListagemBarbearias() {
       cancelado = true;
       clearTimeout(timer);
     };
-  }, [localidade]);
+  }, [inicializacaoEnderecoConcluida, localidade, localizacaoUsuario]);
 
   // Autocomplete em tempo real de endereços (ViaCEP + OpenStreetMap)
   React.useEffect(() => {
@@ -334,9 +398,40 @@ function ConteudoListagemBarbearias() {
 
   React.useEffect(() => {
     // Se está em processo de geocodificar o endereço digitado, aguarda a resolução das coordenadas
-    if (geocodificando) return;
-    carregarBarbearias();
+    const termoLocalidade = localidade.trim();
+    const precisaGeocodificar = termoLocalidade.length >= 3
+      && !localizacaoUsuario
+      && !coordenadasEndereco
+      && geocodificacaoConcluidaRef.current !== termoLocalidade;
+    if (!inicializacaoEnderecoConcluida || geocodificando || precisaGeocodificar) return;
+
+    const coordenadasEfetivas = termoLocalidade ? coordenadasEndereco : localizacaoUsuario;
+    const chaveBuscaInicial = JSON.stringify({
+      latitude: coordenadasEfetivas?.lat ?? null,
+      longitude: coordenadasEfetivas?.lng ?? null,
+      busca: busca.trim() || null,
+      raio: raioDistancia || null,
+      faixaPreco,
+      notaMinima,
+      ordenacao,
+      localidade: !coordenadasEfetivas && termoLocalidade
+        ? normalizarTexto(termoLocalidade)
+        : null,
+    });
+    if (ultimaBuscaInicialRef.current === chaveBuscaInicial) return;
+    ultimaBuscaInicialRef.current = chaveBuscaInicial;
+    setRolagemIniciada(false);
+
+    const idRequisicao = ++requisicaoBuscaRef.current;
+    carregamentoLoteRef.current = false;
+    setCarregando(true);
+    setCarregandoMais(false);
+    setTemMaisBarbearias(true);
+    setErroBusca(null);
+    setBarbearias([]);
+    carregarBarbearias(0, false, idRequisicao);
   }, [
+    inicializacaoEnderecoConcluida,
     busca,
     localidade,
     localizacaoUsuario,
@@ -348,210 +443,205 @@ function ConteudoListagemBarbearias() {
     ordenacao,
   ]);
 
-  async function carregarBarbearias() {
+  async function carregarBarbearias(offset: number, anexar: boolean, idRequisicao: number) {
     try {
-      setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
 
       const termoLoc = localidade.trim();
       // O endereço digitado no campo de busca tem prioridade absoluta sobre o GPS do dispositivo
       const coordsEfetivas = termoLoc ? coordenadasEndereco : localizacaoUsuario;
 
-      // Chamada da RPC no PostgreSQL que calcula distância e estatísticas
-      const { data, error } = await supabase.rpc("buscar_barbearias_com_distancia", {
+      // Busca somente um lote já filtrado e ordenado pelo banco.
+      const { data, error } = await buscarBarbeariasComCache(supabase, {
         p_latitude: coordsEfetivas?.lat ?? null,
         p_longitude: coordsEfetivas?.lng ?? null,
         p_busca_nome: busca.trim() || null,
         p_raio_km: raioDistancia || null,
+        p_faixa_preco: faixaPreco,
+        p_nota_minima: notaMinima,
+        p_ordenacao: ordenacao,
+        p_busca_localidade: !coordsEfetivas && termoLoc ? normalizarTexto(termoLoc) : null,
+        p_limite: TAMANHO_PAGINA_BARBEARIAS,
+        p_deslocamento: offset,
       });
 
       if (error) {
-        console.error("Erro na RPC buscar_barbearias_com_distancia:", error);
+        throw error;
       }
 
-      if (data) {
-        let lista: BarbeariaComDistancia[] = (data as any[]).map((b) => {
-          let dist =
-            b.distancia_km !== null && b.distancia_km !== undefined
-              ? Number(b.distancia_km)
-              : null;
+      if (idRequisicao !== requisicaoBuscaRef.current) return;
 
-          // Se a RPC não calculou mas temos coordenadas efetivas e da barbearia, calcula via frontend
-          if (dist === null && coordsEfetivas && b.latitude && b.longitude) {
-            dist = Number(
-              calcularDistanciaKm(
-                coordsEfetivas.lat,
-                coordsEfetivas.lng,
-                Number(b.latitude),
-                Number(b.longitude)
-              )
-            );
-          }
+      const lista: BarbeariaComDistancia[] = ((data || []) as any[]).map((b) => {
+        let dist = b.distancia_km !== null && b.distancia_km !== undefined
+          ? Number(b.distancia_km)
+          : null;
 
-          const precoCorte =
-            b.preco_corte !== null && b.preco_corte !== undefined
-              ? Number(b.preco_corte)
-              : null;
-          const menorPreco =
-            b.menor_preco !== null && b.menor_preco !== undefined
-              ? Number(b.menor_preco)
-              : null;
-          const maiorPreco =
-            b.maior_preco !== null && b.maior_preco !== undefined
-              ? Number(b.maior_preco)
-              : null;
-          const mediaNota =
-            b.media_nota !== null && b.media_nota !== undefined
-              ? Number(b.media_nota)
-              : 0;
-          const totalAvaliacoes = Number(b.total_avaliacoes || 0);
-          const totalServicos = Number(b.total_servicos || 0);
-
-          return {
-            ...b,
-            distancia_calculada: dist,
-            preco_corte: precoCorte,
-            menor_preco: menorPreco,
-            maior_preco: maiorPreco,
-            media_nota: mediaNota,
-            total_avaliacoes: totalAvaliacoes,
-            total_servicos: totalServicos,
-          };
-        });
-
-        // Ocultar barbearias com assinatura ou período de testes expirados
-        lista = lista.filter((b) => {
-          const st = b.status_assinatura;
-          if (st === "vencida" || st === "inadimplente" || st === "suspensa") return false;
-          if (st === "trial" && b.trial_fim && new Date(b.trial_fim) < new Date()) return false;
-          return true;
-        });
-
-        // Refinamento de busca textual de endereço SOMENTE se não houver coordenadas geocodificadas
-        if (!coordsEfetivas && termoLoc) {
-          const termosTokens = normalizarTexto(termoLoc)
-            .split(/[,-\s]+/)
-            .filter((t) => t.length >= 2);
-          const termoDigitos = termoLoc.replace(/\D/g, "");
-
-          lista = lista.filter((b) => {
-            const textoBarbearia = [
-              normalizarTexto(b.bairro || ""),
-              normalizarTexto(b.cidade || ""),
-              normalizarTexto(b.estado || ""),
-              normalizarTexto(b.endereco || ""),
-            ].join(" ");
-            const cepDigitos = (b.cep || "").replace(/\D/g, "");
-
-            const matchToken = termosTokens.some((tok) => textoBarbearia.includes(tok));
-            const matchCep = termoDigitos.length >= 4 && cepDigitos.includes(termoDigitos);
-            return matchToken || matchCep;
-          });
+        if (dist === null && coordsEfetivas && b.latitude && b.longitude) {
+          dist = Number(calcularDistanciaKm(
+            coordsEfetivas.lat,
+            coordsEfetivas.lng,
+            Number(b.latitude),
+            Number(b.longitude)
+          ));
         }
 
-        // Filtro por faixa de preço
-        if (faixaPreco !== "todos") {
-          lista = lista.filter((b) => {
-            const precoReferencia = b.preco_corte ?? b.menor_preco;
-            if (precoReferencia === null || precoReferencia === undefined) return false;
-            if (faixaPreco === "ate-35") return precoReferencia <= 35;
-            if (faixaPreco === "ate-50") return precoReferencia <= 50;
-            if (faixaPreco === "ate-75") return precoReferencia <= 75;
-            if (faixaPreco === "acima-75") return precoReferencia > 75;
-            return true;
-          });
-        }
+        return {
+          ...b,
+          distancia_calculada: dist,
+          preco_corte: b.preco_corte == null ? null : Number(b.preco_corte),
+          menor_preco: b.menor_preco == null ? null : Number(b.menor_preco),
+          maior_preco: b.maior_preco == null ? null : Number(b.maior_preco),
+          media_nota: b.media_nota == null ? 0 : Number(b.media_nota),
+          total_avaliacoes: Number(b.total_avaliacoes || 0),
+          total_servicos: Number(b.total_servicos || 0),
+        };
+      });
 
-        // Filtro por raio de distância (garantia adicional no frontend)
-        if (raioDistancia !== null && coordsEfetivas) {
-          lista = lista.filter((b) => {
-            if (b.distancia_calculada === null || b.distancia_calculada === undefined) return false;
-            return b.distancia_calculada <= raioDistancia;
-          });
-        }
+      setBarbearias((atuais) => anexar ? [...atuais, ...lista] : lista);
+      setTemMaisBarbearias(lista.length === TAMANHO_PAGINA_BARBEARIAS);
+      setErroBusca(null);
+    } catch (erro) {
+      if (idRequisicao === requisicaoBuscaRef.current) {
+        setErroBusca(traduzirErro(erro, "Não foi possível carregar as barbearias no momento."));
+        setTemMaisBarbearias(false);
+      }
+    } finally {
+      if (idRequisicao === requisicaoBuscaRef.current) {
+        setCarregando(false);
+        setCarregandoMais(false);
+        carregamentoLoteRef.current = false;
+      }
+    }
+  }
 
-        // Filtro por nota mínima
-        if (notaMinima !== null) {
-          lista = lista.filter((b) => {
-            if ((b.total_avaliacoes || 0) === 0) return false;
-            return (b.media_nota || 0) >= notaMinima;
-          });
-        }
+  React.useEffect(() => {
+    if (rolagemIniciada) return;
 
-        // Ordenação
-        lista.sort((a, b) => {
-          if (ordenacao === "distancia" && coordsEfetivas) {
-            const dA = a.distancia_calculada ?? 999999;
-            const dB = b.distancia_calculada ?? 999999;
-            return dA - dB;
-          }
-          if (ordenacao === "menor-preco") {
-            const pA = a.preco_corte ?? a.menor_preco ?? 999999;
-            const pB = b.preco_corte ?? b.menor_preco ?? 999999;
-            return pA - pB;
-          }
-          if (ordenacao === "maior-preco") {
-            const pA = a.preco_corte ?? a.menor_preco ?? 0;
-            const pB = b.preco_corte ?? b.menor_preco ?? 0;
-            return pB - pA;
-          }
-          if (ordenacao === "melhor-nota") {
-            const nA = a.media_nota ?? 0;
-            const nB = b.media_nota ?? 0;
-            if (nB !== nA) return nB - nA;
-            return (b.total_avaliacoes ?? 0) - (a.total_avaliacoes ?? 0);
-          }
-          // Padrão: se houver coordenadas (GPS ou endereço pesquisado), ordena por proximidade!
-          if (coordsEfetivas) {
-            const dA = a.distancia_calculada ?? 999999;
-            const dB = b.distancia_calculada ?? 999999;
-            return dA - dB;
-          }
-          return a.nome.localeCompare(b.nome);
-        });
+    const habilitarCargaAutomatica = () => setRolagemIniciada(true);
+    const habilitarPelaTecla = (evento: KeyboardEvent) => {
+      const alvo = evento.target as HTMLElement | null;
+      if (
+        alvo?.isContentEditable ||
+        alvo?.matches("input, textarea, select") ||
+        !["ArrowDown", "PageDown", "End", " "].includes(evento.key)
+      ) return;
+      setRolagemIniciada(true);
+    };
 
-        // Buscar fotos de capa da galeria para enriquecer a exibição
-        if (lista.length > 0) {
+    window.addEventListener("wheel", habilitarCargaAutomatica, { once: true, passive: true });
+    window.addEventListener("touchmove", habilitarCargaAutomatica, { once: true, passive: true });
+    window.addEventListener("keydown", habilitarPelaTecla);
+    return () => {
+      window.removeEventListener("wheel", habilitarCargaAutomatica);
+      window.removeEventListener("touchmove", habilitarCargaAutomatica);
+      window.removeEventListener("keydown", habilitarPelaTecla);
+    };
+  }, [rolagemIniciada]);
+
+  React.useEffect(() => {
+    const sentinela = fimListaRef.current;
+    if (!rolagemIniciada || !sentinela || carregando || carregandoMais || !temMaisBarbearias || erroBusca) return;
+
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (!entrada.isIntersecting || carregamentoLoteRef.current) return;
+        carregamentoLoteRef.current = true;
+        setCarregandoMais(true);
+        carregarBarbearias(barbearias.length, true, requisicaoBuscaRef.current);
+      },
+      { rootMargin: "0px" }
+    );
+
+    observador.observe(sentinela);
+    return () => observador.disconnect();
+  }, [barbearias.length, carregando, carregandoMais, erroBusca, rolagemIniciada, temMaisBarbearias]);
+
+  function obterLocalizacaoAtual(): Promise<boolean> {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setErroLocalizacao("Geolocalização não é suportada pelo seu navegador ou dispositivo.");
+      return Promise.resolve(false);
+    }
+
+    setObtendoLocalizacao(true);
+    setErroLocalizacao(null);
+    enderecoAlteradoDuranteLocalizacaoRef.current = false;
+
+    return new Promise((resolver) => {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (enderecoAlteradoDuranteLocalizacaoRef.current) {
+            setObtendoLocalizacao(false);
+            resolver(false);
+            return;
+          }
+
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setLocalizacaoUsuario({ lat, lng });
+          setCoordenadasEndereco({ lat, lng });
+
+          let enderecoTexto = "";
+          let bairroDetectado = "";
+          let cidadeDetectada = "";
+
           try {
-            const ids = lista.map((item) => item.id);
-            const { data: fotosData } = await (supabase.from("galeria_fotos") as any)
-              .select("barbearia_id, foto_url, destaque_capa, ordem, created_at")
-              .in("barbearia_id", ids);
-
-            if (fotosData && fotosData.length > 0) {
-              const mapaCapa: Record<string, string> = {};
-              // Prioriza destaque_capa = true, senão primeira foto adicionada
-              fotosData.forEach((f: any) => {
-                if (f.destaque_capa) {
-                  mapaCapa[f.barbearia_id] = f.foto_url;
-                } else if (!mapaCapa[f.barbearia_id]) {
-                  mapaCapa[f.barbearia_id] = f.foto_url;
-                }
-              });
-
-              lista = lista.map((item) => ({
-                ...item,
-                foto_capa_url: mapaCapa[item.id] || item.foto_capa_url || null,
-              }));
+            const info = await obterEnderecoPorCoordenadas(lat, lng);
+            if (info) {
+              enderecoTexto = info.enderecoCompleto || info.titulo;
+              bairroDetectado = info.bairro || "";
+              cidadeDetectada = info.cidade || "";
             }
           } catch {
-            // Silencioso
+            // Fallback silencioso
           }
-        }
 
-        setBarbearias(lista);
-      }
-    } catch {
-      // Tratamento silencioso
-    } finally {
-      setCarregando(false);
-    }
+          if (!enderecoTexto) {
+            enderecoTexto = [bairroDetectado, cidadeDetectada].filter(Boolean).join(", ") || "Minha Localização Atual";
+          }
+
+          // Preenche o campo de endereço com a localização detectada por GPS
+          setLocalidade(enderecoTexto);
+
+          // Grava na sessão
+          salvarEnderecoBuscaSessao({
+            texto: enderecoTexto,
+            lat,
+            lng,
+            bairro: bairroDetectado || null,
+            cidade: cidadeDetectada || null,
+            origem: "gps",
+          });
+          setObtendoLocalizacao(false);
+
+          resolver(true);
+        },
+        (err) => {
+          setObtendoLocalizacao(false);
+          if (err.code === 1) {
+            setErroLocalizacao(
+              "Permissão de localização negada pelo navegador. Permita o acesso à localização para ordenar as barbearias por proximidade."
+            );
+          } else if (err.code === 2) {
+            setErroLocalizacao(
+              "Não foi possível determinar sua localização atual. Você pode buscar digitando sua cidade ou bairro no campo de pesquisa."
+            );
+          } else if (err.code === 3) {
+            setErroLocalizacao(
+              "O tempo limite para obter sua localização expirou. Tente novamente ou use a busca por cidade/bairro."
+            );
+          } else {
+            setErroLocalizacao("Ocorreu um erro ao obter sua localização. Tente novamente.");
+          }
+          resolver(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    });
   }
 
   function alternarLocalizacao() {
     if (localizacaoUsuario) {
       setLocalizacaoUsuario(null);
-      setMensagemLocalizacao(null);
       setErroLocalizacao(null);
       setLocalidade("");
       setCoordenadasEndereco(null);
@@ -559,85 +649,7 @@ function ConteudoListagemBarbearias() {
       return;
     }
 
-    if (typeof window === "undefined" || !navigator.geolocation) {
-      setErroLocalizacao("Geolocalização não é suportada pelo seu navegador ou dispositivo.");
-      return;
-    }
-
-    setObtendoLocalizacao(true);
-    setErroLocalizacao(null);
-    setMensagemLocalizacao(null);
-
-    const opcoesGeo: PositionOptions = {
-      enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 60000,
-    };
-
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setLocalizacaoUsuario({ lat, lng });
-        setCoordenadasEndereco({ lat, lng });
-        setObtendoLocalizacao(false);
-
-        let enderecoTexto = "";
-        let bairroDetectado = "";
-        let cidadeDetectada = "";
-
-        try {
-          const info = await obterEnderecoPorCoordenadas(lat, lng);
-          if (info) {
-            enderecoTexto = info.enderecoCompleto || info.titulo;
-            bairroDetectado = info.bairro || "";
-            cidadeDetectada = info.cidade || "";
-          }
-        } catch {
-          // Fallback silencioso
-        }
-
-        if (!enderecoTexto) {
-          enderecoTexto = [bairroDetectado, cidadeDetectada].filter(Boolean).join(", ") || "Minha Localização Atual";
-        }
-
-        // Preenche o campo de endereço com a localização detectada por GPS
-        setLocalidade(enderecoTexto);
-
-        // Grava na sessão
-        salvarEnderecoBuscaSessao({
-          texto: enderecoTexto,
-          lat,
-          lng,
-          bairro: bairroDetectado || null,
-          cidade: cidadeDetectada || null,
-          origem: "gps",
-        });
-
-        setMensagemLocalizacao(
-          `Localização detectada: ${enderecoTexto}! Barbearias ordenadas pelas mais próximas de você.`
-        );
-      },
-      (err) => {
-        setObtendoLocalizacao(false);
-        if (err.code === 1) {
-          setErroLocalizacao(
-            "Permissão de localização negada pelo navegador. Permita o acesso à localização para ordenar as barbearias por proximidade."
-          );
-        } else if (err.code === 2) {
-          setErroLocalizacao(
-            "Não foi possível determinar sua localização atual. Você pode buscar digitando sua cidade ou bairro no campo de pesquisa."
-          );
-        } else if (err.code === 3) {
-          setErroLocalizacao(
-            "O tempo limite para obter sua localização expirou. Tente novamente ou use a busca por cidade/bairro."
-          );
-        } else {
-          setErroLocalizacao("Ocorreu um erro ao obter sua localização. Tente novamente.");
-        }
-      },
-      opcoesGeo
-    );
+    void obterLocalizacaoAtual();
   }
 
   return (
@@ -651,39 +663,6 @@ function ConteudoListagemBarbearias() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={alternarLocalizacao}
-          disabled={obtendoLocalizacao}
-          className={`text-xs font-semibold px-3.5 py-2 rounded-lg border flex items-center gap-2 transition-all self-start md:self-auto min-h-[44px] ${
-            localizacaoUsuario
-              ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm hover:bg-[#C46632]"
-              : "border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B] text-black dark:text-white"
-          }`}
-          title={
-            localizacaoUsuario
-              ? "Localização ativada. Clique para desativar e voltar à ordenação padrão."
-              : "Usar minha localização para ordenar barbearias por proximidade"
-          }
-        >
-          {obtendoLocalizacao ? (
-            <>
-              <Compass className="h-4 w-4 animate-spin text-[#B45A2B]" />
-              <span>Detectando localização...</span>
-            </>
-          ) : localizacaoUsuario ? (
-            <>
-              <Check className="h-4 w-4 text-white" />
-              <span>Localização ativa</span>
-              <X className="h-3.5 w-3.5 ml-1 opacity-75 hover:opacity-100" />
-            </>
-          ) : (
-            <>
-              <Compass className="h-4 w-4 text-[#B45A2B]" />
-              <span>Usar minha localização</span>
-            </>
-          )}
-        </button>
       </div>
 
       {/* Avisos Informativos de Localização */}
@@ -695,25 +674,6 @@ function ConteudoListagemBarbearias() {
         >
           <span>{erroLocalizacao}</span>
         </AlertaTemporizado>
-      )}
-
-      {mensagemLocalizacao && (
-        <AlertaTemporizado
-          variante="sucesso"
-          duracaoMs={5000}
-          aoExpirar={() => setMensagemLocalizacao(null)}
-        >
-          <span>{mensagemLocalizacao}</span>
-        </AlertaTemporizado>
-      )}
-
-      {coordenadasEndereco && (
-        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#B45A2B]/10 border border-[#B45A2B]/20 text-xs text-[#B45A2B] font-medium">
-          <MapPin className="h-4 w-4 shrink-0" />
-          <span>
-            Exibindo barbearias com distâncias calculadas a partir de &quot;{localidade}&quot; e ordenadas pelas mais próximas.
-          </span>
-        </div>
       )}
 
       {/* Barra de Filtros e Busca */}
@@ -748,7 +708,31 @@ function ConteudoListagemBarbearias() {
             {/* Campo de Endereço com Autocomplete Flutuante */}
             <div ref={containerEnderecoRef} className="relative flex-1 sm:flex-[1.5] min-w-0">
               <div className="flex items-center px-3 gap-2 min-h-[44px]">
-                <MapPin className="h-4 w-4 text-[#B45A2B] shrink-0" />
+                <button
+                  type="button"
+                  onClick={alternarLocalizacao}
+                  disabled={obtendoLocalizacao}
+                  aria-pressed={Boolean(localizacaoUsuario)}
+                  aria-label={
+                    obtendoLocalizacao
+                      ? "Obtendo localização"
+                      : localizacaoUsuario
+                        ? "Desativar localização atual"
+                        : "Usar localização atual"
+                  }
+                  title={
+                    localizacaoUsuario
+                      ? "Localização atual ativa. Clique para desativar."
+                      : "Usar localização atual"
+                  }
+                  className={`h-11 w-11 -ml-2 shrink-0 rounded-xl flex items-center justify-center transition-colors disabled:cursor-wait ${
+                    localizacaoUsuario
+                      ? "bg-[#B45A2B]/10 text-[#B45A2B]"
+                      : "text-[#B45A2B] hover:bg-neutral-200/70 dark:hover:bg-neutral-800"
+                  }`}
+                >
+                  <MapPin className={`h-4 w-4 ${obtendoLocalizacao ? "animate-pulse" : ""}`} />
+                </button>
                 <input
                   type="text"
                   placeholder="Digite rua, bairro, cidade ou CEP..."
@@ -759,11 +743,12 @@ function ConteudoListagemBarbearias() {
                     }
                   }}
                   onChange={(e) => {
+                    enderecoAlteradoDuranteLocalizacaoRef.current = true;
+                    geocodificacaoConcluidaRef.current = null;
                     setLocalidade(e.target.value);
                     setSugestoesAbertas(true);
                     if (localizacaoUsuario) {
                       setLocalizacaoUsuario(null);
-                      setMensagemLocalizacao(null);
                     }
                   }}
                   onKeyDown={async (e) => {
@@ -798,10 +783,10 @@ function ConteudoListagemBarbearias() {
                   <button
                     type="button"
                     onClick={() => {
+                      enderecoAlteradoDuranteLocalizacaoRef.current = true;
                       setLocalidade("");
                       setCoordenadasEndereco(null);
                       setLocalizacaoUsuario(null);
-                      setMensagemLocalizacao(null);
                       setSugestoesEndereco([]);
                       setSugestoesAbertas(false);
                       limparEnderecoBuscaSessao();
@@ -830,12 +815,12 @@ function ConteudoListagemBarbearias() {
                       onMouseDown={(e) => {
                         e.preventDefault();
                         const texto = sug.enderecoCompleto || sug.titulo;
+                        enderecoAlteradoDuranteLocalizacaoRef.current = true;
                         setLocalidade(texto);
                         setCoordenadasEndereco({ lat: sug.lat, lng: sug.lng });
                         setSugestoesAbertas(false);
                         if (localizacaoUsuario) {
                           setLocalizacaoUsuario(null);
-                          setMensagemLocalizacao(null);
                         }
                         salvarEnderecoBuscaSessao({
                           texto,
@@ -1117,6 +1102,12 @@ function ConteudoListagemBarbearias() {
           <LoadingSpinner tamanho="lg" />
           <p className="text-sm opacity-70">Consultando barbearias do marketplace...</p>
         </div>
+      ) : erroBusca && barbearias.length === 0 ? (
+        <Card camada="primaria" className="text-center py-10">
+          <CardContent>
+            <p role="alert" className="text-sm">{erroBusca}</p>
+          </CardContent>
+        </Card>
       ) : barbearias.length === 0 ? (
         <Card camada="primaria" className="text-center py-16">
           <CardContent className="flex flex-col items-center gap-4">
@@ -1136,7 +1127,6 @@ function ConteudoListagemBarbearias() {
                   setLocalidade("");
                   setCoordenadasEndereco(null);
                   setLocalizacaoUsuario(null);
-                  setMensagemLocalizacao(null);
                   setFaixaPreco("todos");
                   setRaioDistancia(null);
                   setNotaMinima(null);
@@ -1157,47 +1147,62 @@ function ConteudoListagemBarbearias() {
               camada="primaria"
               className="hover:border-[#B45A2B]/60 transition-all hover:shadow-md flex flex-col justify-between"
             >
-              <div className="h-40 bg-[#EEEEF0] dark:bg-[#1C1C1F] rounded-t-xl flex items-center justify-center relative overflow-hidden">
-                {b.foto_capa_url || b.logo_url ? (
-                  <img
-                    src={b.foto_capa_url || b.logo_url!}
-                    alt={b.nome}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Scissors className="h-12 w-12 opacity-30 text-[#B45A2B]" />
-                )}
-
-                {/* Nota e Total de Avaliações Reais */}
-                <span className="absolute top-3 right-3 bg-black/75 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold backdrop-blur-sm">
-                  <Star className="h-3.5 w-3.5 text-[#EAB308] fill-[#EAB308]" />
-                  {b.total_avaliacoes && b.total_avaliacoes > 0 ? (
-                    <span>
-                      {b.media_nota}{" "}
-                      <span className="opacity-70 text-[10px]">({b.total_avaliacoes})</span>
-                    </span>
+              <div className="relative">
+                <div className="h-40 bg-[#EEEEF0] dark:bg-[#1C1C1F] rounded-t-xl flex items-center justify-center relative overflow-hidden">
+                  {b.foto_capa_url || b.logo_url ? (
+                    <img
+                      src={b.foto_capa_url || b.logo_url!}
+                      alt={b.nome}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   ) : (
-                    <span>Novo</span>
+                    <Scissors className="h-12 w-12 opacity-30 text-[#B45A2B]" />
                   )}
-                </span>
 
-                {/* Distância */}
-                {b.distancia_calculada !== undefined && b.distancia_calculada !== null && (
-                  <span className="absolute bottom-3 left-3 bg-[#B45A2B] text-white text-[11px] px-2 py-0.5 rounded-full font-bold shadow">
-                    {b.distancia_calculada} km de você
+                  {/* Nota e Total de Avaliações Reais */}
+                  <span className="absolute top-3 right-3 bg-black/75 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold backdrop-blur-sm">
+                    <Star className="h-3.5 w-3.5 text-[#EAB308] fill-[#EAB308]" />
+                    {b.total_avaliacoes && b.total_avaliacoes > 0 ? (
+                      <span>
+                        {b.media_nota}{" "}
+                        <span className="opacity-70 text-[10px]">({b.total_avaliacoes})</span>
+                      </span>
+                    ) : (
+                      <span>Novo</span>
+                    )}
                   </span>
+
+                  {/* Distância */}
+                  {b.distancia_calculada !== undefined && b.distancia_calculada !== null && (
+                    <span className="absolute bottom-3 right-3 bg-[#B45A2B] text-white text-[11px] px-2 py-0.5 rounded-full font-bold shadow">
+                      {b.distancia_calculada} km de você
+                    </span>
+                  )}
+                </div>
+
+                {b.foto_capa_url && (
+                  <div className="absolute bottom-2 left-5 z-10 flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-[#B45A2B]/20 bg-[#F6F6F7] text-base font-bold text-[#B45A2B] shadow-md ring-4 ring-[#F6F6F7] dark:bg-[#141416] dark:ring-[#141416]">
+                    {b.logo_url ? (
+                      <img
+                        src={b.logo_url}
+                        alt={`Logo de ${b.nome}`}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      b.nome.slice(0, 2).toUpperCase()
+                    )}
+                  </div>
                 )}
               </div>
 
-              <CardContent className="p-5 flex flex-col gap-4">
+              <CardContent className="px-5 pb-5 pt-3 flex flex-col gap-4">
                 <div>
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="text-lg font-bold">{b.nome}</h3>
-                    {b.bairro && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#B45A2B]/10 text-[#B45A2B] border border-[#B45A2B]/20 shrink-0">
-                        {b.bairro}
-                      </span>
-                    )}
                   </div>
                   <p className="text-xs opacity-70 flex items-center gap-1 mt-1.5">
                     <MapPin className="h-3.5 w-3.5 text-[#B45A2B] shrink-0" />
@@ -1248,6 +1253,20 @@ function ConteudoListagemBarbearias() {
             </Card>
           ))}
         </div>
+      )}
+      {!carregando && barbearias.length > 0 && temMaisBarbearias && !erroBusca && (
+        <div
+          ref={fimListaRef}
+          className="flex min-h-12 items-center justify-center py-4"
+          aria-live="polite"
+          aria-busy={carregandoMais}
+        >
+          {carregandoMais && <LoadingSpinner tamanho="sm" />}
+          <span className="sr-only">{carregandoMais ? "Carregando mais barbearias" : ""}</span>
+        </div>
+      )}
+      {!carregando && erroBusca && barbearias.length > 0 && (
+        <p role="alert" className="py-3 text-center text-sm">{erroBusca}</p>
       )}
     </div>
   );
