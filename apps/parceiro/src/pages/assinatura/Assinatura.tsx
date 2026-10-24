@@ -16,6 +16,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterMembroAtual } from "../../lib/unidade-atual";
+import { chamarApi } from "../../lib/api";
 import type { Barbearia, Plano, Assinatura, CicloAssinatura } from "@barzzo/tipos";
 import {
   traduzirErro,
@@ -263,7 +264,7 @@ export default function PaginaAssinaturaParceiro() {
       }
 
       // Enviar para o backend unificado /api/assinar-com-cartao
-      const resp = await fetch("/api/assinar-com-cartao", {
+      const resp = await chamarApi("/api/assinar-com-cartao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -336,7 +337,7 @@ export default function PaginaAssinaturaParceiro() {
         throw new Error(tokenData.message || "Falha ao tokenizar o cartão.");
       }
 
-      const respSalvar = await fetch("/api/salvar-cartao", {
+      const respSalvar = await chamarApi("/api/salvar-cartao", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -374,7 +375,7 @@ export default function PaginaAssinaturaParceiro() {
       setErro(null);
       setSucesso(null);
 
-      const resp = await fetch("/api/cancelar-assinatura", {
+      const resp = await chamarApi("/api/cancelar-assinatura", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ barbearia_id: barbearia.id }),

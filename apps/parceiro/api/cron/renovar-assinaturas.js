@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { exigirSegredoDeCron } from '../_seguranca.js';
 
 export default async function handler(req, res) {
   // Aceita GET e POST para permitir acionamento via Vercel Cron
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
+
+  if (!exigirSegredoDeCron(req, res)) return;
 
   try {
     const mpAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;

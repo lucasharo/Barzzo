@@ -1,6 +1,7 @@
 export * from "./estilos";
 export * from "./cep";
 export * from "./data-local";
+export * from "./plataforma";
 export * from "./erros";
 export * from "./geolocalizacao";
 export * from "./sessao-busca";
