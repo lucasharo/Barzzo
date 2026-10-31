@@ -14,6 +14,7 @@ import {
   LoadingSpinner,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
+import { obterMembroAtual } from "../../lib/unidade-atual";
 import { gerarLinkInfluenciador } from "@barzzo/dominio";
 import { obterUrlBaseAppCliente } from "../../utils/url-cliente";
 import { formatarData, traduzirErro } from "@barzzo/utilitarios";
@@ -76,6 +77,13 @@ export default function PaginaPainelInfluenciador() {
 
       if (!session) {
         navigate("/entrar");
+        return;
+      }
+
+      // Barbearias não devem acessar a tela do painel do influenciador
+      const { data: membro } = await obterMembroAtual(supabase, session.user.id, "barbearia_id");
+      if (membro?.barbearia_id) {
+        navigate("/painel", { replace: true });
         return;
       }
 
