@@ -22,4 +22,4 @@ As regras oficiais são as do pedido da Task 11 e estão formalizadas em `REGRAS
 
 ## Estado
 
-EM_DESENVOLVIMENTO
+CONCLUIDA (aceite pelo PO concedido por Lucas em 31/10/2026)

@@ -33,6 +33,8 @@ import {
   CheckCircle2,
   Clock,
   Award,
+  LayoutDashboard,
+  RefreshCw,
 } from "lucide-react";
 
 interface CupomBarzzo {
@@ -236,12 +238,14 @@ export default function PaginaPainelInfluenciador() {
           </p>
           <div className="flex flex-col gap-2">
             <Link to="/influenciador/cadastro">
-              <Button variante="principal" className="w-full min-h-[44px]">
+              <Button variante="principal" className="w-full min-h-[44px] gap-2">
+                <Award className="w-4 h-4" />
                 Ser influenciador do Barzzo
               </Button>
             </Link>
             <Link to="/painel">
-              <Button variante="secundario" className="w-full min-h-[44px]">
+              <Button variante="secundario" className="w-full min-h-[44px] gap-2">
+                <LayoutDashboard className="w-4 h-4" />
                 Ir para o Painel Geral
               </Button>
             </Link>
@@ -390,8 +394,18 @@ export default function PaginaPainelInfluenciador() {
                     disabled={salvandoCodigo}
                     aria-label="Novo cupom"
                   />
-                  <Button type="submit" variante="secundario" className="min-h-[44px]" disabled={salvandoCodigo || !novoCodigo}>
-                    {salvandoCodigo ? "Enviando..." : "Trocar e reenviar"}
+                  <Button type="submit" variante="secundario" className="min-h-[44px] gap-2" disabled={salvandoCodigo || !novoCodigo}>
+                    {salvandoCodigo ? (
+                      <>
+                        <LoadingSpinner tamanho="sm" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4" />
+                        Trocar e reenviar
+                      </>
+                    )}
                   </Button>
                 </form>
               )}

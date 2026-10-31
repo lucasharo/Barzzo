@@ -16,7 +16,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
-import { Award } from "lucide-react";
+import { Award, LogIn, Send, UserPlus } from "lucide-react";
 
 const RETORNO = encodeURIComponent("/influenciador/cadastro");
 
@@ -120,12 +120,14 @@ export default function PaginaCadastroInfluenciador() {
             <div className="flex flex-col gap-3">
               <p className="text-sm opacity-75 text-center">Para continuar, entre ou crie sua conta.</p>
               <Link to={`/cadastro?retorno=${RETORNO}`}>
-                <Button variante="principal" className="w-full min-h-[44px]">
+                <Button variante="principal" className="w-full min-h-[44px] gap-2">
+                  <UserPlus className="w-4 h-4" />
                   Criar minha conta
                 </Button>
               </Link>
               <Link to={`/entrar?retorno=${RETORNO}`}>
-                <Button variante="secundario" className="w-full min-h-[44px]">
+                <Button variante="secundario" className="w-full min-h-[44px] gap-2">
+                  <LogIn className="w-4 h-4" />
                   Já tenho conta
                 </Button>
               </Link>
@@ -191,8 +193,18 @@ export default function PaginaCadastroInfluenciador() {
                 </p>
               </div>
 
-              <Button type="submit" variante="principal" className="w-full min-h-[44px]" disabled={salvando}>
-                {salvando ? "Enviando..." : "Enviar para aprovação"}
+              <Button type="submit" variante="principal" className="w-full min-h-[44px] gap-2" disabled={salvando}>
+                {salvando ? (
+                  <>
+                    <LoadingSpinner tamanho="sm" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Enviar para aprovação
+                  </>
+                )}
               </Button>
             </form>
           )}
