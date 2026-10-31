@@ -1,9 +1,9 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: 11 — Revisão de cupons, atribuição e comissões
+- Task ativa: 12 — Influenciadores globais do Barzzo
 - Estado: AGUARDANDO_ACEITE_PO
-- Próximo agente: PO final / QA remoto
+- Próximo agente: PO final
 - Bloqueios: nenhum
 
 | Task | Issue | Nome | Estado |
@@ -19,6 +19,7 @@
 | 09 | #9 | Notificações, dashboard e relatórios | CONCLUIDA |
 | 10 | #10 | Assinaturas, Admin e produção | CONCLUIDA |
 | HOTFIX-01 | #11 | Mercado Pago nas assinaturas | CONCLUIDA |
-| 11 | #12 | Revisão de cupons, atribuição e comissões | AGUARDANDO_ACEITE_PO |
+| 11 | #12 | Revisão de cupons, atribuição e comissões | CONCLUIDA |
+| 12 | #13 | Influenciadores globais do Barzzo | AGUARDANDO_ACEITE_PO |
 
 Atualizar em toda troca de gate. Nunca iniciar task posterior antes da anterior estar CONCLUIDA.

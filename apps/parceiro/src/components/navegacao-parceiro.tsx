@@ -23,6 +23,7 @@ import {
   Store,
   Home,
   Building2,
+  Award,
 } from "lucide-react";
 import {
   Button,
@@ -124,6 +125,7 @@ export function NavegacaoParceiro() {
         { href: "/relatorios", rotulo: "Relatórios & Faturamento", icone: BarChart3 },
         { href: "/campanhas", rotulo: "Campanhas & Cupons", icone: Megaphone },
         { href: "/influenciadores", rotulo: "Influenciadores & Afiliados", icone: Share2 },
+        { href: "/influenciador/painel", rotulo: "Painel do Influenciador", icone: Award },
       ],
     },
     {

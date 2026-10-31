@@ -488,11 +488,22 @@ export default function PaginaInfluenciadoresAdmin() {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-            <Button type="button" variante="fantasma" onClick={() => setEmEdicao(null)} disabled={salvando}>
+            <Button type="button" variante="fantasma" className="gap-1.5" onClick={() => setEmEdicao(null)} disabled={salvando}>
+              <X className="w-4 h-4" />
               Cancelar
             </Button>
-            <Button type="submit" variante="principal" disabled={salvando}>
-              {salvando ? "Salvando..." : "Salvar"}
+            <Button type="submit" variante="principal" className="gap-1.5" disabled={salvando}>
+              {salvando ? (
+                <>
+                  <LoadingSpinner tamanho="sm" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Salvar
+                </>
+              )}
             </Button>
           </div>
         </form>
