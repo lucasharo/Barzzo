@@ -94,8 +94,8 @@ export function CarrosselDias({
         variante="fantasma"
         tamanho="icone"
         className={`${botaoSeta} !w-9 !min-w-[36px]`}
-        onClick={() => aoPaginar(-colunas)}
-        aria-label="Dias anteriores"
+        onClick={() => aoPaginar(-1)}
+        aria-label="Dia anterior"
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
@@ -151,8 +151,8 @@ export function CarrosselDias({
         variante="fantasma"
         tamanho="icone"
         className={`${botaoSeta} !w-9 !min-w-[36px]`}
-        onClick={() => aoPaginar(colunas)}
-        aria-label="Próximos dias"
+        onClick={() => aoPaginar(1)}
+        aria-label="Próximo dia"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>
