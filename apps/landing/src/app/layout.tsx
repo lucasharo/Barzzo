@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Roboto } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { AuthCallbackBridge } from "../components/auth-callback-bridge";
 
 const roboto = Roboto({
   weight: ["400", "500", "700"],
@@ -46,6 +47,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={roboto.variable} suppressHydrationWarning>
       <body className="min-h-screen flex flex-col bg-[--fundo] text-[--texto] transition-colors duration-150">
+        <AuthCallbackBridge />
         {/* Header */}
         <header className="sticky top-0 z-50 border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
           <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">

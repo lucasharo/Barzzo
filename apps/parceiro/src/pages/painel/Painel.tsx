@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Card,
@@ -41,9 +41,12 @@ import {
   Bell,
   Scissors,
   Phone,
+  Award,
+  LogIn,
 } from "lucide-react";
 
 export default function PaginaPainelParceiro() {
+  const navigate = useNavigate();
   const [carregando, setCarregando] = React.useState(true);
   const [usuario, setUsuario] = React.useState<any>(null);
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
@@ -207,6 +210,25 @@ export default function PaginaPainelParceiro() {
     carregarPainel();
   }, [carregarPainel]);
 
+  // Redirecionamento de influenciadores sem barbearia
+  React.useEffect(() => {
+    if (!carregando && usuario && !barbearia) {
+      const supabase = criarClienteSupabaseBrowser();
+      (supabase.from("influenciadores") as any)
+        .select("id")
+        .eq("usuario_id", usuario.id)
+        .is("barbearia_id", null)
+        .maybeSingle()
+        .then(({ data }: any) => {
+          if (data?.id) {
+            navigate("/influenciador/painel", { replace: true });
+          } else if (usuario.user_metadata?.tipo_cadastro === "influenciador") {
+            navigate("/influenciador/cadastro", { replace: true });
+          }
+        });
+    }
+  }, [carregando, usuario, barbearia, navigate]);
+
   // Transição rápida de status de atendimento
   async function handleMudarStatus(agendamentoId: string, novoStatus: "em_atendimento" | "concluido") {
     try {
@@ -332,25 +354,55 @@ export default function PaginaPainelParceiro() {
   }
 
   if (!barbearia) {
+    const ehInfluenciadorCadastro = usuario?.user_metadata?.tipo_cadastro === "influenciador";
+
     return (
       <div className="flex-1 max-w-xl mx-auto py-12 flex flex-col items-center text-center gap-6">
-        <Store className="h-14 w-14 text-[#B45A2B]" />
+        {ehInfluenciadorCadastro ? (
+          <Award className="h-14 w-14 text-[#B45A2B]" />
+        ) : (
+          <Store className="h-14 w-14 text-[#B45A2B]" />
+        )}
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold">
-            {usuario ? "Cadastre sua Barbearia" : "Bem-vindo ao Barzzo Parceiro"}
+            {ehInfluenciadorCadastro
+              ? "Cadastro de Influenciador"
+              : usuario
+              ? "Cadastre sua Barbearia"
+              : "Bem-vindo ao Barzzo Parceiro"}
           </h1>
           <p className="text-sm opacity-70 max-w-md mx-auto">
-            {usuario
+            {ehInfluenciadorCadastro
+              ? "Você iniciou o cadastro como influenciador do Barzzo. Conclua a solicitação do seu cupom para acessar seu painel."
+              : usuario
               ? "Sua conta ainda não possui uma barbearia vinculada. Conclua o onboarding para desbloquear o dashboard operacional."
               : "Conecte-se à sua conta ou cadastre sua barbearia para gerenciar agendamentos, equipe e faturamento."}
           </p>
         </div>
 
-        {usuario ? (
+        {ehInfluenciadorCadastro ? (
+          <div className="flex flex-col items-center gap-3">
+            <Link to="/influenciador/cadastro">
+              <Button
+                variante="principal"
+                tamanho="lg"
+                className="min-h-[48px]"
+                leftIcon={<Award className="h-5 w-5" />}
+              >
+                Concluir Cadastro de Influenciador
+              </Button>
+            </Link>
+          </div>
+        ) : usuario ? (
           <div className="flex flex-col items-center gap-3">
             <Link to="/onboarding">
-              <Button variante="principal" tamanho="lg" className="min-h-[48px]">
-                Iniciar Onboarding <ArrowRight className="ml-2 h-5 w-5" />
+              <Button
+                variante="principal"
+                tamanho="lg"
+                className="min-h-[48px]"
+                leftIcon={<Store className="h-5 w-5" />}
+              >
+                Iniciar Onboarding
               </Button>
             </Link>
             <Link to="/influenciador/painel" className="text-sm font-semibold text-[#B45A2B] hover:underline">
@@ -360,12 +412,22 @@ export default function PaginaPainelParceiro() {
         ) : (
           <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
             <Link to="/entrar" className="w-full sm:w-auto">
-              <Button variante="principal" tamanho="lg" className="w-full min-h-[48px]">
+              <Button
+                variante="principal"
+                tamanho="lg"
+                className="w-full min-h-[48px]"
+                leftIcon={<LogIn className="h-5 w-5" />}
+              >
                 Entrar na Minha Conta
               </Button>
             </Link>
             <Link to="/onboarding" className="w-full sm:w-auto">
-              <Button variante="secundario" tamanho="lg" className="w-full min-h-[48px]">
+              <Button
+                variante="secundario"
+                tamanho="lg"
+                className="w-full min-h-[48px]"
+                leftIcon={<Store className="h-5 w-5" />}
+              >
                 Cadastrar Barbearia
               </Button>
             </Link>

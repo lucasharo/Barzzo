@@ -33,26 +33,46 @@ export default function PaginaCadastroInfluenciador() {
 
   React.useEffect(() => {
     let ativo = true;
-    (async () => {
+    const supabase = criarClienteSupabaseBrowser();
+
+    async function verificarSessao(session: any) {
+      if (!session?.user) {
+        if (ativo) setSituacao("visitante");
+        return;
+      }
+
+      if (session.user.user_metadata?.nome) {
+        setNome((prev) => prev || session.user.user_metadata.nome);
+      }
+      if (session.user.user_metadata?.telefone) {
+        setTelefone((prev) => prev || session.user.user_metadata.telefone);
+      }
+
       try {
-        const supabase = criarClienteSupabaseBrowser();
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
-          if (ativo) setSituacao("visitante");
-          return;
-        }
         const { data: existente } = await (supabase.from("influenciadores") as any)
           .select("id")
-          .eq("usuario_id", data.session.user.id)
+          .eq("usuario_id", session.user.id)
           .is("barbearia_id", null)
           .maybeSingle();
         if (ativo) setSituacao(existente ? "cadastrado" : "formulario");
       } catch {
-        if (ativo) setSituacao("visitante");
+        if (ativo) setSituacao("formulario");
       }
-    })();
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      verificarSessao(session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      verificarSessao(session);
+    });
+
     return () => {
       ativo = false;
+      subscription.unsubscribe();
     };
   }, []);
 

@@ -16,12 +16,13 @@ import { esquemaLogin } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterMembroAtual } from "../../lib/unidade-atual";
 import { traduzirErro } from "@barzzo/utilitarios";
-import { Store } from "lucide-react";
+import { Store, Award, LogIn } from "lucide-react";
 
 export default function PaginaEntrarParceiro() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const retornoUrl = searchParams.get("retorno");
+  const ehInfluenciador = Boolean(retornoUrl?.includes("influenciador"));
 
   const [email, setEmail] = React.useState("");
   const [senha, setSenha] = React.useState("");
@@ -71,7 +72,19 @@ export default function PaginaEntrarParceiro() {
           .eq("usuario_id", data.session.user.id)
           .is("barbearia_id", null)
           .maybeSingle();
-        navigate(influenciador ? "/influenciador/painel" : "/onboarding");
+
+        if (influenciador) {
+          navigate("/influenciador/painel");
+          return;
+        }
+
+        // Se cadastrou como influenciador e ainda não concluiu a criação do cupom
+        if (data.session.user.user_metadata?.tipo_cadastro === "influenciador") {
+          navigate("/influenciador/cadastro");
+          return;
+        }
+
+        navigate("/onboarding");
       }
     } catch {
       setErro("Ocorreu um erro ao processar seu login. Tente novamente.");
@@ -85,11 +98,19 @@ export default function PaginaEntrarParceiro() {
       <Card camada="primaria" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
-            <Store className="h-10 w-10 text-[#B45A2B]" />
+            {ehInfluenciador ? (
+              <Award className="h-10 w-10 text-[#B45A2B]" />
+            ) : (
+              <Store className="h-10 w-10 text-[#B45A2B]" />
+            )}
           </div>
-          <CardTitle className="text-2xl font-bold">Barzzo Parceiro</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {ehInfluenciador ? "Portal do Influenciador" : "Barzzo Parceiro"}
+          </CardTitle>
           <CardDescription>
-            Acesse o painel da sua barbearia para gerenciar agenda, equipe e clientes.
+            {ehInfluenciador
+              ? "Acesse o painel para acompanhar seus cupons, conversões e comissões."
+              : "Acesse o painel da sua barbearia para gerenciar agenda, equipe e clientes."}
           </CardDescription>
         </CardHeader>
 
@@ -108,7 +129,7 @@ export default function PaginaEntrarParceiro() {
               <Input
                 id="email"
                 type="email"
-                placeholder="seuemail@barbearia.com"
+                placeholder={ehInfluenciador ? "seuemail@exemplo.com" : "seuemail@barbearia.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -147,12 +168,13 @@ export default function PaginaEntrarParceiro() {
               tamanho="md"
               carregando={carregando}
               className="w-full mt-2"
+              leftIcon={<LogIn className="h-4 w-4" />}
             >
-              Entrar no Painel
+              {ehInfluenciador ? "Entrar no Portal do Influenciador" : "Entrar no Painel"}
             </Button>
 
             <div className="text-center text-sm opacity-80 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-              Ainda não cadastrou sua barbearia?{" "}
+              {ehInfluenciador ? "Ainda não tem cadastro como influenciador? " : "Ainda não cadastrou sua barbearia? "}
               <Link
                 to={retornoUrl ? `/cadastro?retorno=${encodeURIComponent(retornoUrl)}` : "/cadastro"}
                 className="font-semibold text-[#B45A2B] hover:underline"
