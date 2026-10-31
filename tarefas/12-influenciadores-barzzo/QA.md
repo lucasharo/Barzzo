@@ -30,3 +30,9 @@
 4. **UX / Design System**:
    - Presença de ícones semânticos à esquerda em todos os botões (`UserPlus`, `LogIn`, `Send`, `Award`, `Check`, `X`, `RefreshCw`, `Pencil`).
    - Navegação integrada e responsiva no Partner app.
+
+5. **Ajustes de Isolamento de Perfil e E-mail Dinâmico (PR #16)**:
+   - `emailRedirectTo` testado com dinamicidade de `window.location.origin`.
+   - Navegação de influenciador sem barbearia verificada: zero acesso a itens operacionais de barbearia (agenda, clientes, serviços, faturamento da barbearia).
+   - Redirecionamento defensivo de rota: `/painel` redireciona automaticamente para `/influenciador/painel` (ou `/influenciador/cadastro`).
+   - Gates de automação (Vitest, Typecheck monorepo, ESLint, Next/Vite Build) revalidados com 100% de sucesso.

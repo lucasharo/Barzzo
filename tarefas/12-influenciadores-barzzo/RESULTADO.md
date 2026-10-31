@@ -24,3 +24,10 @@
    - Suíte `tests/seguranca/influenciadores-barzzo.test.ts` com 100% de aprovação.
    - Suíte completa do monorepo: 27 arquivos de teste, 312 testes passando.
    - Zero erros em typecheck e zero erros em lint.
+
+5. **Correções de Validação e Isolamento de Influenciador (PR #16)**:
+   - **Redirect Dinâmico de E-mail**: `supabase.auth.signUp` agora passa explicitamente `emailRedirectTo: `${window.location.origin}${destino}`` e `tipo_cadastro: "influenciador"`. Localhost vai dinamicamente para a porta 3002 e Vercel vai para o domínio `*-dev.vercel.app`, eliminando fallback indevido para o `site_url` (porta 3000).
+   - **Isolamento Estrito de Menu/Navegação**: Para usuários influenciadores sem barbearia (`ehSomenteInfluenciador`), a interface oculta por completo os menus operacionais de barbearia (`Painel`, `Agenda`, `Clientes`, `Serviços`, `Relatórios`, `Assinatura`, `Mais`).
+   - **Badge Semântico e Destinos**: Badge no topo exibe `INFLUENCIADOR` (em vez de `PARCEIRO`), desktop nav exibe apenas `Painel do Influenciador`, BottomNav móvel exibe `Painel` e `Menu`, e o Drawer exibe apenas ferramentas de influenciador e opção secundária de cadastrar barbearia.
+   - **Ponte de Compatibilidade na Landing (`apps/landing`)**: Criado `AuthCallbackBridge` que detecta tokens de autenticação que venham a bater na porta 3000 por configurações legadas e repassa automaticamente ao app do parceiro com tokens preservados.
+   - **Suporte de Ícone em Botões**: Propriedade `leftIcon` integrada no componente `Button` de `@barzzo/ui`, garantindo conformidade com as diretrizes do Design System.
