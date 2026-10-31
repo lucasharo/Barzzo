@@ -13,6 +13,7 @@ export interface ButtonProps
     | "link";
   tamanho?: "sm" | "md" | "lg" | "icone";
   carregando?: boolean;
+  leftIcon?: React.ReactNode;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -22,6 +23,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variante = "principal",
       tamanho = "md",
       carregando = false,
+      leftIcon,
       disabled,
       children,
       ...props
@@ -67,9 +69,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {carregando && (
+        {carregando ? (
           <LoadingSpinner className="mr-2 h-4 w-4" tamanho="sm" />
-        )}
+        ) : leftIcon ? (
+          <span className="mr-2 inline-flex shrink-0 items-center">{leftIcon}</span>
+        ) : null}
         {children}
       </button>
     );

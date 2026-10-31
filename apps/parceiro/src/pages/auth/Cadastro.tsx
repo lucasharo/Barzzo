@@ -16,12 +16,13 @@ import {
 import { esquemaCadastro } from "@barzzo/validacoes";
 import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { Store } from "lucide-react";
+import { Store, Award, UserPlus } from "lucide-react";
 
 export default function PaginaCadastroParceiro() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const retornoUrl = searchParams.get("retorno");
+  const ehInfluenciador = Boolean(retornoUrl?.includes("influenciador"));
 
   const [nome, setNome] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -56,32 +57,45 @@ export default function PaginaCadastroParceiro() {
     try {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
+      const destino = retornoUrl || "/onboarding";
+      const emailRedirectTo = `${window.location.origin}${destino}`;
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password: senha,
         options: {
+          emailRedirectTo,
           data: {
             nome,
             telefone: telefoneLimpo || null,
+            tipo_cadastro: ehInfluenciador ? "influenciador" : "barbearia",
           },
         },
       });
 
       if (error) {
-        setErro(traduzirErro(error, "Não foi possível criar sua conta de parceiro. Verifique os dados informados."));
+        setErro(traduzirErro(error, "Não foi possível criar sua conta. Verifique os dados informados."));
         return;
       }
 
-      if (data.user) {
-        setSucesso("Conta de parceiro criada com sucesso! Redirecionando para o onboarding...");
-        const destino = retornoUrl || "/onboarding";
+      if (data.session) {
+        setSucesso(
+          ehInfluenciador
+            ? "Conta criada com sucesso! Redirecionando..."
+            : "Conta de parceiro criada com sucesso! Redirecionando para o onboarding..."
+        );
         setTimeout(() => {
           navigate(destino);
         }, 800);
+      } else if (data.user) {
+        setSucesso(
+          ehInfluenciador
+            ? "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso de influenciador e concluir a criação do seu cupom."
+            : "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso e iniciar o onboarding."
+        );
       }
     } catch {
-      setErro("Ocorreu um erro ao criar a conta de parceiro. Tente novamente.");
+      setErro("Ocorreu um erro ao criar a conta. Tente novamente.");
     } finally {
       setCarregando(false);
     }
@@ -92,11 +106,19 @@ export default function PaginaCadastroParceiro() {
       <Card camada="primaria" className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-2">
-            <Store className="h-10 w-10 text-[#B45A2B]" />
+            {ehInfluenciador ? (
+              <Award className="h-10 w-10 text-[#B45A2B]" />
+            ) : (
+              <Store className="h-10 w-10 text-[#B45A2B]" />
+            )}
           </div>
-          <CardTitle className="text-2xl font-bold">Cadastre sua Barbearia</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            {ehInfluenciador ? "Crie sua conta de Influenciador" : "Cadastre sua Barbearia"}
+          </CardTitle>
           <CardDescription>
-            Crie sua conta de parceiro e ganhe 30 dias de teste gratuito sem taxa de adesão.
+            {ehInfluenciador
+              ? "Crie sua conta para divulgar o Barzzo, solicitar seu cupom oficial e receber comissões automáticas."
+              : "Crie sua conta de parceiro e ganhe 30 dias de teste gratuito sem taxa de adesão."}
           </CardDescription>
         </CardHeader>
 
@@ -116,12 +138,12 @@ export default function PaginaCadastroParceiro() {
           <form onSubmit={lidarComCadastro} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="nome" obrigatorio>
-                Nome do Responsável
+                {ehInfluenciador ? "Seu Nome Completo" : "Nome do Responsável"}
               </Label>
               <Input
                 id="nome"
                 type="text"
-                placeholder="Seu nome completo"
+                placeholder={ehInfluenciador ? "Seu nome ou nome artístico" : "Seu nome completo"}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
                 autoComplete="name"
@@ -132,12 +154,12 @@ export default function PaginaCadastroParceiro() {
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="email" obrigatorio>
-                E-mail Profissional
+                {ehInfluenciador ? "Seu E-mail" : "E-mail Profissional"}
               </Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="contato@suabarbearia.com"
+                placeholder={ehInfluenciador ? "seuemail@exemplo.com" : "contato@suabarbearia.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -198,12 +220,13 @@ export default function PaginaCadastroParceiro() {
               tamanho="md"
               carregando={carregando}
               className="w-full mt-2"
+              leftIcon={ehInfluenciador ? <Award className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
             >
-              Criar Conta e Iniciar Onboarding
+              {ehInfluenciador ? "Criar Conta de Influenciador" : "Criar Conta e Iniciar Onboarding"}
             </Button>
 
             <div className="text-center text-sm opacity-80 pt-2 border-t border-neutral-200 dark:border-neutral-800">
-              Já possui uma conta de parceiro?{" "}
+              {ehInfluenciador ? "Já possui uma conta? " : "Já possui uma conta de parceiro? "}
               <Link
                 to={retornoUrl ? `/entrar?retorno=${encodeURIComponent(retornoUrl)}` : "/entrar"}
                 className="font-semibold text-[#B45A2B] hover:underline"

@@ -48,6 +48,7 @@ export function NavegacaoParceiro() {
   const [drawerAberto, setDrawerAberto] = React.useState(false);
   const [usuario, setUsuario] = React.useState<any>(null);
   const [unidades, setUnidades] = React.useState<UnidadeUsuario[]>([]);
+  const [ehInfluenciador, setEhInfluenciador] = React.useState(false);
 
   React.useEffect(() => {
     const supabase = criarClienteSupabaseBrowser();
@@ -63,6 +64,35 @@ export function NavegacaoParceiro() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Verificar se o usuário logado possui perfil de influenciador Barzzo
+  React.useEffect(() => {
+    if (!usuario) {
+      setEhInfluenciador(false);
+      return;
+    }
+
+    if (usuario.user_metadata?.tipo_cadastro === "influenciador") {
+      setEhInfluenciador(true);
+    }
+
+    let ativo = true;
+    const supabase = criarClienteSupabaseBrowser();
+    (supabase.from("influenciadores") as any)
+      .select("id")
+      .eq("usuario_id", usuario.id)
+      .is("barbearia_id", null)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (ativo && data?.id) {
+          setEhInfluenciador(true);
+        }
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [usuario?.id, usuario?.user_metadata?.tipo_cadastro]);
 
   // Unidades (matriz e filiais) do usuário logado, para o seletor e o item de menu.
   React.useEffect(() => {
@@ -84,8 +114,13 @@ export function NavegacaoParceiro() {
     valor: u.id,
     rotulo: u.matriz_id ? `${u.nome} (filial)` : u.nome,
   }));
-  // O menu de unidades aparece para quem tem plano com filiais (Growth ou Rede) ou já tem mais de uma unidade.
   const mostrarUnidades = unidades.length > 1 || situacaoFiliais(unidades).permiteFiliais;
+
+  const ehSomenteInfluenciador =
+    unidades.length === 0 &&
+    (ehInfluenciador ||
+      pathname.startsWith("/influenciador") ||
+      usuario?.user_metadata?.tipo_cadastro === "influenciador");
 
   // Fechar drawer ao mudar de rota
   React.useEffect(() => {
@@ -96,6 +131,7 @@ export function NavegacaoParceiro() {
     const supabase = criarClienteSupabaseBrowser();
     await supabase.auth.signOut();
     setUsuario(null);
+    setEhInfluenciador(false);
     setDrawerAberto(false);
     navigate("/");
   };
@@ -153,21 +189,37 @@ export function NavegacaoParceiro() {
 
   return (
     <>
-      {/* Header Parceiro */}
+      {/* Header Parceiro / Influenciador */}
       <header className="fixed inset-x-0 top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4 lg:gap-6">
-            <Link to={usuario ? "/painel" : "/"} className="flex items-center gap-2">
+            <Link
+              to={ehSomenteInfluenciador ? "/influenciador/painel" : (usuario ? "/painel" : "/")}
+              className="flex items-center gap-2"
+            >
               <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
                 BARZZO
               </span>
               <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B]/15 text-[#B45A2B] font-semibold px-2 py-0.5 rounded">
-                Parceiro
+                {ehSomenteInfluenciador ? "Influenciador" : "Parceiro"}
               </span>
             </Link>
 
             {/* Menu Horizontal Desktop (telas >= lg) */}
-            {usuario ? (
+            {ehSomenteInfluenciador ? (
+              <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
+                <Link
+                  to="/influenciador/painel"
+                  className={`px-3 py-1.5 rounded-md transition-colors ${
+                    pathname.startsWith("/influenciador")
+                      ? "bg-[#B45A2B]/10 text-[#B45A2B] font-semibold"
+                      : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                  }`}
+                >
+                  Painel do Influenciador
+                </Link>
+              </nav>
+            ) : usuario ? (
               <nav className="hidden lg:flex items-center gap-1 text-sm font-medium">
                 {itensDesktopTopo.map((item) => {
                   const ativo = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -227,14 +279,18 @@ export function NavegacaoParceiro() {
             {!usuario && (
               <div className="hidden lg:flex items-center gap-2">
                 <Link to="/entrar">
-                  <Button variante="principal" tamanho="sm">
+                  <Button
+                    variante="principal"
+                    tamanho="sm"
+                    leftIcon={<LogIn className="h-3.5 w-3.5" />}
+                  >
                     Entrar
                   </Button>
                 </Link>
               </div>
             )}
 
-            {usuario && unidades.length > 1 && unidadeAtual && (
+            {usuario && unidades.length > 1 && unidadeAtual && !ehSomenteInfluenciador && (
               <div className="hidden lg:block w-52">
                 <Seletor
                   valor={unidadeAtual.id}
@@ -253,6 +309,7 @@ export function NavegacaoParceiro() {
                 tamanho="sm"
                 onClick={lidarComLogout}
                 className="hidden lg:inline-flex text-xs"
+                leftIcon={<LogOut className="h-3.5 w-3.5" />}
               >
                 Sair
               </Button>
@@ -265,7 +322,7 @@ export function NavegacaoParceiro() {
               type="button"
               onClick={() => setDrawerAberto(true)}
               className="flex lg:hidden h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-              aria-label="Abrir menu de navegação da barbearia"
+              aria-label="Abrir menu de navegação"
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -279,8 +336,12 @@ export function NavegacaoParceiro() {
       <Drawer
         aberto={drawerAberto}
         aoFechar={() => setDrawerAberto(false)}
-        titulo="Menu do Parceiro"
-        descricao="Painel de controle e configurações da barbearia"
+        titulo={ehSomenteInfluenciador ? "Portal do Influenciador" : "Menu do Parceiro"}
+        descricao={
+          ehSomenteInfluenciador
+            ? "Gestão do seu perfil de influenciador e comissões"
+            : "Painel de controle e configurações da barbearia"
+        }
         posicao="direita"
         largura="w-84 max-w-[88vw]"
         rodape={
@@ -290,27 +351,69 @@ export function NavegacaoParceiro() {
               tamanho="md"
               onClick={lidarComLogout}
               className="w-full flex items-center justify-center gap-2 text-sm"
+              leftIcon={<LogOut className="h-4 w-4" />}
             >
-              <LogOut className="h-4 w-4" />
               Sair do Painel
             </Button>
           ) : (
             <div className="flex flex-col gap-2 w-full">
               <Link to="/entrar" className="w-full">
-                <Button variante="principal" tamanho="md" className="w-full gap-2">
-                  <LogIn className="h-4 w-4" /> Entrar na Minha Conta
+                <Button
+                  variante="principal"
+                  tamanho="md"
+                  className="w-full gap-2"
+                  leftIcon={<LogIn className="h-4 w-4" />}
+                >
+                  Entrar na Minha Conta
                 </Button>
               </Link>
               <Link to="/onboarding" className="w-full">
-                <Button variante="secundario" tamanho="md" className="w-full gap-2">
-                  <Store className="h-4 w-4" /> Cadastrar Barbearia
+                <Button
+                  variante="secundario"
+                  tamanho="md"
+                  className="w-full gap-2"
+                  leftIcon={<Store className="h-4 w-4" />}
+                >
+                  Cadastrar Barbearia
                 </Button>
               </Link>
             </div>
           )
         }
       >
-        {usuario ? (
+        {ehSomenteInfluenciador ? (
+          <div className="flex flex-col gap-6 py-1">
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 px-3 py-1">
+                Influenciador Barzzo
+              </span>
+              <Link
+                to="/influenciador/painel"
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  pathname.startsWith("/influenciador")
+                    ? "bg-[#B45A2B]/15 text-[#B45A2B] font-semibold"
+                    : "hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                }`}
+              >
+                <Award className="h-4 w-4 opacity-75 shrink-0" />
+                <span>Painel do Influenciador</span>
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 px-3 py-1">
+                Barbearias
+              </span>
+              <Link
+                to="/onboarding"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+              >
+                <Store className="h-4 w-4 opacity-75 shrink-0" />
+                <span>Cadastrar Barbearia</span>
+              </Link>
+            </div>
+          </div>
+        ) : usuario ? (
           <div className="flex flex-col gap-6 py-1">
             {unidades.length > 1 && unidadeAtual && (
               <div className="flex flex-col gap-1.5 px-3">
@@ -395,7 +498,22 @@ export function NavegacaoParceiro() {
 
       {/* Bottom Navigation Bar Mobile (< md) */}
       <BottomNav>
-        {usuario ? (
+        {ehSomenteInfluenciador ? (
+          <>
+            <BottomNavItem
+              icone={Award}
+              rotulo="Painel"
+              ativo={pathname.startsWith("/influenciador")}
+              onClick={() => navigate("/influenciador/painel")}
+            />
+            <BottomNavItem
+              icone={Menu}
+              rotulo="Menu"
+              ativo={drawerAberto}
+              onClick={() => setDrawerAberto(true)}
+            />
+          </>
+        ) : usuario ? (
           <>
             <BottomNavItem
               icone={LayoutDashboard}
