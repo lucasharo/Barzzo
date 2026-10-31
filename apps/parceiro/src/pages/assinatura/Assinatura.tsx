@@ -501,7 +501,7 @@ export default function PaginaAssinaturaParceiro() {
             </span>
           </div>
           <p className="text-sm opacity-70 mt-1">
-            Gerencie seu plano com renovação automática contínua e faturamento seguro via cartão de crédito.
+            Gerencie seu plano com renovação automática contínua e assinatura segura via cartão de crédito.
           </p>
         </div>
 
@@ -615,7 +615,7 @@ export default function PaginaAssinaturaParceiro() {
                 : "opacity-60 hover:opacity-100"
             }`}
           >
-            Faturamento Mensal
+            Plano Mensal
           </button>
           <button
             type="button"
@@ -626,7 +626,7 @@ export default function PaginaAssinaturaParceiro() {
                 : "opacity-60 hover:opacity-100"
             }`}
           >
-            Faturamento Semestral
+            Plano Semestral
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/20 uppercase font-black">
               Economize
             </span>
