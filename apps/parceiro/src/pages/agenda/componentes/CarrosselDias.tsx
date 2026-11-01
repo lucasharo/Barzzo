@@ -43,6 +43,17 @@ export function CarrosselDias({
   const totalDias = new Date(ano, mes + 1, 0).getDate();
   const inicioChave = chaveDiaLocal(inicio);
 
+  const mesAnteriorRef = React.useRef(mes);
+  React.useEffect(() => {
+    if (mesAnteriorRef.current !== mes) {
+      mesAnteriorRef.current = mes;
+      const faixa = faixaRef.current;
+      if (faixa) {
+        faixa.scrollTo({ left: 0, behavior: "auto" });
+      }
+    }
+  }, [mes]);
+
   // Na abertura da tela ou ao trocar de mês, centraliza o dia ativo
   React.useEffect(() => {
     if (primeiraRolagem.current) {
