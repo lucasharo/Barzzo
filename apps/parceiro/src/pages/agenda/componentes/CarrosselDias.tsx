@@ -43,18 +43,57 @@ export function CarrosselDias({
   const totalDias = new Date(ano, mes + 1, 0).getDate();
   const inicioChave = chaveDiaLocal(inicio);
 
-  // Mantém o dia selecionado centralizado no carrossel.
+  // Na abertura da tela ou ao trocar de mês, centraliza o dia ativo
   React.useEffect(() => {
-    const faixa = faixaRef.current;
-    const ativo = ativoRef.current;
-    if (!faixa || !ativo) return;
-    faixa.scrollTo({
-      left: ativo.offsetLeft - faixa.clientWidth / 2 + ativo.clientWidth / 2,
-      // Na abertura da tela vai direto ao dia; nas trocas seguintes anima.
-      behavior: primeiraRolagem.current ? "auto" : "smooth",
-    });
-    primeiraRolagem.current = false;
+    if (primeiraRolagem.current) {
+      const faixa = faixaRef.current;
+      const ativo = ativoRef.current;
+      if (faixa && ativo) {
+        faixa.scrollTo({
+          left: Math.max(0, ativo.offsetLeft - faixa.clientWidth / 2 + ativo.clientWidth / 2),
+          behavior: "auto",
+        });
+      }
+      primeiraRolagem.current = false;
+    }
   }, [inicioChave]);
+
+  function handlePaginar(delta: number) {
+    const faixa = faixaRef.current;
+    if (faixa) {
+      const primeiroFilho = faixa.firstElementChild as HTMLElement | null;
+      const largura = primeiroFilho ? primeiroFilho.offsetWidth + 6 : 64;
+      faixa.scrollBy({
+        left: delta * largura,
+        behavior: "smooth",
+      });
+    }
+    aoPaginar(delta);
+  }
+
+  function handleIrParaHoje() {
+    aoIrParaHoje();
+    setTimeout(() => {
+      const faixa = faixaRef.current;
+      const ativo = ativoRef.current;
+      if (faixa && ativo) {
+        faixa.scrollTo({
+          left: Math.max(0, ativo.offsetLeft - faixa.clientWidth / 2 + ativo.clientWidth / 2),
+          behavior: "smooth",
+        });
+      }
+    }, 50);
+  }
+
+  function handleMudarMes(delta: number) {
+    aoMudarMes(delta);
+    setTimeout(() => {
+      const faixa = faixaRef.current;
+      if (faixa) {
+        faixa.scrollTo({ left: 0, behavior: "smooth" });
+      }
+    }, 50);
+  }
 
   const botaoSeta = "border border-neutral-200 dark:border-neutral-800 shrink-0";
 
@@ -68,7 +107,7 @@ export function CarrosselDias({
           variante="principal"
           tamanho="icone"
           className="shrink-0"
-          onClick={() => aoMudarMes(-1)}
+          onClick={() => handleMudarMes(-1)}
           aria-label="Mês anterior"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -80,12 +119,12 @@ export function CarrosselDias({
           variante="principal"
           tamanho="icone"
           className="shrink-0"
-          onClick={() => aoMudarMes(1)}
+          onClick={() => handleMudarMes(1)}
           aria-label="Próximo mês"
         >
           <ChevronRight className="h-5 w-5" />
         </Button>
-        <Button variante="secundario" tamanho="sm" onClick={aoIrParaHoje} className="ml-1 min-h-[44px] px-3 shrink-0">
+        <Button variante="secundario" tamanho="sm" onClick={handleIrParaHoje} className="ml-1 min-h-[44px] px-3 shrink-0">
           Hoje
         </Button>
       </div>
@@ -94,7 +133,7 @@ export function CarrosselDias({
         variante="fantasma"
         tamanho="icone"
         className={`${botaoSeta} !w-9 !min-w-[36px]`}
-        onClick={() => aoPaginar(-1)}
+        onClick={() => handlePaginar(-1)}
         aria-label="Dia anterior"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -151,7 +190,7 @@ export function CarrosselDias({
         variante="fantasma"
         tamanho="icone"
         className={`${botaoSeta} !w-9 !min-w-[36px]`}
-        onClick={() => aoPaginar(1)}
+        onClick={() => handlePaginar(1)}
         aria-label="Próximo dia"
       >
         <ChevronRight className="h-4 w-4" />
