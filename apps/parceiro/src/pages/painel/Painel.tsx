@@ -14,7 +14,7 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterMembroAtual } from "../../lib/unidade-atual";
-import { formatarTelefone } from "@barzzo/utilitarios";
+import { formatarTelefone, traduzirErro } from "@barzzo/utilitarios";
 import type {
   AgendamentoComDetalhes,
   Barbearia,
@@ -243,26 +243,8 @@ export default function PaginaPainelParceiro() {
       });
 
       if (erroRpc) {
-        // Fallback de update direto caso a RPC transacional não tenha sido acionada
-        const camposUpdate: any = { status: novoStatus };
-        if (novoStatus === "em_atendimento") {
-          const agora = new Date();
-          camposUpdate.inicio_real = agora.toISOString();
-          camposUpdate.inicio_previsto = agora.toISOString();
-          const agTarget = agendamentosHoje.find((a) => a.id === agendamentoId);
-          if (agTarget?.duracao_total_minutos) {
-            const fim = new Date(agora.getTime() + agTarget.duracao_total_minutos * 60000);
-            camposUpdate.fim_previsto = fim.toISOString();
-          }
-        } else if (novoStatus === "concluido") {
-          camposUpdate.fim_real = new Date().toISOString();
-        }
-
-        const { error: erroUp } = await (supabase.from("agendamentos") as any)
-          .update(camposUpdate)
-          .eq("id", agendamentoId);
-
-        if (erroUp) throw erroUp;
+        setErro(traduzirErro(erroRpc, "Não foi possível atualizar o status do atendimento."));
+        return;
       }
 
       // Se concluiu, disparar processamento de comissão de influenciador se aplicável
@@ -274,8 +256,8 @@ export default function PaginaPainelParceiro() {
 
       setSucesso(`Atendimento ${novoStatus === "em_atendimento" ? "iniciado" : "concluído com sucesso"}!`);
       await carregarPainel();
-    } catch {
-      setErro("Não foi possível atualizar o status do atendimento.");
+    } catch (err) {
+      setErro(traduzirErro(err, "Não foi possível atualizar o status do atendimento."));
     } finally {
       setAtualizandoStatusId(null);
     }
@@ -306,14 +288,14 @@ export default function PaginaPainelParceiro() {
         p_novo_status: novoStatus,
       });
       if (erroRpc) {
-        setErro("Não foi possível atualizar o status do atendimento.");
+        setErro(traduzirErro(erroRpc, "Não foi possível atualizar o status do atendimento."));
         return;
       }
       setSelecionado(null);
       setSucesso(novoStatus === "cancelado" ? "Atendimento cancelado." : "Atendimento marcado como não compareceu.");
       await carregarPainel();
-    } catch {
-      setErro("Não foi possível atualizar o status do atendimento.");
+    } catch (err) {
+      setErro(traduzirErro(err, "Não foi possível atualizar o status do atendimento."));
     } finally {
       setAtualizandoStatusId(null);
     }
