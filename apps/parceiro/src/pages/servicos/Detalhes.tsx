@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardDescription,
   Input,
+  InputMascarado,
   Label,
   Alert,
   AlertDescription,
@@ -31,6 +32,16 @@ import {
 
 const DURACOES_RAPIDAS = [15, 30, 45, 60, 90, 120];
 
+function mascararPreco(valor: string): string {
+  const digitos = valor.replace(/\D/g, "");
+  if (!digitos) return "";
+
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(digitos) / 100);
+}
+
 export default function PaginaEdicaoServico() {
   const params = useParams();
   const navigate = useNavigate();
@@ -45,8 +56,8 @@ export default function PaginaEdicaoServico() {
   // Form states
   const [nome, setNome] = React.useState("");
   const [descricao, setDescricao] = React.useState("");
-  const [preco, setPreco] = React.useState<string>("40.00");
-  const [duracaoMinutos, setDuracaoMinutos] = React.useState<number>(30);
+  const [preco, setPreco] = React.useState<string>("40,00");
+  const [duracaoMinutos, setDuracaoMinutos] = React.useState<string>("30");
   const [ativo, setAtivo] = React.useState(true);
 
   // Profissionais da barbearia e vinculados
@@ -109,8 +120,8 @@ export default function PaginaEdicaoServico() {
 
         setNome(servicoDb.nome);
         setDescricao(servicoDb.descricao || "");
-        setPreco(Number(servicoDb.preco).toFixed(2));
-        setDuracaoMinutos(servicoDb.duracao_minutos);
+        setPreco(mascararPreco(String(Math.round(Number(servicoDb.preco) * 100))));
+        setDuracaoMinutos(String(servicoDb.duracao_minutos));
         setAtivo(servicoDb.ativo);
 
         // Carregar vínculos profissionais
@@ -162,8 +173,10 @@ export default function PaginaEdicaoServico() {
     const resultado = esquemaServico.safeParse({
       nome,
       descricao: descricao ? descricao : null,
-      preco: Number(preco.replace(",", ".")),
-      duracao_minutos: duracaoMinutos,
+      preco: preco.trim()
+        ? Number(preco.replace(/\./g, "").replace(",", "."))
+        : Number.NaN,
+      duracao_minutos: duracaoMinutos ? Number(duracaoMinutos) : Number.NaN,
       ativo,
       profissionais_ids: profissionaisSelecionados,
     });
@@ -375,14 +388,15 @@ export default function PaginaEdicaoServico() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold opacity-60">
                     R$
                   </span>
-                  <Input
+                  <InputMascarado
                     id="preco"
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    placeholder="45.00"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="0,00"
                     value={preco}
-                    onChange={(e) => setPreco(e.target.value)}
+                    mascara={mascararPreco}
+                    onChangeValor={setPreco}
                     className="pl-10 font-bold"
                     required
                   />
@@ -396,12 +410,12 @@ export default function PaginaEdicaoServico() {
                   <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50" />
                   <Input
                     id="duracao"
-                    type="number"
-                    step="5"
-                    min="5"
-                    max="480"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={3}
                     value={duracaoMinutos}
-                    onChange={(e) => setDuracaoMinutos(Number(e.target.value))}
+                    onChange={(e) => setDuracaoMinutos(e.target.value.replace(/\D/g, ""))}
                     className="pl-10 font-bold"
                     required
                   />
@@ -412,9 +426,9 @@ export default function PaginaEdicaoServico() {
                     <button
                       key={min}
                       type="button"
-                      onClick={() => setDuracaoMinutos(min)}
+                      onClick={() => setDuracaoMinutos(String(min))}
                       className={`text-[11px] px-2 py-0.5 rounded font-medium border transition-colors ${
-                        duracaoMinutos === min
+                        duracaoMinutos === String(min)
                           ? "bg-[#B45A2B] text-white border-[#B45A2B]"
                           : "border-neutral-300 dark:border-neutral-700 hover:border-[#B45A2B]/60"
                       }`}
