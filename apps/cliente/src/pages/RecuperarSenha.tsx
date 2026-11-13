@@ -15,7 +15,7 @@ import {
 } from "@barzzo/ui";
 import { esquemaRecuperarSenha } from "@barzzo/validacoes";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { origemWeb, traduzirErro } from "@barzzo/utilitarios";
+import { traduzirErro, urlRedirectAutenticacao } from "@barzzo/utilitarios";
 
 // Endereço público do Cliente na web, usado nos links de e-mail enviados a partir do app Android.
 const URL_WEB_CLIENTE: string =
@@ -44,7 +44,7 @@ export default function PaginaRecuperarSenha() {
       const supabase = criarClienteSupabaseBrowser();
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${origemWeb(URL_WEB_CLIENTE)}/redefinir-senha`,
+        redirectTo: urlRedirectAutenticacao("/redefinir-senha", URL_WEB_CLIENTE),
       });
 
       if (error) {
