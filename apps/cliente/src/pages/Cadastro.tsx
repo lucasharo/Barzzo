@@ -15,10 +15,14 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { esquemaCadastro } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone, traduzirErro, formatarData } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro, formatarData, urlRedirectAutenticacao } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterRascunhoReserva, calcularDestinoAposAuth } from "@barzzo/dominio";
 import { Sparkles } from "lucide-react";
+
+const URL_WEB_CLIENTE: string =
+  (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_WEB_URL ??
+  "https://barzzo-cliente-dev.vercel.app";
 
 export default function PaginaCadastro() {
   const navigate = useNavigate();
@@ -62,11 +66,13 @@ export default function PaginaCadastro() {
     try {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
+      const destino = calcularDestinoAposAuth(retornoUrl, draft);
 
       const { data, error } = await supabase.auth.signUp({
         email,
         password: senha,
         options: {
+          emailRedirectTo: urlRedirectAutenticacao(destino, URL_WEB_CLIENTE),
           data: {
             nome,
             telefone: telefoneLimpo || null,
@@ -81,7 +87,6 @@ export default function PaginaCadastro() {
 
       if (data.user) {
         setSucesso("Conta criada com sucesso! Redirecionando...");
-        const destino = calcularDestinoAposAuth(retornoUrl, draft);
         setTimeout(() => {
           navigate(destino);
         }, 1000);
