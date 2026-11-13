@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -21,14 +21,17 @@ import { Sparkles } from "lucide-react";
 
 export default function PaginaEntrar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const retornoUrl = searchParams.get("retorno");
+  const confirmacaoPendente = searchParams.get("confirmacao") === "pendente";
+  const estadoCadastro = location.state as { email?: string } | null;
 
   const draft = React.useMemo(() => {
     return typeof window !== "undefined" ? obterRascunhoReserva() : null;
   }, []);
 
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState(estadoCadastro?.email ?? "");
   const [senha, setSenha] = React.useState("");
   const [carregando, setCarregando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -84,6 +87,15 @@ export default function PaginaEntrar() {
         </CardHeader>
 
         <CardContent>
+          {confirmacaoPendente && (
+            <Alert variante="sucesso" className="mb-4">
+              <AlertDescription>
+                Sua conta foi criada. Enviamos um e-mail de confirmação para {email || "o endereço cadastrado"}.
+                Clique no link recebido para ativar a conta e, em seguida, entre aqui com seu e-mail e senha.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {draft && (
             <div className="mb-4 p-3.5 rounded-xl border border-[#B45A2B]/20 bg-[#B45A2B]/5 flex items-start gap-3">
               <Sparkles className="h-5 w-5 text-[#B45A2B] shrink-0 mt-0.5" />

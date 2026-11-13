@@ -89,11 +89,8 @@ export default function PaginaCadastroParceiro() {
           navigate(destino);
         }, 800);
       } else if (data.user) {
-        setSucesso(
-          ehInfluenciador
-            ? "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso de influenciador e concluir a criação do seu cupom."
-            : "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso e iniciar o onboarding."
-        );
+        const parametrosLogin = new URLSearchParams({ confirmacao: "pendente", retorno: destino });
+        navigate(`/entrar?${parametrosLogin.toString()}`, { state: { email, ehInfluenciador } });
       }
     } catch {
       setErro("Ocorreu um erro ao criar a conta. Tente novamente.");

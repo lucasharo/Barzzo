@@ -17,7 +17,6 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
-  calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
   salvarRascunhoReserva,
   obterRascunhoReserva,
@@ -31,11 +30,7 @@ import type {
   Barbearia,
   Servico,
   Profissional,
-  HorarioBarbearia,
-  JornadaProfissional,
-  BloqueioAgenda,
   SlotDisponivel,
-  DiaSemana,
   RascunhoReserva,
   Cupom,
 } from "@barzzo/tipos";
@@ -72,9 +67,6 @@ function ConteudoWizardReservaCliente() {
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
   const [servicos, setServicos] = React.useState<Servico[]>([]);
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
-  const [horariosBarbearia, setHorariosBarbearia] = React.useState<Record<number, HorarioBarbearia>>({});
-  const [jornadasProfissionais, setJornadasProfissionais] = React.useState<JornadaProfissional[]>([]);
-  const [vinculosServicos, setVinculosServicos] = React.useState<{ profissional_id: string; servico_id: string }[]>([]);
 
   // Wizard Steps: 1 = Serviço, 2 = Profissional, 3 = Data & Horário, 4 = Resumo
   const [passoAtual, setPassoAtual] = React.useState<number>(1);
@@ -197,26 +189,6 @@ function ConteudoWizardReservaCliente() {
       const listaProfissionais = (pDb || []) as Profissional[];
       setProfissionais(listaProfissionais);
 
-      // Horários
-      const { data: hbDb } = await supabase
-        .from("horarios_barbearia")
-        .select("*")
-        .eq("barbearia_id", barb.id);
-
-      const mapaHb: Record<number, HorarioBarbearia> = {};
-      (hbDb || []).forEach((h: HorarioBarbearia) => {
-        mapaHb[h.dia_semana] = h;
-      });
-      setHorariosBarbearia(mapaHb);
-
-      // Jornadas
-      const { data: jpDb } = await supabase.from("jornadas_profissionais").select("*");
-      setJornadasProfissionais((jpDb || []) as JornadaProfissional[]);
-
-      // Vínculos
-      const { data: psDb } = await supabase.from("profissionais_servicos").select("profissional_id, servico_id").eq("ativo", true);
-      setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
-
       // Restaurar rascunho de reserva salvo se pertencer a esta barbearia
       const draft = typeof window !== "undefined" ? obterRascunhoReserva() : null;
       if (draft && (draft.barbearia_slug === slug || draft.barbearia_id === barb.id)) {
@@ -295,34 +267,19 @@ function ConteudoWizardReservaCliente() {
       setSlotSelecionado(null);
       const supabase = criarClienteSupabaseBrowser();
 
-      const dataObj = new Date(dataSelecionada + "T12:00:00");
-      const diaSemana = dataObj.getDay() as DiaSemana;
-      const horarioBarb = horariosBarbearia[diaSemana] || null;
-
       const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
       const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
       const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
-      const { data: bloqDb } = await supabase
-        .from("bloqueios_agenda")
-        .select("*")
-        .eq("barbearia_id", barbearia!.id)
-        .lte("inicio", dataFim)
-        .gte("fim", dataInicio);
+      const filtroId = modoProfissional === "especifico" ? profissionalSelecionado?.id ?? null : null;
+      const { data: slotsDb, error: erroSlots } = await supabase.rpc("buscar_horarios_disponiveis", {
+        p_barbearia_id: barbearia!.id,
+        p_servico_id: servicoSelecionado!.id,
+        p_data: dataSelecionada,
+        p_profissional_id: filtroId,
+      });
 
-      const { data: agsDb } = await supabase
-        .from("agendamentos")
-        .select("profissional_id, inicio_previsto, fim_previsto")
-        .eq("barbearia_id", barbearia!.id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .gte("inicio_previsto", dataInicio)
-        .lte("inicio_previsto", dataFim);
-
-      const agendamentosExistentes = (agsDb || []).map((ag: any) => ({
-        profissional_id: ag.profissional_id,
-        inicio: ag.inicio_previsto,
-        fim: ag.fim_previsto,
-      }));
+      if (erroSlots) throw erroSlots;
 
       // Se o cliente estiver logado, buscar também agendamentos dele no dia para evitar conflitos
       const {
@@ -335,8 +292,8 @@ function ConteudoWizardReservaCliente() {
           .select("inicio_previsto, fim_previsto")
           .eq("cliente_id", session.user.id)
           .not("status", "in", '("cancelado","nao_compareceu")')
-          .gte("inicio_previsto", dataInicio)
-          .lte("inicio_previsto", dataFim);
+          .lt("inicio_previsto", dataFim)
+          .gt("fim_previsto", dataInicio);
 
         agendamentosCliente = (agsCliDb || []).map((ag: any) => ({
           inicio: ag.inicio_previsto,
@@ -344,33 +301,7 @@ function ConteudoWizardReservaCliente() {
         }));
       }
 
-      const profsAptos = profissionais.map((p) => {
-        const habilitado = vinculosServicos.some(
-          (v) => v.profissional_id === p.id && v.servico_id === servicoSelecionado!.id
-        );
-        const jornada = jornadasProfissionais.find(
-          (j) => j.profissional_id === p.id && j.dia_semana === diaSemana
-        );
-        return {
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          habilitado,
-          jornada: jornada || null,
-        };
-      });
-
-      const filtroId = modoProfissional === "especifico" ? profissionalSelecionado?.id : null;
-
-      const slots = calcularHorariosDisponiveis({
-        servico: servicoSelecionado!,
-        horarioBarbearia: horarioBarb,
-        profissionais: profsAptos,
-        bloqueios: (bloqDb || []) as BloqueioAgenda[],
-        agendamentosExistentes,
-        data: dataSelecionada,
-        profissionalIdFiltro: filtroId,
-      });
+      const slots = (slotsDb || []) as SlotDisponivel[];
 
       // Filtrar slots caso o cliente logado já tenha compromisso no mesmo horário
       const slotsValidos = slots.filter((slot) => {
