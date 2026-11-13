@@ -86,10 +86,14 @@ export default function PaginaCadastro() {
       }
 
       if (data.user) {
-        setSucesso("Conta criada com sucesso! Redirecionando...");
-        setTimeout(() => {
-          navigate(destino);
-        }, 1000);
+        if (data.session) {
+          setSucesso("Conta criada com sucesso! Redirecionando...");
+          setTimeout(() => navigate(destino), 1000);
+          return;
+        }
+
+        const parametrosLogin = new URLSearchParams({ confirmacao: "pendente", retorno: destino });
+        navigate(`/entrar?${parametrosLogin.toString()}`, { state: { email } });
       }
     } catch (err: unknown) {
       setErro("Ocorreu um erro ao criar a conta. Tente novamente.");

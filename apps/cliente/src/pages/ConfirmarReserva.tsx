@@ -16,19 +16,10 @@ import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
   obterRascunhoReserva,
   limparRascunhoReserva,
-  calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
 } from "@barzzo/dominio";
 import { formatarData } from "@barzzo/utilitarios";
-import type {
-  RascunhoReserva,
-  SlotDisponivel,
-  Profissional,
-  HorarioBarbearia,
-  JornadaProfissional,
-  BloqueioAgenda,
-  DiaSemana,
-} from "@barzzo/tipos";
+import type { RascunhoReserva, SlotDisponivel } from "@barzzo/tipos";
 import {
   CheckCircle,
   Calendar,
@@ -124,7 +115,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
       const dataFimIso = converterParaIsoUtc(draft.data, horaFimStr);
 
       // 1. Checar se o próprio cliente já tem agendamento ativo sobreposto
-      const { data: agCliente } = await supabase
+      const { data: agCliente, error: erroAgCliente } = await supabase
         .from("agendamentos")
         .select("id")
         .eq("cliente_id", clienteId)
@@ -132,25 +123,27 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         .lt("inicio_previsto", dataFimIso)
         .gt("fim_previsto", dataInicioIso);
 
+      if (erroAgCliente) return { livre: false, motivo: "cliente_conflito" };
       if (agCliente && agCliente.length > 0) {
         return { livre: false, motivo: "cliente_conflito" };
       }
 
-      // 2. Checar se há agendamento sobreposto para o profissional / barbearia
-      let query = supabase
-        .from("agendamentos")
-        .select("id")
-        .eq("barbearia_id", draft.barbearia_id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .lt("inicio_previsto", dataFimIso)
-        .gt("fim_previsto", dataInicioIso);
+      // A RPC consulta os agendamentos sem expor reservas de outros clientes via RLS.
+      const { data: slots, error: erroSlots } = await supabase.rpc("buscar_horarios_disponiveis", {
+        p_barbearia_id: draft.barbearia_id,
+        p_servico_id: draft.servico_id,
+        p_data: draft.data,
+        p_profissional_id: draft.profissional_id,
+      });
 
-      if (draft.profissional_id) {
-        query = query.eq("profissional_id", draft.profissional_id);
-      }
+      if (erroSlots) return { livre: false, motivo: "profissional_ocupado" };
+      const horariosDisponiveis = (slots || []) as SlotDisponivel[];
+      const horarioEstaLivre = horariosDisponiveis.some(
+        (slot) => slot.horario === draft.horario &&
+          (!draft.profissional_id || slot.profissional_id === draft.profissional_id)
+      );
 
-      const { data } = await query;
-      if (data && data.length > 0) {
+      if (!horarioEstaLivre) {
         return { livre: false, motivo: "profissional_ocupado" };
       }
 
@@ -163,64 +156,19 @@ export default function PaginaConfirmacaoReservaPosLogin() {
   async function carregarHorariosAlternativos(draft: RascunhoReserva) {
     try {
       const supabase = criarClienteSupabaseBrowser();
-      const dataObj = new Date(draft.data + "T12:00:00");
-      const diaSemana = dataObj.getDay() as DiaSemana;
-
-      const { data: hbDb } = await supabase
-        .from("horarios_barbearia")
-        .select("*")
-        .eq("barbearia_id", draft.barbearia_id)
-        .eq("dia_semana", diaSemana)
-        .single();
-
-      const { data: profsDb } = await supabase
-        .from("profissionais")
-        .select("id, barbearia_id, nome, foto_url, bio, ativo")
-        .eq("barbearia_id", draft.barbearia_id)
-        .eq("ativo", true);
-
-      const { data: sDb } = await supabase
-        .from("servicos")
-        .select("*")
-        .eq("id", draft.servico_id)
-        .single();
-
-      const { data: jpDb } = await supabase
-        .from("jornadas_profissionais")
-        .select("*")
-        .eq("dia_semana", diaSemana);
-
-      const { data: psDb } = await supabase
-        .from("profissionais_servicos")
-        .select("profissional_id, servico_id")
-        .eq("servico_id", draft.servico_id)
-        .eq("ativo", true);
-
-      if (!sDb || !hbDb || !profsDb) return;
-
-      const profsAptos = (profsDb as Profissional[]).map((p) => {
-        const habilitado = (psDb || []).some((v: any) => v.profissional_id === p.id);
-        const jornada = (jpDb || []).find((j: any) => j.profissional_id === p.id);
-        return {
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          habilitado,
-          jornada: jornada || null,
-        };
+      const { data: slots, error: erroSlots } = await supabase.rpc("buscar_horarios_disponiveis", {
+        p_barbearia_id: draft.barbearia_id,
+        p_servico_id: draft.servico_id,
+        p_data: draft.data,
+        p_profissional_id: draft.profissional_id,
       });
 
-      const slots = calcularHorariosDisponiveis({
-        servico: sDb,
-        horarioBarbearia: hbDb,
-        profissionais: profsAptos,
-        data: draft.data,
-        profissionalIdFiltro: draft.profissional_id,
-      });
+      if (erroSlots) return;
 
-      setHorariosAlternativos(slots);
-      if (slots.length > 0) {
-        setNovoSlotEscolhido(slots[0].horario);
+      const horarios = (slots || []) as SlotDisponivel[];
+      setHorariosAlternativos(horarios);
+      if (horarios.length > 0) {
+        setNovoSlotEscolhido(horarios[0].horario);
       }
     } catch {
       // Silencioso
