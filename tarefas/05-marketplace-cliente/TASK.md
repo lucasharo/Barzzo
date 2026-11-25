@@ -1,7 +1,7 @@
 # TASK-05 — Marketplace e jornada do cliente
 
 ## Objetivo
-Descoberta pública e reserva com login somente no final.
+Descoberta pública e reserva com login somente no final. O cliente seleciona até quatro serviços, e a disponibilidade usa a soma das durações.
 
 ## Rotas
 /inicio
@@ -18,12 +18,12 @@ Nome, localização, distância, serviço, preço, nota quando disponível, aber
 Capa/logo, descrição, endereço, horário, serviços/preços, profissionais, galeria, produtos, avaliações, localização e CTA Agendar.
 
 ## Fluxo
-Pesquisa -> perfil -> serviço -> profissional/qualquer -> data/horário -> resumo -> autenticar se anônimo -> recuperar seleção -> revalidar -> criar -> confirmação.
+Pesquisa -> perfil -> até quatro serviços -> profissional/qualquer habilitado para todos -> data/horário pelo tempo total -> resumo -> autenticar se anônimo -> recuperar seleção -> revalidar -> criar -> confirmação.
 
 Não criar reserva definitiva antes da autenticação.
 
 ## Estado pré-login
-Preservar barbearia, serviço, profissional, data, horário e referência futura de cupom/influencer.
+Preservar barbearia, serviços selecionados, profissional, data, horário e referência futura de cupom/influencer.
 
 ## UX
 ui-ux-pro-max obrigatório com foco em conversão e mínimo atrito.
@@ -32,4 +32,4 @@ ui-ux-pro-max obrigatório com foco em conversão e mínimo atrito.
 Fluxo anônimo completo, login sem perder seleção, horário ocupado durante login, sem disponibilidade, geolocalização negada, mobile, público/privado e regressão.
 
 ## Aceite
-Visitante chega ao resumo sem login e confirma após autenticar sem refazer escolhas.
+Visitante chega ao resumo sem login, escolhe até quatro serviços e confirma após autenticar sem refazer escolhas; a duração combinada é usada para validar e gravar a reserva.
