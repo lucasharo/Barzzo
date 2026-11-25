@@ -43,15 +43,16 @@ Todos os critérios de aceite estabelecidos no `TASK.md` foram integralmente ate
 
 | Critério | Resultado | Evidência |
 |---|---|---|
-| Selecionar de um a três serviços | Conforme | Interface, validação do rascunho e RPC limitam o conjunto a três |
-| Somar duração e preço antes de escolher horário | Conforme | Soma no domínio/UI; cobertura unitária soma 30 + 20 + 10 minutos |
+| Selecionar de um a quatro serviços | Conforme | Interface, validação do rascunho e RPC limitam o conjunto a quatro |
+| Somar duração e preço antes de escolher horário | Conforme | Soma no domínio/UI; cobertura unitária soma 30 + 20 + 10 + 15 minutos |
+| Limite de quatro nos dois apps | Conforme | Cliente e Parceiro, schemas e RPC usam o mesmo limite; teste rejeita cinco serviços |
 | Exibir profissionais habilitados para todos os serviços | Conforme | Vínculos `profissionais_servicos` filtram as opções específicas |
 | Distribuir “Qualquer profissional” pela menor carga diária | Conforme | A RPC ordena os candidatos pela contagem de reservas ativas no banco |
 | Revalidar duração e disponibilidade após login | Conforme | RPC recalcula duração a partir do banco antes de confirmar |
 | Preservar seleção pré-login e salvar snapshot por serviço | Conforme | Rascunho mantém compatibilidade antiga e grava vários itens em `agendamentos_servicos` |
-| Testes automatizados | Aprovado | 325 testes passaram no branch de DEV |
+| Testes automatizados | Aprovado | 326 testes passaram na validação desta alteração |
 | Typecheck e build | Aprovado | `npm run typecheck` e `npm run build` passaram no branch isolado de DEV |
 | Lint global | Aprovado | `npm run lint` passou sem erros; há warnings preexistentes em vários workspaces |
-| Migration em DEV | Aprovado | Migration `20261125212728` aplicada e confirmada no projeto Barzzo Dev; RPC e permissões verificadas. A conferência de reserva no navegador fica após o deploy |
+| Migration em DEV | Aprovado | Migration `20261125212728` e atualização `20261125225305` aplicadas ao projeto Barzzo Dev; a RPC aceita quatro serviços e preserva execução por `anon` e `authenticated` |
 
 **Parecer:** gates automatizados aprovados e migration aplicada em DEV. Falta conferir o fluxo de reserva no domínio de DEV após a publicação.

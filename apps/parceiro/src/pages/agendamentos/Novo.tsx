@@ -249,8 +249,8 @@ export default function PaginaNovoAgendamentoManual() {
       return;
     }
 
-    if (servicosIds.length === 0 || servicosIds.length > 3) {
-      setErro("Selecione de um a três serviços.");
+    if (servicosIds.length === 0 || servicosIds.length > 4) {
+      setErro("Selecione de um a quatro serviços.");
       return;
     }
 
@@ -420,8 +420,8 @@ export default function PaginaNovoAgendamentoManual() {
       return;
     }
 
-    if (servicosIds.length >= 3) {
-      setErro("Você pode selecionar até três serviços por agendamento.");
+    if (servicosIds.length >= 4) {
+      setErro("Você pode selecionar até quatro serviços por agendamento.");
       return;
     }
 
@@ -532,7 +532,7 @@ export default function PaginaNovoAgendamentoManual() {
                 2. Serviços Desejados
               </h3>
               <p className="text-sm opacity-70" aria-live="polite">
-                Selecione de um a três serviços. {servicosIds.length}/3 selecionados.
+                Selecione de um a quatro serviços. {servicosIds.length}/4 selecionados.
               </p>
 
               {servicos.length === 0 ? (

@@ -49,7 +49,7 @@ Arquivo criado: `supabase/migrations/20260925000003_criar_agendamentos_e_agenda.
 - **`/agendamentos/novo`**:
   - Formulário para agendamento manual (balcão/WhatsApp).
   - Suporte a cliente avulso com formatação de telefone.
-  - Integração com a RPC de disponibilidade para exibir somente horários livres para um a três serviços selecionados.
+  - Integração com a RPC de disponibilidade para exibir somente horários livres para um a quatro serviços selecionados.
   - Soma preço e duração dos serviços; confirma o horário revalidando o intervalo completo e persiste um snapshot por serviço.
   - Opção "Qualquer Profissional Disponível" ou seleção nominal de barbeiro.
 - **`/agendamentos/[id]`**:
@@ -79,7 +79,7 @@ Arquivo criado: `supabase/migrations/20260925000003_criar_agendamentos_e_agenda.
 
 ### Evolução — múltiplos serviços no agendamento manual
 
-- O formulário do Parceiro permite escolher até três serviços e mostra o total de preço e duração.
+- O formulário do Parceiro permite escolher até quatro serviços e mostra o total de preço e duração.
 - Horários e profissionais são calculados pela RPC `buscar_horarios_disponiveis_multiplos_servicos`, reaproveitada do fluxo do Cliente.
 - Antes de gravar, o fluxo busca os dados atuais dos serviços e revalida o slot; o intervalo usa a duração total da RPC e os snapshots são gravados individualmente.
-- A validação rejeita mais de três serviços. Os testes, lint, typecheck e build registrados no PR cobrem a versão promovida a DEV.
+- A validação rejeita mais de quatro serviços. Os testes, lint, typecheck e build registrados no PR cobrem a versão promovida a DEV.

@@ -10,7 +10,7 @@ agendamentos e agendamentos_servicos. Guardar inicio_previsto, fim_previsto, ini
 pendente, confirmado, em_atendimento, concluido, cancelado, nao_compareceu. Definir transições válidas.
 
 ## Operações
-Criar agendamentos manualmente pela equipe com até três serviços, usar qualquer profissional, reagendar, cancelar, marcar no-show, iniciar e finalizar.
+Criar agendamentos manualmente pela equipe com até quatro serviços, usar qualquer profissional, reagendar, cancelar, marcar no-show, iniciar e finalizar.
 
 No agendamento manual, somar a duração dos serviços selecionados para consultar e reservar o intervalo completo; guardar um snapshot por serviço e totalizar os preços.
 
@@ -29,7 +29,7 @@ Elegíveis e disponíveis; menor carga do dia; desempate estável.
 ui-ux-pro-max obrigatório; agenda por dia/semana e por profissional, utilizável por toque.
 
 ## Testes críticos
-Concorrência, reagendamento em conflito, bloqueio recente, seleção manual de um a três serviços, duração/preço total, snapshots por serviço, transições inválidas, tempos reais, RLS e regressão.
+Concorrência, reagendamento em conflito, bloqueio recente, seleção manual de um a quatro serviços, duração/preço total, snapshots por serviço, transições inválidas, tempos reais, RLS e regressão.
 
 ## Aceite
 Agenda operacional sem dupla reserva, com previsto/real e autorização correta.
