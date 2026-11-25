@@ -805,7 +805,7 @@ function ConteudoWizardReservaCliente() {
               <Scissors className="h-5 w-5 text-[#B45A2B] shrink-0" /> 1. Escolha os Serviços
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Selecione de um a três serviços. O tempo e o valor serão somados.
+              Selecione de um a quatro serviços. O tempo e o valor serão somados.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-3">
@@ -844,13 +844,13 @@ function ConteudoWizardReservaCliente() {
                       variante={selecionado ? "secundario" : "principal"}
                       tamanho="sm"
                       className="min-h-[44px]"
-                      disabled={!selecionado && servicosSelecionados.length >= 3}
+                      disabled={!selecionado && servicosSelecionados.length >= 4}
                       aria-pressed={selecionado}
                       leftIcon={selecionado ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                       onClick={() => {
                         setServicosSelecionados((atuais) => {
                           if (selecionado) return atuais.filter((servico) => servico.id !== s.id);
-                          if (atuais.length >= 3) return atuais;
+                          if (atuais.length >= 4) return atuais;
                           return [...atuais, s];
                         });
                         setModoProfissional("qualquer");
@@ -889,8 +889,8 @@ function ConteudoWizardReservaCliente() {
                 Continuar
               </Button>
             </div>
-            {servicosSelecionados.length >= 3 && (
-              <p className="text-sm" role="status">O limite de três serviços por agendamento foi atingido.</p>
+            {servicosSelecionados.length >= 4 && (
+              <p className="text-sm" role="status">O limite de quatro serviços por agendamento foi atingido.</p>
             )}
           </CardContent>
         </Card>

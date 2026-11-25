@@ -107,7 +107,7 @@ nao_compareceu  -> (terminal)
 Rotas:
 - **`/agenda`**: Calendário operacional completo com visão diária e semanal, alternador de profissional ou equipe completa, cards de agendamento coloridos por status e botões de ação rápida.
 - **`/agendamentos/novo`**: Formulário de agendamento manual pela barbearia com busca/cadastro de cliente avulso, escolha de serviço, data/slots e seleção do profissional ou opção "Qualquer Profissional".
-- A seleção manual aceita de um a três serviços. A RPC `buscar_horarios_disponiveis_multiplos_servicos` valida habilitação e disponibilidade usando a duração total atual do banco; a gravação preserva um snapshot por serviço.
+- A seleção manual aceita de um a quatro serviços. A RPC `buscar_horarios_disponiveis_multiplos_servicos` valida habilitação e disponibilidade usando a duração total atual do banco; a gravação preserva um snapshot por serviço.
 - **`/agendamentos/[id]`**: Painel detalhado do agendamento com comparativo previsto x real, reagendamento com checagem de conflito e botões de transição rápida de status.
 
 ---

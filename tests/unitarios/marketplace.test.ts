@@ -89,11 +89,12 @@ describe("TASK-05: Marketplace e Jornada do Cliente", () => {
       expect(resultado.success).toBe(false);
     });
 
-    it("deve aceitar até três serviços no mesmo rascunho", () => {
+    it("deve aceitar até quatro serviços e rejeitar cinco no mesmo rascunho", () => {
       const servicos = [
         { servico_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", nome_servico: "Corte", preco: 40, duracao_minutos: 30 },
         { servico_id: "c2c3d4e5-f6a7-8901-bcde-f12345678902", nome_servico: "Barba", preco: 25, duracao_minutos: 20 },
         { servico_id: "d2c3d4e5-f6a7-8901-bcde-f12345678903", nome_servico: "Sobrancelha", preco: 10, duracao_minutos: 10 },
+        { servico_id: "f2c3d4e5-f6a7-8901-bcde-f12345678905", nome_servico: "Pigmentação", preco: 15, duracao_minutos: 15 },
       ];
 
       expect(esquemaRascunhoReserva.safeParse({ ...rascunhoValido, servicos }).success).toBe(true);
@@ -108,7 +109,8 @@ describe("TASK-05: Marketplace e Jornada do Cliente", () => {
         { duracao_minutos: 30 },
         { duracao_minutos: 20 },
         { duracao_minutos: 10 },
-      ])).toBe(60);
+        { duracao_minutos: 15 },
+      ])).toBe(75);
     });
   });
 

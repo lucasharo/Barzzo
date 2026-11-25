@@ -80,7 +80,8 @@ Nesta task foi implementada toda a jornada de descoberta e contratação de serv
 - A duração retornada pela RPC é revalidada no momento da confirmação e usada em `fim_previsto` e `duracao_total_minutos`.
 - O rascunho pré-login preserva o snapshot de cada serviço. Após a autenticação, a confirmação grava uma linha por serviço em `agendamentos_servicos`; rascunhos antigos de serviço único continuam compatíveis.
 - Migration criada: `supabase/migrations/20261125212728_horarios_disponiveis_multiplos_servicos.sql`.
-- Limite de três serviços aplicado na interface, no schema do rascunho e na RPC. A lista de profissionais específicos considera quem está vinculado a todos os serviços.
+- Migration complementar `supabase/migrations/20261125225305_limite_quatro_servicos_reserva.sql` amplia o limite a quatro serviços nos fluxos Cliente e Parceiro, nos schemas de validação e na RPC.
+- A lista de profissionais específicos considera quem está vinculado a todos os serviços.
 - A revalidação pós-login usa a duração atual retornada pela RPC antes de conferir conflitos do cliente.
 - A opção “Qualquer profissional” usa os candidatos da RPC, ordenados pela menor carga de agendamentos do dia no banco.
 - Validação no branch isolado de DEV: `npm test` (325 testes), `npm run lint`, `npm run typecheck` e `npm run build` passaram. O lint reportou warnings preexistentes, sem erros.

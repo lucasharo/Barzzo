@@ -141,7 +141,7 @@ describe("TASK-04: Agenda e Agendamentos", () => {
       expect(res.success).toBe(true);
     });
 
-    it("esquemaCriarAgendamentoManual: aceita até três serviços e rejeita quatro", () => {
+    it("esquemaCriarAgendamentoManual: aceita até quatro serviços e rejeita cinco", () => {
       const servico = {
         servico_id: "00000000-0000-0000-0000-000000000003",
         nome_servico: "Corte Social",
@@ -156,8 +156,8 @@ describe("TASK-04: Agenda e Agendamentos", () => {
         fim_previsto: "2026-10-05T10:00:00.000Z",
       };
 
-      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico] }).success).toBe(true);
-      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico, servico] }).success).toBe(false);
+      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico, servico] }).success).toBe(true);
+      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico, servico, servico] }).success).toBe(false);
     });
 
     it("esquemaCriarAgendamentoManual: rejeita término anterior ao início", () => {

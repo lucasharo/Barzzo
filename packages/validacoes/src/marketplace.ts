@@ -27,7 +27,7 @@ export const esquemaRascunhoReserva = z.object({
     nome_servico: z.string().min(1, "Nome do serviço é obrigatório."),
     preco: z.coerce.number().min(0, "Preço do serviço não pode ser negativo."),
     duracao_minutos: z.coerce.number().int().min(1, "Duração mínima de 1 minuto."),
-  })).min(1, "Selecione ao menos um serviço.").max(3, "Selecione no máximo três serviços.").optional(),
+  })).min(1, "Selecione ao menos um serviço.").max(4, "Selecione no máximo quatro serviços.").optional(),
 });
 
 export type EntradaRascunhoReserva = z.infer<typeof esquemaRascunhoReserva>;
