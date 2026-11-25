@@ -7,6 +7,7 @@ import {
   obterPrecoCorte,
   calcularDestinoAposAuth,
   CHAVE_RASCUNHO_RESERVA,
+  calcularDuracaoTotalServicos,
 } from "../../packages/dominio/src/marketplace";
 import { esquemaRascunhoReserva } from "../../packages/validacoes/src/marketplace";
 import type { RascunhoReserva } from "../../packages/tipos/src/marketplace";
@@ -86,6 +87,28 @@ describe("TASK-05: Marketplace e Jornada do Cliente", () => {
       const rascunhoIdInvalido = { ...rascunhoValido, barbearia_id: "id-invalido-123" };
       const resultado = esquemaRascunhoReserva.safeParse(rascunhoIdInvalido);
       expect(resultado.success).toBe(false);
+    });
+
+    it("deve aceitar até três serviços no mesmo rascunho", () => {
+      const servicos = [
+        { servico_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901", nome_servico: "Corte", preco: 40, duracao_minutos: 30 },
+        { servico_id: "c2c3d4e5-f6a7-8901-bcde-f12345678902", nome_servico: "Barba", preco: 25, duracao_minutos: 20 },
+        { servico_id: "d2c3d4e5-f6a7-8901-bcde-f12345678903", nome_servico: "Sobrancelha", preco: 10, duracao_minutos: 10 },
+      ];
+
+      expect(esquemaRascunhoReserva.safeParse({ ...rascunhoValido, servicos }).success).toBe(true);
+      expect(esquemaRascunhoReserva.safeParse({
+        ...rascunhoValido,
+        servicos: [...servicos, { ...servicos[0], servico_id: "e2c3d4e5-f6a7-8901-bcde-f12345678904" }],
+      }).success).toBe(false);
+    });
+
+    it("deve somar as durações de todos os serviços selecionados", () => {
+      expect(calcularDuracaoTotalServicos([
+        { duracao_minutos: 30 },
+        { duracao_minutos: 20 },
+        { duracao_minutos: 10 },
+      ])).toBe(60);
     });
   });
 

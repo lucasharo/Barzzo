@@ -72,3 +72,16 @@ Nesta task foi implementada toda a jornada de descoberta e contratação de serv
 - **Testes Automatizados**: 39 testes executados com 100% de aprovação (`scripts/testar.mjs`).
 - **Verificação Estática**: `tsc --noEmit` executado sem erros no monorepo e no `apps/cliente`.
 - **Acessibilidade**: touch targets mínimos de 44x44px respeitados em todos os botões e links interativos conforme padrão `ui-ux-pro-max`.
+
+## Evolução — seleção de múltiplos serviços (25/11/2026)
+
+- O Cliente pode selecionar vários serviços no mesmo agendamento e revisar o subtotal e a duração total antes de escolher o horário.
+- A disponibilidade é calculada pela RPC `buscar_horarios_disponiveis_multiplos_servicos`, que soma as durações no banco e só considera profissionais habilitados para todos os serviços.
+- A duração retornada pela RPC é revalidada no momento da confirmação e usada em `fim_previsto` e `duracao_total_minutos`.
+- O rascunho pré-login preserva o snapshot de cada serviço. Após a autenticação, a confirmação grava uma linha por serviço em `agendamentos_servicos`; rascunhos antigos de serviço único continuam compatíveis.
+- Migration criada: `supabase/migrations/20261125212728_horarios_disponiveis_multiplos_servicos.sql`.
+- Limite de três serviços aplicado na interface, no schema do rascunho e na RPC. A lista de profissionais específicos considera quem está vinculado a todos os serviços.
+- A revalidação pós-login usa a duração atual retornada pela RPC antes de conferir conflitos do cliente.
+- A opção “Qualquer profissional” usa os candidatos da RPC, ordenados pela menor carga de agendamentos do dia no banco.
+- Validação no branch isolado de DEV: `npm test` (325 testes), `npm run lint`, `npm run typecheck` e `npm run build` passaram. O lint reportou warnings preexistentes, sem erros.
+- A migration `20261125212728` foi aplicada ao Supabase Barzzo Dev (`gdgeokfwkbusemayqucb`) e confirmada na lista remota de migrations. A RPC foi verificada no banco com execução liberada para `anon` e `authenticated`. A publicação do frontend ocorre neste ciclo pela branch `release/init`; o fluxo completo de reserva em navegador ainda deve ser conferido após o deploy.

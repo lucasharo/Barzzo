@@ -17,6 +17,15 @@ export interface RascunhoReserva {
   codigo_cupom?: string | null;
   valor_desconto?: number | null;
   preco_final?: number | null;
+  /** Snapshot completo dos serviços; opcional para manter compatibilidade com reservas antigas. */
+  servicos?: RascunhoServicoReserva[];
+}
+
+export interface RascunhoServicoReserva {
+  servico_id: string;
+  nome_servico: string;
+  preco: number;
+  duracao_minutos: number;
 }
 
 export interface BarbeariaMarketplace {
