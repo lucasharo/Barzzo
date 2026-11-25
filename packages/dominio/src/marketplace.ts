@@ -1,7 +1,7 @@
 // packages/dominio/src/marketplace.ts
 // Regras de geolocalização e gerenciamento seguro do rascunho de reserva pré-login.
 
-import type { RascunhoReserva } from "@barzzo/tipos";
+import type { RascunhoReserva, RascunhoServicoReserva } from "@barzzo/tipos";
 
 export const CHAVE_RASCUNHO_RESERVA = "@barzzo:rascunho_reserva";
 
@@ -69,6 +69,27 @@ export function limparRascunhoReserva(): void {
   } catch {
     // Falha silenciosa
   }
+}
+
+/** Recupera os serviços do rascunho atual ou converte o formato antigo de serviço único. */
+export function listarServicosRascunhoReserva(
+  rascunho: RascunhoReserva
+): RascunhoServicoReserva[] {
+  if (rascunho.servicos?.length) return rascunho.servicos;
+
+  return [{
+    servico_id: rascunho.servico_id,
+    nome_servico: rascunho.servico_nome,
+    preco: rascunho.preco,
+    duracao_minutos: rascunho.duracao_minutos,
+  }];
+}
+
+/** Soma a duração dos serviços que serão executados no mesmo agendamento. */
+export function calcularDuracaoTotalServicos(
+  servicos: Array<Pick<RascunhoServicoReserva, "duracao_minutos">>
+): number {
+  return servicos.reduce((total, servico) => total + Number(servico.duracao_minutos), 0);
 }
 
 /**

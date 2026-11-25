@@ -22,6 +22,12 @@ export const esquemaRascunhoReserva = z.object({
   codigo_cupom: z.string().max(50).optional().nullable(),
   valor_desconto: z.coerce.number().min(0).optional().nullable(),
   preco_final: z.coerce.number().min(0).optional().nullable(),
+  servicos: z.array(z.object({
+    servico_id: z.string().uuid("ID do serviço inválido."),
+    nome_servico: z.string().min(1, "Nome do serviço é obrigatório."),
+    preco: z.coerce.number().min(0, "Preço do serviço não pode ser negativo."),
+    duracao_minutos: z.coerce.number().int().min(1, "Duração mínima de 1 minuto."),
+  })).min(1, "Selecione ao menos um serviço.").max(3, "Selecione no máximo três serviços.").optional(),
 });
 
 export type EntradaRascunhoReserva = z.infer<typeof esquemaRascunhoReserva>;
