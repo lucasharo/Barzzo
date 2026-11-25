@@ -392,7 +392,8 @@ export default function PaginaEdicaoServico() {
                     id="preco"
                     type="text"
                     inputMode="numeric"
-                    pattern="[0-9]*"
+                    pattern="[0-9.]+,[0-9]{2}"
+                    title="Informe o preço no formato 0,00."
                     placeholder="0,00"
                     value={preco}
                     mascara={mascararPreco}
