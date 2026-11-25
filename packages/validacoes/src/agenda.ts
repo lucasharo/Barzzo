@@ -23,7 +23,9 @@ export const esquemaCriarAgendamentoManual = z.object({
   inicio_previsto: z.string().datetime({ message: "Data/hora de início inválida." }),
   fim_previsto: z.string().datetime({ message: "Data/hora de término inválida." }),
   observacoes: z.string().max(500, "Observações devem ter no máximo 500 caracteres.").optional().nullable(),
-  servicos: z.array(esquemaServicoAgendamento).min(1, "Selecione pelo menos um serviço.")
+  servicos: z.array(esquemaServicoAgendamento)
+    .min(1, "Selecione pelo menos um serviço.")
+    .max(3, "Selecione no máximo três serviços.")
 }).refine((data) => new Date(data.inicio_previsto) < new Date(data.fim_previsto), {
   message: "Horário de início deve ser anterior ao término previsto.",
   path: ["fim_previsto"]

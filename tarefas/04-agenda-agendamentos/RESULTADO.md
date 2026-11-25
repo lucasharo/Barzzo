@@ -49,7 +49,8 @@ Arquivo criado: `supabase/migrations/20260925000003_criar_agendamentos_e_agenda.
 - **`/agendamentos/novo`**:
   - Formulário para agendamento manual (balcão/WhatsApp).
   - Suporte a cliente avulso com formatação de telefone.
-  - Integração com o motor de disponibilidade para exibir somente horários livres.
+  - Integração com a RPC de disponibilidade para exibir somente horários livres para um a três serviços selecionados.
+  - Soma preço e duração dos serviços; confirma o horário revalidando o intervalo completo e persiste um snapshot por serviço.
   - Opção "Qualquer Profissional Disponível" ou seleção nominal de barbeiro.
 - **`/agendamentos/[id]`**:
   - Visão detalhada com dados do cliente e do profissional.
@@ -75,3 +76,10 @@ Arquivo criado: `supabase/migrations/20260925000003_criar_agendamentos_e_agenda.
   - 36 testes automatizados executados e 100% aprovados (zero falhas).
   - Cobertura de transições de status, algoritmo de balanceamento de carga, comparativo de tempo, schemas Zod, extensões GiST e RLS.
 - **Typecheck TypeScript**: `tsc --noEmit` executado em todos os pacotes (`@barzzo/tipos`, `@barzzo/validacoes`, `@barzzo/dominio`) com 0 erros de compilação.
+
+### Evolução — múltiplos serviços no agendamento manual
+
+- O formulário do Parceiro permite escolher até três serviços e mostra o total de preço e duração.
+- Horários e profissionais são calculados pela RPC `buscar_horarios_disponiveis_multiplos_servicos`, reaproveitada do fluxo do Cliente.
+- Antes de gravar, o fluxo busca os dados atuais dos serviços e revalida o slot; o intervalo usa a duração total da RPC e os snapshots são gravados individualmente.
+- A validação rejeita mais de três serviços. Os testes, lint, typecheck e build registrados no PR cobrem a versão promovida a DEV.

@@ -21,30 +21,44 @@ import { dataLocalIso, formatarTelefone, limparTelefone } from "@barzzo/utilitar
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { obterMembroAtual } from "../../lib/unidade-atual";
 import { esquemaCriarAgendamentoManual } from "@barzzo/validacoes";
-import {
-  calcularHorariosDisponiveis,
-  selecionarProfissionalMenorCarga,
-} from "@barzzo/dominio";
 import type {
   Servico,
   Profissional,
-  HorarioBarbearia,
-  JornadaProfissional,
-  BloqueioAgenda,
   SlotDisponivel,
   Barbearia,
-  DiaSemana,
 } from "@barzzo/tipos";
 import {
   ArrowLeft,
   Calendar,
   Clock,
-  User,
-  Scissors,
   CheckCircle,
   Save,
   Sparkles,
 } from "lucide-react";
+
+interface ParametrosDisponibilidadeManual {
+  p_barbearia_id: string;
+  p_servicos_ids: string[];
+  p_data: string;
+  p_profissional_id: string | null;
+}
+
+interface RespostaDisponibilidadeManual {
+  data: SlotDisponivel[] | null;
+  error: { message: string } | null;
+}
+
+function consultarDisponibilidadeManual(
+  supabase: ReturnType<typeof criarClienteSupabaseBrowser>,
+  parametros: ParametrosDisponibilidadeManual
+): Promise<RespostaDisponibilidadeManual> {
+  const rpc = supabase.rpc.bind(supabase) as unknown as (
+    nome: "buscar_horarios_disponiveis_multiplos_servicos",
+    parametros: ParametrosDisponibilidadeManual
+  ) => Promise<RespostaDisponibilidadeManual>;
+
+  return rpc("buscar_horarios_disponiveis_multiplos_servicos", parametros);
+}
 
 export default function PaginaNovoAgendamentoManual() {
   const navigate = useNavigate();
@@ -62,12 +76,9 @@ export default function PaginaNovoAgendamentoManual() {
   // Catálogo e equipe
   const [servicos, setServicos] = React.useState<Servico[]>([]);
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
-  const [horariosBarbearia, setHorariosBarbearia] = React.useState<Record<number, HorarioBarbearia>>({});
-  const [jornadasProfissionais, setJornadasProfissionais] = React.useState<JornadaProfissional[]>([]);
-  const [vinculosServicos, setVinculosServicos] = React.useState<{ profissional_id: string; servico_id: string }[]>([]);
 
   // Seleções
-  const [servicoId, setServicoId] = React.useState<string>("");
+  const [servicosIds, setServicosIds] = React.useState<string[]>([]);
   const [modoProfissional, setModoProfissional] = React.useState<"qualquer" | "especifico">("qualquer");
   const [profissionalId, setProfissionalId] = React.useState<string>("");
   // A agenda em calendário abre este formulário já com data, hora e, se couber, profissional
@@ -126,7 +137,7 @@ export default function PaginaNovoAgendamentoManual() {
       const listaServicos = (sDb || []) as Servico[];
       setServicos(listaServicos);
       if (listaServicos.length > 0) {
-        setServicoId(listaServicos[0].id);
+        setServicosIds([listaServicos[0].id]);
       }
 
       // Profissionais ativos
@@ -145,28 +156,6 @@ export default function PaginaNovoAgendamentoManual() {
         if (preSelecionado) setModoProfissional("especifico");
       }
 
-      // Horários barbearia
-      const { data: hbDb } = await supabase.from("horarios_barbearia").select("*").eq("barbearia_id", bId);
-      const mapaHb: Record<number, HorarioBarbearia> = {};
-      (hbDb || []).forEach((h: HorarioBarbearia) => {
-        mapaHb[h.dia_semana] = h;
-      });
-      setHorariosBarbearia(mapaHb);
-
-      // Jornadas e vínculos só dos profissionais desta barbearia (sem filtro, o
-      // PostgREST trunca em 1000 linhas e os horários somem à medida que o Barzzo cresce).
-      const idsProfs = listaProfs.map((p) => p.id);
-      if (idsProfs.length > 0) {
-        const { data: jpDb } = await supabase.from("jornadas_profissionais").select("*").in("profissional_id", idsProfs);
-        setJornadasProfissionais((jpDb || []) as JornadaProfissional[]);
-
-        const { data: psDb } = await supabase
-          .from("profissionais_servicos")
-          .select("profissional_id, servico_id")
-          .eq("ativo", true)
-          .in("profissional_id", idsProfs);
-        setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
-      }
     } catch {
       setErro("Erro ao inicializar formulário de novo agendamento.");
     } finally {
@@ -174,24 +163,24 @@ export default function PaginaNovoAgendamentoManual() {
     }
   }
 
-  // Recalcular slots disponíveis quando mudar o serviço, a data ou o profissional
-  // Inclui os dados carregados de forma assíncrona (horários, jornadas, vínculos):
-  // sem eles o cálculo rodava com listas vazias e a tela ficava sem horários até o usuário mexer em algum filtro.
+  // A RPC calcula a agenda com a duração e os vínculos atuais de todos os serviços.
   const calculoAtual = React.useRef(0);
   React.useEffect(() => {
-    if (!servicoId || !dataAgendamento || !barbearia) return;
+    if (servicosIds.length === 0 || !dataAgendamento || !barbearia) {
+      calculoAtual.current += 1;
+      setSlotsDisponiveis([]);
+      setSlotSelecionado(null);
+      setHoraIndisponivel(null);
+      setCalculandoSlots(false);
+      return;
+    }
     recalcularSlots();
   }, [
-    servicoId,
+    servicosIds,
     dataAgendamento,
     modoProfissional,
     profissionalId,
     barbearia,
-    servicos,
-    profissionais,
-    horariosBarbearia,
-    jornadasProfissionais,
-    vinculosServicos,
   ]);
 
   function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
@@ -206,83 +195,31 @@ export default function PaginaNovoAgendamentoManual() {
     try {
       setCalculandoSlots(true);
       setSlotSelecionado(null);
+      setHoraIndisponivel(null);
+      setSlotsDisponiveis([]);
       const supabase = criarClienteSupabaseBrowser();
+      const { data: slotsDb, error: erroSlots } = await consultarDisponibilidadeManual(supabase, {
+        p_barbearia_id: barbearia!.id,
+        p_servicos_ids: servicosIds,
+        p_data: dataAgendamento,
+        p_profissional_id: modoProfissional === "especifico" ? profissionalId : null,
+      });
 
-      const servico = servicos.find((s) => s.id === servicoId);
-      if (!servico) return;
-
-      const dataObj = new Date(dataAgendamento + "T12:00:00");
-      const diaSemana = dataObj.getDay() as DiaSemana;
-      const horarioBarb = horariosBarbearia[diaSemana] || null;
-
-      // Buscar bloqueios e agendamentos existentes na data
-      const [ano, mes, dia] = dataAgendamento.split("-").map(Number);
-      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
-      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
-
-      const { data: bloqDb } = await supabase
-        .from("bloqueios_agenda")
-        .select("*")
-        .eq("barbearia_id", barbearia!.id)
-        .lte("inicio", dataFim)
-        .gte("fim", dataInicio);
-
-      const { data: agsDb } = await supabase
-        .from("agendamentos")
-        .select("profissional_id, inicio_previsto, fim_previsto")
-        .eq("barbearia_id", barbearia!.id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .gte("inicio_previsto", dataInicio)
-        .lte("inicio_previsto", dataFim);
-
-      // Uma consulta mais nova já assumiu: descarta esta resposta antiga.
       if (execucao !== calculoAtual.current) return;
+      if (erroSlots) throw erroSlots;
 
-      const agendamentosExistentes = (agsDb || []).map((ag: any) => ({
-        profissional_id: ag.profissional_id,
-        inicio: ag.inicio_previsto,
-        fim: ag.fim_previsto,
-      }));
-
-      // Montar profissionais aptos
-      const profsAptos = profissionais.map((p) => {
-        const habilitado = vinculosServicos.some(
-          (v) => v.profissional_id === p.id && v.servico_id === servicoId
-        );
-        const jornada = jornadasProfissionais.find(
-          (j) => j.profissional_id === p.id && j.dia_semana === diaSemana
-        );
-        return {
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          habilitado,
-          jornada: jornada || null,
-        };
-      });
-
-      const filtroId = modoProfissional === "especifico" ? profissionalId : null;
-
-      const slots = calcularHorariosDisponiveis({
-        servico,
-        horarioBarbearia: horarioBarb,
-        profissionais: profsAptos,
-        bloqueios: (bloqDb || []) as BloqueioAgenda[],
-        agendamentosExistentes,
-        data: dataAgendamento,
-        profissionalIdFiltro: filtroId,
-      });
+      const slots = (slotsDb || []) as SlotDisponivel[];
 
       setSlotsDisponiveis(slots);
       const veioDaAgenda = !!horaPreSelecionada && dataAgendamento === parametros.get("data");
       const preSelecionado = veioDaAgenda ? slots.find((slot) => slot.horario === horaPreSelecionada) : undefined;
-      // Se o horário clicado na agenda não comporta este serviço, avisa em vez de trocar em silêncio.
+      // Se o horário clicado na agenda não comporta todos os serviços, avisa em vez de trocar em silêncio.
       setHoraIndisponivel(veioDaAgenda && !preSelecionado ? horaPreSelecionada : null);
       if (slots.length > 0) {
         setSlotSelecionado((preSelecionado ?? slots[0]).horario);
       }
     } catch {
-      setErro("Falha ao calcular slots disponíveis.");
+      setErro("Não foi possível calcular os horários para os serviços selecionados.");
     } finally {
       if (execucao === calculoAtual.current) setCalculandoSlots(false);
     }
@@ -312,96 +249,99 @@ export default function PaginaNovoAgendamentoManual() {
       return;
     }
 
-    const servico = servicos.find((s) => s.id === servicoId);
-    if (!servico) {
-      setErro("Selecione um serviço válido.");
-      return;
-    }
-
-    // Definir profissional definitivo
-    let profDefinitivoId = profissionalId;
-
-    if (modoProfissional === "qualquer") {
-      // Filtrar quais profissionais estão livres neste slot específico
-      const profsDisponiveisNoSlot = slotsDisponiveis
-        .filter((s) => s.horario === slotSelecionado)
-        .map((s) => s.profissional_id);
-
-      // Calcular carga de cada um deles hoje
-      const supabase = criarClienteSupabaseBrowser();
-      const [ano, mes, dia] = dataAgendamento.split("-").map(Number);
-      const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
-      const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
-
-      const { data: agsDia } = await supabase
-        .from("agendamentos")
-        .select("profissional_id")
-        .eq("barbearia_id", barbearia.id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .gte("inicio_previsto", dataInicio)
-        .lte("inicio_previsto", dataFim);
-
-      const contagemCarga: Record<string, number> = {};
-      (agsDia || []).forEach((ag: { profissional_id: string }) => {
-        contagemCarga[ag.profissional_id] = (contagemCarga[ag.profissional_id] || 0) + 1;
-      });
-
-      const candidatos = profissionais
-        .filter((p) => profsDisponiveisNoSlot.includes(p.id))
-        .map((p) => ({
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          totalAgendamentosNoDia: contagemCarga[p.id] || 0,
-        }));
-
-      const escolhido = selecionarProfissionalMenorCarga(candidatos);
-      if (!escolhido) {
-        setErro("Nenhum profissional disponível para o horário selecionado.");
-        return;
-      }
-      profDefinitivoId = escolhido.id;
-    }
-
-    // Montar datas ISO
-    const [h, m] = slotSelecionado.split(":").map(Number);
-    const fimEmMinutos = h * 60 + m + servico.duracao_minutos;
-    const horasFim = Math.floor(fimEmMinutos / 60);
-    const minFim = fimEmMinutos % 60;
-    const horaFimStr = `${String(horasFim).padStart(2, "0")}:${String(minFim).padStart(2, "0")}`;
-
-    const inicioPrevisto = converterParaIsoUtc(dataAgendamento, slotSelecionado);
-    const fimPrevisto = converterParaIsoUtc(dataAgendamento, horaFimStr);
-
-    const dadosValidacao = {
-      barbearia_id: barbearia.id,
-      profissional_id: profDefinitivoId,
-      cliente_nome: clienteNome,
-      cliente_telefone: clienteTelefone ? (limparTelefone(clienteTelefone) || null) : null,
-      cliente_email: clienteEmail ? clienteEmail : null,
-      cliente_id: null,
-      inicio_previsto: inicioPrevisto,
-      fim_previsto: fimPrevisto,
-      observacoes: observacoes ? observacoes : null,
-      servicos: [
-        {
-          servico_id: servico.id,
-          nome_servico: servico.nome,
-          preco: Number(servico.preco),
-          duracao_minutos: servico.duracao_minutos,
-        },
-      ],
-    };
-
-    const resultadoZod = esquemaCriarAgendamentoManual.safeParse(dadosValidacao);
-    if (!resultadoZod.success) {
-      setErro(resultadoZod.error.errors[0]?.message || "Verifique os dados preenchidos.");
+    if (servicosIds.length === 0 || servicosIds.length > 3) {
+      setErro("Selecione de um a três serviços.");
       return;
     }
 
     try {
       setSalvando(true);
       const supabase = criarClienteSupabaseBrowser();
+      const { data: servicosDb, error: erroServicos } = await supabase
+        .from("servicos")
+        .select("id, nome, preco, duracao_minutos")
+        .eq("barbearia_id", barbearia.id)
+        .eq("ativo", true)
+        .in("id", servicosIds);
+
+      if (erroServicos || !servicosDb || servicosDb.length !== servicosIds.length) {
+        setErro("Um dos serviços foi alterado ou desativado. Atualize a seleção e tente novamente.");
+        return;
+      }
+
+      const snapshotsServicos = servicosIds.map((id) => {
+        const servico = servicosDb.find((item) => item.id === id);
+        return servico
+          ? {
+              servico_id: servico.id,
+              nome_servico: servico.nome,
+              preco: Number(servico.preco),
+              duracao_minutos: Number(servico.duracao_minutos),
+            }
+          : null;
+      });
+
+      if (snapshotsServicos.some((servico) => !servico)) {
+        setErro("Não foi possível carregar os serviços selecionados. Tente novamente.");
+        return;
+      }
+
+      const snapshotsValidos = snapshotsServicos.filter((servico) => servico !== null);
+      const { data: slotsRevalidados, error: erroRevalidacao } = await consultarDisponibilidadeManual(supabase, {
+        p_barbearia_id: barbearia.id,
+        p_servicos_ids: servicosIds,
+        p_data: dataAgendamento,
+        p_profissional_id: modoProfissional === "especifico" ? profissionalId : null,
+      });
+
+      if (erroRevalidacao) {
+        setErro("Não foi possível revalidar a disponibilidade. Atualize os horários e tente novamente.");
+        return;
+      }
+
+      const horarioValidado = ((slotsRevalidados || []) as SlotDisponivel[]).find(
+        (slot) => slot.horario === slotSelecionado
+      );
+      if (!horarioValidado) {
+        setErro("Este horário não comporta mais todos os serviços. Escolha outro horário.");
+        recalcularSlots();
+        return;
+      }
+
+      const profDefinitivoId = horarioValidado.profissional_id;
+      const duracaoTotal = Number(horarioValidado.duracao_minutos);
+      const duracaoSnapshots = snapshotsValidos.reduce((total, servico) => total + servico.duracao_minutos, 0);
+      if (duracaoSnapshots !== duracaoTotal) {
+        setErro("A duração de um serviço mudou. Atualize a seleção antes de confirmar.");
+        recalcularSlots();
+        return;
+      }
+      const precoTotal = snapshotsValidos.reduce((total, servico) => total + servico.preco, 0);
+
+      const [h, m] = slotSelecionado.split(":").map(Number);
+      const fimEmMinutos = h * 60 + m + duracaoTotal;
+      const horasFim = Math.floor(fimEmMinutos / 60);
+      const minFim = fimEmMinutos % 60;
+      const horaFimStr = `${String(horasFim).padStart(2, "0")}:${String(minFim).padStart(2, "0")}`;
+
+      const dadosValidacao = {
+        barbearia_id: barbearia.id,
+        profissional_id: profDefinitivoId,
+        cliente_nome: clienteNome,
+        cliente_telefone: clienteTelefone ? (limparTelefone(clienteTelefone) || null) : null,
+        cliente_email: clienteEmail ? clienteEmail : null,
+        cliente_id: null,
+        inicio_previsto: converterParaIsoUtc(dataAgendamento, slotSelecionado),
+        fim_previsto: converterParaIsoUtc(dataAgendamento, horaFimStr),
+        observacoes: observacoes ? observacoes : null,
+        servicos: snapshotsValidos,
+      };
+
+      const resultadoZod = esquemaCriarAgendamentoManual.safeParse(dadosValidacao);
+      if (!resultadoZod.success) {
+        setErro(resultadoZod.error.errors[0]?.message || "Verifique os dados preenchidos.");
+        return;
+      }
 
       // 1. Inserir agendamento
       const { data: novoAgendamento, error: erroAg } = await supabase
@@ -418,8 +358,8 @@ export default function PaginaNovoAgendamentoManual() {
           status: "confirmado",
           origem: "parceiro",
           observacoes: resultadoZod.data.observacoes,
-          preco_total: servico.preco,
-          duracao_total_minutos: servico.duracao_minutos,
+          preco_total: precoTotal,
+          duracao_total_minutos: duracaoTotal,
         })
         .select("id")
         .single();
@@ -437,14 +377,29 @@ export default function PaginaNovoAgendamentoManual() {
         return;
       }
 
-      // 2. Inserir snapshot do serviço
-      await supabase.from("agendamentos_servicos").insert({
-        agendamento_id: novoAgendamento.id,
-        servico_id: servico.id,
-        nome_servico: servico.nome,
-        preco: servico.preco,
-        duracao_minutos: servico.duracao_minutos,
-      });
+      // 2. Gravar uma linha de snapshot para cada serviço contratado.
+      const { error: erroSnapshots } = await supabase.from("agendamentos_servicos").insert(
+        resultadoZod.data.servicos.map((servico) => ({
+          agendamento_id: novoAgendamento.id,
+          servico_id: servico.servico_id,
+          nome_servico: servico.nome_servico,
+          preco: servico.preco,
+          duracao_minutos: servico.duracao_minutos,
+        }))
+      );
+
+      if (erroSnapshots) {
+        const { error: erroAoDesfazer } = await supabase
+          .from("agendamentos")
+          .delete()
+          .eq("id", novoAgendamento.id);
+        setErro(
+          erroAoDesfazer
+            ? "O agendamento foi criado, mas não foi possível associar todos os serviços. Entre em contato com o suporte."
+            : "Não foi possível salvar os serviços do agendamento. O horário foi liberado. Tente novamente."
+        );
+        return;
+      }
 
       setSucesso("Agendamento criado com sucesso!");
       setTimeout(() => {
@@ -457,6 +412,22 @@ export default function PaginaNovoAgendamentoManual() {
     }
   }
 
+  function alternarServico(servicoId: string) {
+    setErro(null);
+    setHoraIndisponivel(null);
+    if (servicosIds.includes(servicoId)) {
+      setServicosIds(servicosIds.filter((id) => id !== servicoId));
+      return;
+    }
+
+    if (servicosIds.length >= 3) {
+      setErro("Você pode selecionar até três serviços por agendamento.");
+      return;
+    }
+
+    setServicosIds([...servicosIds, servicoId]);
+  }
+
   if (carregando) {
     return (
       <div className="py-20 flex flex-col items-center justify-center gap-4">
@@ -466,7 +437,11 @@ export default function PaginaNovoAgendamentoManual() {
     );
   }
 
-  const servicoAtual = servicos.find((s) => s.id === servicoId);
+  const servicosSelecionados = servicosIds
+    .map((id) => servicos.find((servico) => servico.id === id))
+    .filter((servico): servico is Servico => Boolean(servico));
+  const precoTotal = servicosSelecionados.reduce((total, servico) => total + Number(servico.preco), 0);
+  const duracaoTotal = servicosSelecionados.reduce((total, servico) => total + servico.duracao_minutos, 0);
 
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-6">
@@ -551,11 +526,14 @@ export default function PaginaNovoAgendamentoManual() {
               </div>
             </div>
 
-            {/* 2. Seleção de Serviço */}
+            {/* 2. Seleção de Serviços */}
             <div className="flex flex-col gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#B45A2B]">
-                2. Serviço Desejado
+                2. Serviços Desejados
               </h3>
+              <p className="text-sm opacity-70" aria-live="polite">
+                Selecione de um a três serviços. {servicosIds.length}/3 selecionados.
+              </p>
 
               {servicos.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed text-center text-sm opacity-70">
@@ -564,31 +542,36 @@ export default function PaginaNovoAgendamentoManual() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {servicos.map((s) => (
-                    <div
+                    <Button
                       key={s.id}
-                      onClick={() => setServicoId(s.id)}
-                      className={`p-3 rounded-xl border cursor-pointer select-none transition-all flex flex-col justify-between gap-2 ${
-                        servicoId === s.id
-                          ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
-                          : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 opacity-70"
+                      type="button"
+                      variante="fantasma"
+                      aria-pressed={servicosIds.includes(s.id)}
+                      onClick={() => alternarServico(s.id)}
+                      leftIcon={
+                        <CheckCircle
+                          aria-hidden="true"
+                          className={`h-5 w-5 ${servicosIds.includes(s.id) ? "text-[#B45A2B]" : "opacity-50"}`}
+                        />
+                      }
+                      className={`h-auto min-h-[76px] w-full justify-start border px-4 py-3 text-left ${
+                        servicosIds.includes(s.id)
+                          ? "border-[#B45A2B] bg-[#B45A2B]/10 ring-1 ring-[#B45A2B]"
+                          : "border-neutral-200 dark:border-neutral-800"
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <span className="font-bold text-sm">{s.nome}</span>
-                        {servicoId === s.id && (
-                          <CheckCircle className="h-4 w-4 text-[#B45A2B]" />
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs opacity-80 pt-1 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                        <span className="font-bold text-[#B45A2B]">
-                          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(s.preco))}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold text-sm">{s.nome}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs opacity-80">
+                          <span className="font-bold text-[#B45A2B]">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(s.preco))}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock aria-hidden="true" className="h-3 w-3" /> {s.duracao_minutos} min
+                          </span>
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {s.duracao_minutos} min
-                        </span>
-                      </div>
-                    </div>
+                      </span>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -604,7 +587,7 @@ export default function PaginaNovoAgendamentoManual() {
                 <div className="flex flex-col gap-2">
                   <Label>Barbeiro Atendente</Label>
                   <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 cursor-pointer text-sm">
+                    <label className="flex min-h-[48px] items-center gap-2 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 cursor-pointer text-sm">
                       <input
                         type="radio"
                         name="modoProf"
@@ -618,7 +601,7 @@ export default function PaginaNovoAgendamentoManual() {
                       </span>
                     </label>
 
-                    <label className="flex items-center gap-2 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 cursor-pointer text-sm">
+                    <label className="flex min-h-[48px] items-center gap-2 p-2.5 rounded-lg border border-neutral-200 dark:border-neutral-800 cursor-pointer text-sm">
                       <input
                         type="radio"
                         name="modoProf"
@@ -671,7 +654,7 @@ export default function PaginaNovoAgendamentoManual() {
               {horaIndisponivel && !calculandoSlots && (
                 <Alert variante="alerta">
                   <AlertDescription>
-                    O horário das {horaIndisponivel} escolhido na agenda não comporta este serviço com o profissional
+                    O horário das {horaIndisponivel} escolhido na agenda não comporta todos os serviços com o profissional
                     selecionado. Escolha outro horário abaixo.
                   </AlertDescription>
                 </Alert>
@@ -680,6 +663,10 @@ export default function PaginaNovoAgendamentoManual() {
               {calculandoSlots ? (
                 <div className="py-6 text-center text-xs opacity-70">
                   Calculando horários com garantia de não-sobreposição...
+                </div>
+              ) : servicosIds.length === 0 ? (
+                <div className="p-4 rounded-xl border border-dashed text-center text-sm opacity-70">
+                  Selecione ao menos um serviço para consultar os horários.
                 </div>
               ) : slotsDisponiveis.length === 0 ? (
                 <div className="p-4 rounded-xl border border-dashed text-center text-sm opacity-70">
@@ -691,18 +678,22 @@ export default function PaginaNovoAgendamentoManual() {
                   {Array.from(new Set(slotsDisponiveis.map((s) => s.horario))).map((h) => {
                     const selecionado = slotSelecionado === h;
                     return (
-                      <button
+                      <Button
                         key={h}
                         type="button"
+                        variante="fantasma"
+                        leftIcon={
+                          <Clock aria-hidden="true" className={`h-3.5 w-3.5 ${selecionado ? "text-white" : "text-[#B45A2B]"}`} />
+                        }
                         onClick={() => setSlotSelecionado(h)}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
+                        className={`h-11 min-h-[44px] px-3 text-xs font-bold border transition-all ${
                           selecionado
-                            ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm"
+                            ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm hover:bg-[#C46632]"
                             : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B]/60"
                         }`}
                       >
                         {h}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -724,19 +715,21 @@ export default function PaginaNovoAgendamentoManual() {
 
             {/* Resumo e Ação */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-              {servicoAtual && slotSelecionado ? (
+              {servicosSelecionados.length > 0 && slotSelecionado ? (
                 <div className="text-xs">
                   <span className="opacity-70">Resumo: </span>
-                  <strong>{servicoAtual.nome}</strong> às <strong>{slotSelecionado}</strong> (
-                  {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servicoAtual.preco))})
+                  <strong>{servicosSelecionados.map((servico) => servico.nome).join(" + ")}</strong> às <strong>{slotSelecionado}</strong>
+                  <span className="block mt-1">
+                    {duracaoTotal} min · {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(precoTotal)}
+                  </span>
                 </div>
               ) : (
-                <div className="text-xs opacity-50">Selecione o serviço e o horário acima.</div>
+                <div className="text-xs opacity-50">Selecione os serviços e o horário acima.</div>
               )}
 
               <div className="flex items-center gap-2">
                 <Link to="/agenda">
-                  <Button variante="fantasma" type="button">
+                  <Button variante="fantasma" type="button" leftIcon={<ArrowLeft aria-hidden="true" className="h-4 w-4" />}>
                     Cancelar
                   </Button>
                 </Link>
@@ -744,8 +737,8 @@ export default function PaginaNovoAgendamentoManual() {
                   variante="principal"
                   type="submit"
                   disabled={salvando || !slotSelecionado}
+                  leftIcon={<Save aria-hidden="true" className="h-4 w-4" />}
                 >
-                  <Save className="h-4 w-4 mr-1.5" />
                   {salvando ? "Confirmando..." : "Confirmar Agendamento"}
                 </Button>
               </div>
