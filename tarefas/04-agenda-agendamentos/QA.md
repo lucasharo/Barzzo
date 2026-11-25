@@ -44,3 +44,17 @@
 **APROVADO SEM RESSALVAS.**
 A TASK-04 cumpre todos os critérios técnicos, funcionais, de integridade concorrente e de design system.
 Avançando para o Gate final de PO.
+
+## Evolução — múltiplos serviços no agendamento manual
+
+| Critério | Resultado | Evidência |
+|---|---|---|
+| Selecionar de um a três serviços | Aprovado | Botões de serviço com estado selecionado acessível e limite de três |
+| Calcular preço e duração totais | Aprovado | Resumo exibe soma; valor e duração são reconstruídos dos serviços atuais no banco |
+| Disponibilidade para a duração combinada | Aprovado | RPC valida vínculos, jornada, pausas, bloqueios e agendamentos existentes |
+| Profissional apto para todos os serviços | Aprovado | RPC retorna apenas profissionais vinculados a todos os serviços selecionados |
+| Revalidar antes de confirmar | Aprovado | O submit consulta novamente a RPC e usa a duração atual retornada pelo banco |
+| Snapshot de cada serviço | Aprovado | `agendamentos_servicos` recebe uma linha por serviço, mantendo o total no agendamento |
+| Validação automatizada | Aprovado | 326 testes aprovados; lint sem erros (warnings preexistentes); typecheck e build completo dos quatro apps aprovados |
+
+**Parecer:** revisão funcional e visual concluída; gates automatizados aprovados. A validação do deploy DEV é registrada após a promoção do PR.

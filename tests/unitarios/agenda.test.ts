@@ -141,6 +141,25 @@ describe("TASK-04: Agenda e Agendamentos", () => {
       expect(res.success).toBe(true);
     });
 
+    it("esquemaCriarAgendamentoManual: aceita até três serviços e rejeita quatro", () => {
+      const servico = {
+        servico_id: "00000000-0000-0000-0000-000000000003",
+        nome_servico: "Corte Social",
+        preco: 45.0,
+        duracao_minutos: 30,
+      };
+      const base = {
+        barbearia_id: "00000000-0000-0000-0000-000000000001",
+        profissional_id: "00000000-0000-0000-0000-000000000002",
+        cliente_nome: "João da Silva",
+        inicio_previsto: "2026-10-05T09:00:00.000Z",
+        fim_previsto: "2026-10-05T10:00:00.000Z",
+      };
+
+      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico] }).success).toBe(true);
+      expect(esquemaCriarAgendamentoManual.safeParse({ ...base, servicos: [servico, servico, servico, servico] }).success).toBe(false);
+    });
+
     it("esquemaCriarAgendamentoManual: rejeita término anterior ao início", () => {
       const invalido = {
         barbearia_id: "00000000-0000-0000-0000-000000000001",
