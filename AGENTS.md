@@ -100,6 +100,14 @@ Regras:
 - Parceiro exige autenticação para áreas operacionais;
 - Admin é aplicação separada.
 
+### Paridade obrigatória entre Web e Mobile
+
+- Para cada funcionalidade existente nas versões Web e Mobile do Cliente ou do Parceiro, mantenha o mesmo comportamento, fluxo, regras de negócio, preferências, validações e estados nas duas plataformas.
+- Reutilize a mesma implementação sempre que possível, centralizando componentes, telas e regras compartilhadas em `packages/*`. Não mantenha versões paralelas que possam divergir.
+- Diferenças necessárias de integração com APIs da plataforma são permitidas, como permissões de push do navegador e do sistema operacional, desde que produzam comportamento funcional equivalente para o usuário.
+- Toda alteração em funcionalidade presente nas duas plataformas deve avaliar e atualizar Web e Mobile na mesma tarefa. Antes de concluir, confira a paridade nas duas versões; não presuma que publicar ou empacotar uma delas atualize a outra.
+- Só crie ou mantenha comportamento diferente entre Web e Mobile quando o usuário pedir explicitamente essa diferença.
+
 ## 5. Papéis dos agentes
 
 Os papéis oficiais estão em `AGENTES.md`:
@@ -214,12 +222,19 @@ Erros de SDKs/infraestrutura devem ser traduzidos antes de aparecer ao usuário.
 
 Fluxo oficial:
 
-- `feature/*`: desenvolvimento ativo;
-- `release/*`: estabilização/homologação;
+- `feature/init`: branch canônica e única de desenvolvimento;
+- `release/init`: branch canônica para publicação no ambiente DEV;
 - `main`: somente produção.
 
 Não trate `main` como branch de desenvolvimento.
 Não promova para `main` sem solicitação explícita de produção.
+
+### Branches canônicas obrigatórias
+
+- Todo trabalho deve partir de `feature/init`; não crie, use nem publique branches paralelas de feature ou release.
+- Para atualizar DEV, faça merge de `feature/init` em `release/init` e publique somente essas branches canônicas.
+- Não envie alterações diretamente de uma branch paralela para `release/init`, nem publique uma branch paralela esperando que ela atualize DEV.
+- `main` continua exclusiva para produção, mediante solicitação explícita.
 
 ### Sincronização ao iniciar ou retomar uma sessão
 
