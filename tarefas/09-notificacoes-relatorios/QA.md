@@ -57,3 +57,26 @@
 ## 4. Veredito Final de QA
 
 A implementação da Task 09 foi verificada, validada e é considerada **APROVADA** sem ressalvas. Encaminhado para o gate final de **Aceite do PO**.
+
+## Adendo de verificação — 23/11/2026
+
+- Migrations `20261123151912`, `20261123152828` e `20261123153240` aplicadas no Supabase DEV e confirmadas no histórico.
+- Confirmados os gatilhos de cancelamento/reagendamento e reativação de lembrete.
+- Confirmadas as rotinas `processar_lembretes_agendamentos` e `processar_notificacoes_campanhas_promocionais`, sem execução permitida a `authenticated`.
+- Confirmados os dois jobs Supabase Cron a cada 15 minutos e o índice único por campanha/destinatário.
+- Os dois jobs concluíram a primeira execução no DEV com sucesso. Não havia campanhas ativas na base durante a validação, então nenhuma divulgação foi enviada nessa execução.
+- Não foi disparada notificação artificial durante a validação para evitar mensagens de teste a usuários reais. O envio de novos eventos ocorre automaticamente pelo gatilho FCM já existente.
+
+## Adendo de verificação — 27/11/2026
+
+- Confirmado no código que os switches por tipo usam `disabled` enquanto o switch principal está desligado, durante o carregamento ou durante o salvamento.
+- As telas Cliente e Parceiro usam o mesmo componente de preferências; o estado salvo de cada tipo não é alterado ao desligar o principal.
+- Builds web concluídos nos quatro apps. APKs Cliente e Parceiro `devRelease` compilados e instalados no SM-S926B na versão `0.1.9-dev`, código 10.
+- Validação de interação em navegador/aparelho não foi executada neste adendo.
+
+## Adendo de verificação — 27/11/2026
+
+- A migration `20261127153048_preferencias_notificacao_por_tipo.sql` foi aplicada ao Supabase DEV e consta no histórico remoto.
+- Consultado `information_schema.columns`: as quatro colunas novas existem, são `NOT NULL` e têm `DEFAULT true`.
+- A migration solicita recarga do cache de schema do PostgREST para disponibilizar as colunas à API.
+- A gravação real com sessão de usuário não foi simulada nesta validação; não foi usado token de usuário nem alterada preferência de conta existente.

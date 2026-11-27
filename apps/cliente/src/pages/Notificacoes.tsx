@@ -1,6 +1,6 @@
 
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   Button,
   Card,
@@ -10,9 +10,19 @@ import {
   Alert,
   AlertDescription,
   LoadingSpinner,
+  Switch,
+  PreferenciasNotificacaoPorTipo,
+  type ChavePreferenciaNotificacao,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
-import { formatarDataHora } from "@barzzo/utilitarios";
+import {
+  ativarPushWeb,
+  definirPushNativoAtivo,
+  notificarPushWebAtivado,
+  tokenPushNativoAtual,
+  type RegistroPushWeb,
+} from "@barzzo/nativo";
+import { ehAppNativo, formatarDataHora, plataformaAtual, traduzirErro } from "@barzzo/utilitarios";
 import type { Notificacao, PreferenciasNotificacao, TipoNotificacao } from "@barzzo/tipos";
 import {
   Bell,
@@ -23,27 +33,40 @@ import {
   Tag,
   Info,
   CheckCheck,
+  BellRing,
   Settings2,
   ShieldCheck,
   ArrowLeft,
 } from "lucide-react";
 
 export default function PaginaNotificacoesCliente() {
+  const { pathname } = useLocation();
+  const appNativo = ehAppNativo();
+  const plataformaPush = plataformaAtual();
   const [carregando, setCarregando] = React.useState(true);
   const [usuarioAutenticado, setUsuarioAutenticado] = React.useState(false);
   const [notificacoes, setNotificacoes] = React.useState<Notificacao[]>([]);
   const [preferencias, setPreferencias] = React.useState<PreferenciasNotificacao>({
     usuario_id: "",
-    notificacoes_transacionais: true,
+    notificacoes_confirmacao: true,
+    notificacoes_cancelamento: true,
+    notificacoes_reagendamento: true,
     notificacoes_promocionais: true,
     notificacoes_lembretes: true,
+    notificacoes_sistema: true,
     atualizado_em: "",
   });
   const [salvandoPref, setSalvandoPref] = React.useState(false);
-  const [aba, setAba] = React.useState<"notificacoes" | "preferencias">("notificacoes");
+  const [aba, setAba] = React.useState<"notificacoes" | "preferencias">(
+    pathname === "/configuracoes/notificacoes" ? "preferencias" : "notificacoes"
+  );
   const [marcandoTodas, setMarcandoTodas] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
   const [sucessoPref, setSucessoPref] = React.useState(false);
+  const [pushAtivo, setPushAtivo] = React.useState(false);
+  const [ativandoPush, setAtivandoPush] = React.useState(false);
+  const [erroPush, setErroPush] = React.useState<string | null>(null);
+  const pushRef = React.useRef<RegistroPushWeb | null>(null);
   const carregamentoInicialExecutadoRef = React.useRef(false);
 
   const carregarDados = React.useCallback(async () => {
@@ -62,6 +85,30 @@ export default function PaginaNotificacoesCliente() {
 
       setUsuarioAutenticado(true);
 
+      let permissaoPushAtiva = true;
+      if (appNativo) {
+        try {
+          const { PushNotifications } = await import("@capacitor/push-notifications");
+          const permissao = await PushNotifications.checkPermissions();
+          permissaoPushAtiva = permissao.receive === "granted";
+        } catch {
+          permissaoPushAtiva = false;
+        }
+      } else {
+        permissaoPushAtiva = typeof Notification !== "undefined" && Notification.permission === "granted";
+      }
+
+      let consultaDispositivo = supabase
+        .from("dispositivos")
+        .select("id")
+        .eq("usuario_id", session.user.id)
+        .eq("plataforma", plataformaPush)
+        .eq("ativo", true);
+      const tokenNativo = appNativo ? tokenPushNativoAtual() : null;
+      if (tokenNativo) consultaDispositivo = consultaDispositivo.eq("fcm_token", tokenNativo);
+      const { data: dispositivoPush } = await consultaDispositivo.limit(1).maybeSingle();
+      setPushAtivo(Boolean(dispositivoPush) && permissaoPushAtiva);
+
       // 1. Carregar notificações
       const { data: notifsDb, error: erroNotifs } = await supabase
         .from("notificacoes")
@@ -73,11 +120,12 @@ export default function PaginaNotificacoesCliente() {
       setNotificacoes((notifsDb as Notificacao[]) || []);
 
       // 2. Carregar preferências
-      const { data: prefDb } = await supabase
+      const { data: prefDb, error: erroPref } = await supabase
         .from("preferencias_notificacao")
         .select("*")
         .eq("usuario_id", session.user.id)
         .maybeSingle();
+      if (erroPref) throw erroPref;
 
       if (prefDb) {
         setPreferencias(prefDb as PreferenciasNotificacao);
@@ -89,7 +137,102 @@ export default function PaginaNotificacoesCliente() {
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [appNativo, plataformaPush]);
+
+  async function handleAlternarPush() {
+    try {
+      setAtivandoPush(true);
+      setErroPush(null);
+      const supabase = criarClienteSupabaseBrowser();
+      const sessionResult = await supabase.auth.getSession();
+      const usuarioId = sessionResult.data.session?.user.id;
+      if (!usuarioId) throw new Error("Entre na sua conta para ativar notificações.");
+
+      if (appNativo) {
+        if (pushAtivo) {
+          const tokenNativo = tokenPushNativoAtual();
+          definirPushNativoAtivo(false);
+          const { error: erroUpdate } = await (supabase.from("dispositivos") as any)
+            .update({ ativo: false })
+            .eq("usuario_id", usuarioId)
+            .eq("plataforma", plataformaPush)
+            .match(tokenNativo ? { fcm_token: tokenNativo } : {});
+          if (erroUpdate) {
+            definirPushNativoAtivo(true);
+            throw erroUpdate;
+          }
+          setPushAtivo(false);
+          return;
+        }
+
+        const { PushNotifications } = await import("@capacitor/push-notifications");
+        let permissao = await PushNotifications.checkPermissions();
+        if (permissao.receive === "prompt" || permissao.receive === "prompt-with-rationale") {
+          permissao = await PushNotifications.requestPermissions();
+        }
+        if (permissao.receive !== "granted") {
+          throw new Error("Permita notificações nas configurações do aparelho para ativá-las.");
+        }
+        definirPushNativoAtivo(true);
+        setPushAtivo(true);
+        return;
+      }
+
+      if (pushAtivo && pushRef.current) {
+        await pushRef.current.desativar();
+        pushRef.current = null;
+        setPushAtivo(false);
+        return;
+      }
+      if (pushAtivo) {
+        const { error: erroUpdate } = await (supabase.from("dispositivos") as any)
+          .update({ ativo: false })
+          .eq("usuario_id", usuarioId)
+          .eq("plataforma", "web");
+        if (erroUpdate) throw erroUpdate;
+        setPushAtivo(false);
+        return;
+      }
+
+      const env = (import.meta as any).env ?? {};
+      const registro = await ativarPushWeb({
+        plataforma: "cliente",
+        config: {
+          apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+          vapidKey: env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        },
+        salvarToken: async (token, modelo) => {
+          const { error: erroRpc } = await (supabase.rpc as any)("registrar_dispositivo", {
+            p_fcm_token: token,
+            p_plataforma: "web",
+            p_modelo: modelo,
+          });
+          if (erroRpc) throw erroRpc;
+        },
+        desativarToken: async (token) => {
+          const { error: erroUpdate } = await (supabase.from("dispositivos") as any)
+            .update({ ativo: false })
+            .eq("usuario_id", usuarioId)
+            .eq("fcm_token", token)
+            .eq("plataforma", "web");
+          if (erroUpdate) throw erroUpdate;
+        },
+      });
+      pushRef.current = registro;
+      setPushAtivo(true);
+      notificarPushWebAtivado();
+    } catch (erro) {
+      setErroPush(
+        traduzirErro(erro, "Não foi possível atualizar as notificações. Verifique sua conexão e tente novamente.")
+      );
+    } finally {
+      setAtivandoPush(false);
+    }
+  }
 
   React.useEffect(() => {
     if (carregamentoInicialExecutadoRef.current) return;
@@ -124,10 +267,15 @@ export default function PaginaNotificacoesCliente() {
     }
   }
 
-  async function handleSalvarPreferencia(chave: "notificacoes_promocionais" | "notificacoes_lembretes", valor: boolean) {
+  async function handleSalvarPreferencia(
+    chave: ChavePreferenciaNotificacao,
+    valor: boolean
+  ) {
+    const preferenciasAnteriores = preferencias;
     try {
       setSalvandoPref(true);
       setSucessoPref(false);
+      setErro(null);
       const supabase = criarClienteSupabaseBrowser();
 
       const novaPref = {
@@ -137,18 +285,23 @@ export default function PaginaNotificacoesCliente() {
       };
       setPreferencias(novaPref);
 
-      await (supabase.from("preferencias_notificacao") as any).upsert({
+      const { error: erroSalvar } = await (supabase.from("preferencias_notificacao") as any).upsert({
         usuario_id: novaPref.usuario_id,
-        notificacoes_transacionais: novaPref.notificacoes_transacionais,
+        notificacoes_confirmacao: novaPref.notificacoes_confirmacao,
+        notificacoes_cancelamento: novaPref.notificacoes_cancelamento,
+        notificacoes_reagendamento: novaPref.notificacoes_reagendamento,
         notificacoes_promocionais: novaPref.notificacoes_promocionais,
         notificacoes_lembretes: novaPref.notificacoes_lembretes,
+        notificacoes_sistema: novaPref.notificacoes_sistema,
         atualizado_em: novaPref.atualizado_em,
       });
+      if (erroSalvar) throw erroSalvar;
 
       setSucessoPref(true);
       setTimeout(() => setSucessoPref(false), 3000);
-    } catch {
-      setErro("Erro ao salvar preferências de notificação.");
+    } catch (erroSalvar) {
+      setPreferencias(preferenciasAnteriores);
+      setErro(traduzirErro(erroSalvar, "Erro ao salvar preferências de notificação."));
     } finally {
       setSalvandoPref(false);
     }
@@ -173,6 +326,10 @@ export default function PaginaNotificacoesCliente() {
   };
 
   const totalNaoLidas = notificacoes.filter((n) => !n.lida).length;
+
+  React.useEffect(() => {
+    setAba(pathname === "/configuracoes/notificacoes" ? "preferencias" : "notificacoes");
+  }, [pathname]);
 
   if (carregando) {
     return (
@@ -207,6 +364,11 @@ export default function PaginaNotificacoesCliente() {
       {erro && (
         <Alert variante="erro">
           <AlertDescription>{erro}</AlertDescription>
+        </Alert>
+      )}
+      {erroPush && (
+        <Alert variante="erro">
+          <AlertDescription>{erroPush}</AlertDescription>
         </Alert>
       )}
 
@@ -334,85 +496,47 @@ export default function PaginaNotificacoesCliente() {
               <Settings2 className="h-5 w-5 text-[#B45A2B]" /> Preferências de Mensagens
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-row items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-[#B45A2B]" aria-hidden="true" />
+                <div className="flex flex-col gap-1">
+                  <span id="push-status-label" className="font-bold text-sm">
+                    {appNativo ? "Notificações neste app" : "Notificações neste navegador"}
+                  </span>
+                  <span id="push-status-cliente" role="status" aria-live="polite" className="text-xs opacity-70">
+                    {appNativo
+                      ? pushAtivo
+                        ? "Este app está registrado para receber avisos do Barzzo."
+                        : "As notificações deste app estão desativadas."
+                      : pushAtivo
+                        ? "Este navegador está ativado para receber avisos do Barzzo."
+                        : "Ative para receber avisos mesmo quando o Barzzo não estiver aberto."}
+                  </span>
+                </div>
+              </div>
+              <Switch
+                id={`push-switch-cliente-${appNativo ? "app" : "web"}`}
+                aria-label={appNativo ? "Notificações neste app" : "Notificações neste navegador"}
+                aria-labelledby="push-status-label"
+                aria-describedby="push-status-cliente"
+                marcado={pushAtivo}
+                aoMudar={() => void handleAlternarPush()}
+                disabled={ativandoPush || !usuarioAutenticado}
+                className="min-h-[44px] min-w-[44px] shrink-0"
+              />
+            </div>
+            <PreferenciasNotificacaoPorTipo
+              preferencias={preferencias}
+              prefixoId="cliente"
+              desabilitado={salvandoPref || !preferencias.usuario_id || !pushAtivo}
+              aoMudar={(chave, valor) => void handleSalvarPreferencia(chave, valor)}
+            />
             {sucessoPref && (
-              <span className="text-xs font-semibold text-[#16A34A]">
+              <span role="status" aria-live="polite" className="text-xs font-semibold text-[#16A34A]">
                 Preferências salvas com sucesso!
               </span>
             )}
-
-            {/* Transacionais (Obrigatórias) */}
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-sm">Notificações Transacionais</span>
-                <span className="text-xs opacity-60">
-                  Confirmações de agendamento e avisos de cancelamento/reagendamento da barbearia.
-                </span>
-              </div>
-              <span className="text-xs font-bold text-[#16A34A] px-2.5 py-1 rounded-full bg-[#16A34A]/10 border border-[#16A34A]/20">
-                Sempre Ativo
-              </span>
-            </div>
-
-            {/* Lembretes de Horário */}
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-sm">Lembretes de Horário</span>
-                <span className="text-xs opacity-60">
-                  Aviso antes do início do seu corte para evitar esquecimentos e atrasos.
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={preferencias.notificacoes_lembretes}
-                onClick={() =>
-                  handleSalvarPreferencia(
-                    "notificacoes_lembretes",
-                    !preferencias.notificacoes_lembretes
-                  )
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none min-h-[44px] items-center ${
-                  preferencias.notificacoes_lembretes ? "bg-[#B45A2B]" : "bg-neutral-300 dark:bg-neutral-700"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    preferencias.notificacoes_lembretes ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Notificações Promocionais */}
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-bold text-sm">Promoções e Cupons Exclusivos</span>
-                <span className="text-xs opacity-60">
-                  Ofertas especiais, novidades e cupons de desconto das suas barbearias favoritas.
-                </span>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={preferencias.notificacoes_promocionais}
-                onClick={() =>
-                  handleSalvarPreferencia(
-                    "notificacoes_promocionais",
-                    !preferencias.notificacoes_promocionais
-                  )
-                }
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none min-h-[44px] items-center ${
-                  preferencias.notificacoes_promocionais ? "bg-[#B45A2B]" : "bg-neutral-300 dark:bg-neutral-700"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    preferencias.notificacoes_promocionais ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
           </CardContent>
         </Card>
       )}
