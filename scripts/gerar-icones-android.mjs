@@ -36,6 +36,50 @@ async function splash(destino, logo) {
     .toFile(destino);
 }
 
+async function iconeClienteMonocromatico(base) {
+  const caminhoForeground = path.join(base, "icon-foreground.png");
+  const { data, info } = await sharp(caminhoForeground)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  for (let indice = 0; indice < data.length; indice += info.channels) {
+    if (data[indice + 3] > 0) {
+      data[indice] = 255;
+      data[indice + 1] = 255;
+      data[indice + 2] = 255;
+    }
+  }
+
+  const foregroundBranco = await sharp(data, {
+    raw: { width: info.width, height: info.height, channels: info.channels },
+  })
+    .png()
+    .toBuffer();
+  await sharp(foregroundBranco).toFile(caminhoForeground);
+
+  const lado = 1024;
+  const escala = 1180;
+  const margem = Math.floor((escala - lado) / 2);
+  const monograma = await sharp(foregroundBranco)
+    .resize(escala, escala)
+    .extract({ left: margem, top: margem, width: lado, height: lado })
+    .png()
+    .toBuffer();
+
+  await sharp({
+    create: {
+      width: lado,
+      height: lado,
+      channels: 4,
+      background: { r: 10, g: 10, b: 11, alpha: 1 },
+    },
+  })
+    .composite([{ input: monograma }])
+    .png()
+    .toFile(path.join(base, "icon-only.png"));
+}
+
 for (const app of ["cliente", "parceiro"]) {
   const base = path.resolve("apps", app, "assets");
   const logoClaro = path.join(base, "logo-claro.webp");
@@ -45,11 +89,14 @@ for (const app of ["cliente", "parceiro"]) {
   }
   await splash(path.join(base, "splash.png"), logoClaro);
   await splash(path.join(base, "splash-dark.png"), logoEscuro);
+  if (app === "cliente") {
+    await iconeClienteMonocromatico(base);
+  }
   console.log("assets base:", app);
   execSync("npx capacitor-assets generate --android --assetPath assets", { cwd: path.resolve("apps", app), stdio: "inherit" });
 
   const recursos = path.resolve("apps", app, "android", "app", "src", "main", "res");
-  // Os dois apps usam o monograma branco e bronze sobre o fundo escuro da marca.
+  // O ícone do Cliente é branco monocromático; o fundo escuro também vale para o Parceiro.
   const corFundo = "#0A0A0B";
   writeFileSync(
     path.join(recursos, "values", "ic_launcher_background.xml"),
