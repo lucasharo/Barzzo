@@ -110,8 +110,9 @@ Regras:
 
 ### Identidade do ícone Android
 
-- O ícone de lançamento do app Cliente deve usar o monograma Barzzo totalmente branco, sem detalhes em bronze, sobre fundo escuro.
+- O ícone de lançamento do app Cliente deve usar a imagem oficial `barzzo-assets/fundos/logo-curto-FFFFFF.png`: monograma preto com detalhes em bronze sobre fundo branco.
 - Mantenha essa regra em `apps/cliente/assets/icon-foreground.png`, `apps/cliente/assets/icon-only.png` e em todos os recursos Android gerados por `scripts/gerar-icones-android.mjs`.
+- O Parceiro mantém o monograma branco e bronze sobre fundo escuro.
 - Antes de concluir uma alteração no ícone, confira o PNG do APK compilado; não considere apenas o arquivo de origem nem reutilize a variante colorida do Parceiro.
 
 ## 5. Papéis dos agentes
