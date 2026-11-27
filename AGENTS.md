@@ -110,10 +110,12 @@ Regras:
 
 ### Identidade do ícone Android
 
-- O ícone de lançamento do app Cliente deve usar a imagem oficial `barzzo-assets/fundos/logo-curto-FFFFFF.png`: monograma preto com detalhes em bronze sobre fundo branco.
-- Mantenha essa regra em `apps/cliente/assets/icon-foreground.png`, `apps/cliente/assets/icon-only.png` e em todos os recursos Android gerados por `scripts/gerar-icones-android.mjs`.
+- O ícone de lançamento do app Cliente deve usar exatamente `D:/Barbearia/barzzo-assets-web-mobile-v2/barzzo-assets/fundos/logo-curto-FFFFFF.png`: monograma preto com detalhes em bronze sobre fundo branco.
+- Preserve a composição oficial nos assets e em todos os recursos Android gerados por `scripts/gerar-icones-android.mjs`: `icon-only.png` mantém a imagem quadrada completa; `icon-foreground.png` usa a marca colorida com transparência; o fundo adaptativo e `ic_launcher_background` permanecem brancos.
+- Não transforme o ícone do Cliente em monocromático, não troque seu fundo branco por escuro e não use a variante do Parceiro.
 - O Parceiro mantém o monograma branco e bronze sobre fundo escuro.
-- Antes de concluir uma alteração no ícone, confira o PNG do APK compilado; não considere apenas o arquivo de origem nem reutilize a variante colorida do Parceiro.
+- Uma alteração apenas no ícone não deve modificar nem regenerar o splash.
+- Antes de concluir uma alteração no ícone, confira a imagem e o fundo adaptativo dentro do APK compilado; não considere apenas os arquivos de origem. Para instalar uma atualização no aparelho, incremente a versão e preserve o applicationId e a assinatura já instalados.
 
 ## 5. Papéis dos agentes
 
