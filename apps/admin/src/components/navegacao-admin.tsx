@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -75,10 +76,22 @@ export function NavegacaoAdmin() {
     return (
       <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/entrar" className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
-              BARZZO
-            </span>
+          <Link href="/entrar" className="flex items-center gap-2" aria-label="Barzzo Admin">
+            <Image
+              src="/marca/barzzo-logo-claro.webp"
+              alt="Barzzo"
+              width="116"
+              height="35"
+              className="h-8 w-auto object-contain dark:hidden"
+            />
+            <Image
+              src="/marca/barzzo-logo-escuro.webp"
+              alt=""
+              aria-hidden="true"
+              width="116"
+              height="35"
+              className="hidden h-8 w-auto object-contain dark:block"
+            />
             <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B] text-white font-bold px-2 py-0.5 rounded shadow-sm">
               Admin
             </span>
@@ -95,10 +108,22 @@ export function NavegacaoAdmin() {
       <header className="sticky top-0 z-40 w-full border-b border-neutral-200/80 dark:border-neutral-800/80 bg-white/90 dark:bg-[#0A0A0B]/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/painel" className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
-                BARZZO
-              </span>
+            <Link href="/painel" className="flex items-center gap-2" aria-label="Barzzo Admin">
+              <Image
+                src="/marca/barzzo-logo-claro.webp"
+                alt="Barzzo"
+                width="116"
+                height="35"
+                className="h-8 w-auto object-contain dark:hidden"
+              />
+              <Image
+                src="/marca/barzzo-logo-escuro.webp"
+                alt=""
+                aria-hidden="true"
+                width="116"
+                height="35"
+                className="hidden h-8 w-auto object-contain dark:block"
+              />
               <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B] text-white font-bold px-2 py-0.5 rounded shadow-sm">
                 Admin
               </span>
