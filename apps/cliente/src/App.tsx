@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { RuntimeNativo } from "@barzzo/nativo";
+import { OuvintePushWeb, RuntimeNativo } from "@barzzo/nativo";
 import { CapturaCupomIndicado } from "./components/captura-cupom-indicado";
 import { NavegacaoCliente } from "./components/navegacao-cliente";
 import PaginaInicialCliente from "./pages/Inicio";
@@ -18,8 +18,19 @@ import PaginaWizardReservaCliente from "./pages/Reservar";
 import PaginaConfirmacaoReservaPosLogin from "./pages/ConfirmarReserva";
 
 export default function App() {
+  const env = (import.meta as any).env ?? {};
+
   return (
     <>
+      <OuvintePushWeb
+        config={{
+          apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        }}
+      />
       <RuntimeNativo esquemaHost="cliente" rotasRaiz={["/"]} />
       <CapturaCupomIndicado />
       <NavegacaoCliente />

@@ -3,7 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { ehAppNativo } from "@barzzo/utilitarios";
 import { iniciarRuntimeNativo } from "./runtime";
-import { registrarPush } from "./push";
+import {
+  eventoPushNativoAlterado,
+  pushNativoAtivo,
+  registrarPush,
+  salvarTokenPushNativo,
+} from "./push";
 
 export interface RuntimeNativoProps {
   /** Host do link profundo: barzzo://<host>/caminho. */
@@ -44,16 +49,19 @@ export function RuntimeNativo({ esquemaHost, rotasRaiz }: RuntimeNativoProps) {
     if (!ehAppNativo()) return;
     const supabase = criarClienteSupabaseBrowser();
     let usuarioRegistrado: string | null = null;
+    let usuarioAtual: string | null = null;
     let removerPush: (() => void) | undefined;
     let cancelado = false;
 
     const iniciarPush = (usuarioId: string) => {
+      if (!pushNativoAtivo()) return;
       if (usuarioRegistrado === usuarioId) return;
       removerPush?.();
       usuarioRegistrado = usuarioId;
       registrarPush({
         salvarToken: async (token, plataforma) => {
-          await supabase.from("dispositivos").upsert(
+          salvarTokenPushNativo(token);
+          const { error } = await supabase.from("dispositivos").upsert(
             {
               usuario_id: usuarioId,
               fcm_token: token,
@@ -63,6 +71,7 @@ export function RuntimeNativo({ esquemaHost, rotasRaiz }: RuntimeNativoProps) {
             } as never,
             { onConflict: "usuario_id,fcm_token" }
           );
+          if (error) throw error;
         },
         aoAbrirNotificacao: (link) => {
           if (link && link.startsWith("/")) navegarRef.current(link);
@@ -70,15 +79,38 @@ export function RuntimeNativo({ esquemaHost, rotasRaiz }: RuntimeNativoProps) {
       }).then((funcao) => {
         if (cancelado) funcao();
         else removerPush = funcao;
+      }).catch((erro: unknown) => {
+        usuarioRegistrado = null;
+        const codigo = erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "sem código";
+        console.error("Falha ao configurar as notificações push", codigo);
       });
     };
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) iniciarPush(data.session.user.id);
+      if (data.session) {
+        usuarioAtual = data.session.user.id;
+        iniciarPush(data.session.user.id);
+      }
     });
+    const aoAlterarPush = (evento: Event) => {
+      const ativo = (evento as CustomEvent<{ ativo: boolean }>).detail?.ativo;
+      if (ativo && usuarioAtual) {
+        usuarioRegistrado = null;
+        iniciarPush(usuarioAtual);
+      } else if (!ativo) {
+        removerPush?.();
+        removerPush = undefined;
+        usuarioRegistrado = null;
+      }
+    };
+    window.addEventListener(eventoPushNativoAlterado, aoAlterarPush);
     const { data: assinatura } = supabase.auth.onAuthStateChange((_evento, sessao) => {
-      if (sessao) iniciarPush(sessao.user.id);
+      if (sessao) {
+        usuarioAtual = sessao.user.id;
+        iniciarPush(sessao.user.id);
+      }
       else {
+        usuarioAtual = null;
         removerPush?.();
         removerPush = undefined;
         usuarioRegistrado = null;
@@ -87,6 +119,7 @@ export function RuntimeNativo({ esquemaHost, rotasRaiz }: RuntimeNativoProps) {
 
     return () => {
       cancelado = true;
+      window.removeEventListener(eventoPushNativoAlterado, aoAlterarPush);
       assinatura.subscription.unsubscribe();
       removerPush?.();
     };
