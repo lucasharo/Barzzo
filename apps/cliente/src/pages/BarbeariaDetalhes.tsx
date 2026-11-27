@@ -47,6 +47,25 @@ import {
   ExternalLink,
 } from "lucide-react";
 
+function criarUrlRotaGoogleMaps(barbearia: Barbearia): string {
+  const destino = [
+    barbearia.endereco,
+    barbearia.bairro,
+    barbearia.cidade,
+    barbearia.estado,
+    barbearia.cep,
+    "Brasil",
+  ].filter(Boolean).join(", ");
+
+  const parametros = new URLSearchParams({
+    api: "1",
+    destination: destino,
+    travelmode: "driving",
+  });
+
+  return `https://www.google.com/maps/dir/?${parametros.toString()}`;
+}
+
 function ConteudoPerfilPublicoBarbearia() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -757,9 +776,7 @@ function ConteudoPerfilPublicoBarbearia() {
               )}
 
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  [barbearia.nome, barbearia.endereco, barbearia.bairro, barbearia.cidade].filter(Boolean).join(", ")
-                )}`}
+                href={criarUrlRotaGoogleMaps(barbearia)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2"

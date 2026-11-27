@@ -114,7 +114,7 @@ export default function PaginaInicial() {
             sua agenda e cresça o seu negócio de forma simples e digital.
           </p>
           <a
-            href="https://parceiro.barzzo.com"
+            href="https://parceiro.barzzo.io"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-8 py-4 rounded-xl border-2 border-[#B45A2B] text-[#B45A2B] hover:bg-[#B45A2B] hover:text-white text-lg font-bold transition-all"

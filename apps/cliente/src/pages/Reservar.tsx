@@ -17,13 +17,13 @@ import {
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
-  calcularHorariosDisponiveis,
-  selecionarProfissionalMenorCarga,
   salvarRascunhoReserva,
   obterRascunhoReserva,
   limparRascunhoReserva,
   calcularDescontoCupom,
   contarUsosCupomClienteNaRegra,
+  calcularDuracaoTotalServicos,
+  listarServicosRascunhoReserva,
 } from "@barzzo/dominio";
 import { formatarData, traduzirErro } from "@barzzo/utilitarios";
 import { lerCupomIndicado } from "../lib/cupom-indicado";
@@ -31,11 +31,7 @@ import type {
   Barbearia,
   Servico,
   Profissional,
-  HorarioBarbearia,
-  JornadaProfissional,
-  BloqueioAgenda,
   SlotDisponivel,
-  DiaSemana,
   RascunhoReserva,
   Cupom,
 } from "@barzzo/tipos";
@@ -48,6 +44,8 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle,
+  Plus,
+  X,
   Tag,
   ShieldCheck,
   ChevronRight,
@@ -72,15 +70,36 @@ function ConteudoWizardReservaCliente() {
   const [barbearia, setBarbearia] = React.useState<Barbearia | null>(null);
   const [servicos, setServicos] = React.useState<Servico[]>([]);
   const [profissionais, setProfissionais] = React.useState<Profissional[]>([]);
-  const [horariosBarbearia, setHorariosBarbearia] = React.useState<Record<number, HorarioBarbearia>>({});
-  const [jornadasProfissionais, setJornadasProfissionais] = React.useState<JornadaProfissional[]>([]);
   const [vinculosServicos, setVinculosServicos] = React.useState<{ profissional_id: string; servico_id: string }[]>([]);
 
   // Wizard Steps: 1 = Serviço, 2 = Profissional, 3 = Data & Horário, 4 = Resumo
   const [passoAtual, setPassoAtual] = React.useState<number>(1);
 
   // Seleções do Cliente
-  const [servicoSelecionado, setServicoSelecionado] = React.useState<Servico | null>(null);
+  const [servicosSelecionados, setServicosSelecionados] = React.useState<Servico[]>([]);
+  const precoTotalServicos = React.useMemo(
+    () => servicosSelecionados.reduce((total, servico) => total + Number(servico.preco), 0),
+    [servicosSelecionados]
+  );
+  const duracaoTotalMinutos = React.useMemo(
+    () => calcularDuracaoTotalServicos(servicosSelecionados),
+    [servicosSelecionados]
+  );
+  const servicosSelecionadosIds = React.useMemo(
+    () => servicosSelecionados.map((servico) => servico.id),
+    [servicosSelecionados]
+  );
+  const profissionaisAptos = React.useMemo(
+    () => profissionais.filter((profissional) =>
+      servicosSelecionadosIds.every((servicoId) =>
+        vinculosServicos.some((vinculo) =>
+          vinculo.profissional_id === profissional.id && vinculo.servico_id === servicoId
+        )
+      )
+    ),
+    [profissionais, servicosSelecionadosIds, vinculosServicos]
+  );
+  const chaveServicosSelecionados = servicosSelecionadosIds.join(",");
   const [modoProfissional, setModoProfissional] = React.useState<"qualquer" | "especifico">("qualquer");
   const [profissionalSelecionado, setProfissionalSelecionado] = React.useState<Profissional | null>(null);
   const [dataSelecionada, setDataSelecionada] = React.useState<string>(() => {
@@ -117,7 +136,7 @@ function ConteudoWizardReservaCliente() {
       cupomAutoAplicacaoPendente &&
       codigoCupom.trim() &&
       barbearia &&
-      servicoSelecionado &&
+      servicosSelecionados.length > 0 &&
       !cupomAplicado &&
       !validandoCupom &&
       !cupomAutoAplicacaoExecutadaRef.current
@@ -126,7 +145,7 @@ function ConteudoWizardReservaCliente() {
       setCupomAutoAplicacaoPendente(false);
       void aplicarValidarCupom();
     }
-  }, [cupomAutoAplicacaoPendente, codigoCupom, carregando, barbearia, servicoSelecionado, usuarioId, cupomAplicado, validandoCupom]);
+  }, [cupomAutoAplicacaoPendente, codigoCupom, carregando, barbearia, servicosSelecionados, usuarioId, cupomAplicado, validandoCupom]);
 
   async function carregarDadosIniciais() {
     try {
@@ -197,32 +216,25 @@ function ConteudoWizardReservaCliente() {
       const listaProfissionais = (pDb || []) as Profissional[];
       setProfissionais(listaProfissionais);
 
-      // Horários
-      const { data: hbDb } = await supabase
-        .from("horarios_barbearia")
-        .select("*")
-        .eq("barbearia_id", barb.id);
-
-      const mapaHb: Record<number, HorarioBarbearia> = {};
-      (hbDb || []).forEach((h: HorarioBarbearia) => {
-        mapaHb[h.dia_semana] = h;
-      });
-      setHorariosBarbearia(mapaHb);
-
-      // Jornadas
-      const { data: jpDb } = await supabase.from("jornadas_profissionais").select("*");
-      setJornadasProfissionais((jpDb || []) as JornadaProfissional[]);
-
-      // Vínculos
-      const { data: psDb } = await supabase.from("profissionais_servicos").select("profissional_id, servico_id").eq("ativo", true);
-      setVinculosServicos((psDb || []) as { profissional_id: string; servico_id: string }[]);
+      // Só permite escolher profissional habilitado para todos os serviços selecionados.
+      if (listaServicos.length > 0) {
+        const { data: vinculosDb } = await supabase
+          .from("profissionais_servicos")
+          .select("profissional_id, servico_id")
+          .eq("ativo", true)
+          .in("servico_id", listaServicos.map((servico) => servico.id));
+        setVinculosServicos((vinculosDb || []) as { profissional_id: string; servico_id: string }[]);
+      }
 
       // Restaurar rascunho de reserva salvo se pertencer a esta barbearia
       const draft = typeof window !== "undefined" ? obterRascunhoReserva() : null;
       if (draft && (draft.barbearia_slug === slug || draft.barbearia_id === barb.id)) {
-        const servicoSalvo = listaServicos.find((s) => s.id === draft.servico_id);
-        if (servicoSalvo) {
-          setServicoSelecionado(servicoSalvo);
+        const servicosSalvos = listarServicosRascunhoReserva(draft);
+        const servicosRestaurados = servicosSalvos
+          .map((servicoSalvo) => listaServicos.find((servico) => servico.id === servicoSalvo.servico_id))
+          .filter((servico): servico is Servico => Boolean(servico));
+        if (servicosRestaurados.length === servicosSalvos.length && servicosRestaurados.length > 0) {
+          setServicosSelecionados(servicosRestaurados);
 
           if (draft.profissional_id) {
             const profSalvo = listaProfissionais.find((p) => p.id === draft.profissional_id);
@@ -264,8 +276,7 @@ function ConteudoWizardReservaCliente() {
       } else if (servicoIdUrl) {
         const preSel = listaServicos.find((s) => s.id === servicoIdUrl);
         if (preSel) {
-          setServicoSelecionado(preSel);
-          setPassoAtual(2); // Avança direto para profissional
+          setServicosSelecionados([preSel]);
         }
       }
     } catch {
@@ -277,10 +288,10 @@ function ConteudoWizardReservaCliente() {
 
   // Recalcular slots quando no Passo 3
   React.useEffect(() => {
-    if (passoAtual === 3 && servicoSelecionado && barbearia) {
+    if (passoAtual === 3 && chaveServicosSelecionados && barbearia) {
       recalcularSlots();
     }
-  }, [passoAtual, servicoSelecionado, modoProfissional, profissionalSelecionado, dataSelecionada, barbearia]);
+  }, [passoAtual, chaveServicosSelecionados, modoProfissional, profissionalSelecionado, dataSelecionada, barbearia]);
 
   function converterParaIsoUtc(dataStr: string, horarioStr: string): string {
     const [ano, mes, dia] = dataStr.split("-").map(Number);
@@ -295,34 +306,19 @@ function ConteudoWizardReservaCliente() {
       setSlotSelecionado(null);
       const supabase = criarClienteSupabaseBrowser();
 
-      const dataObj = new Date(dataSelecionada + "T12:00:00");
-      const diaSemana = dataObj.getDay() as DiaSemana;
-      const horarioBarb = horariosBarbearia[diaSemana] || null;
-
       const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
       const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
       const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
 
-      const { data: bloqDb } = await supabase
-        .from("bloqueios_agenda")
-        .select("*")
-        .eq("barbearia_id", barbearia!.id)
-        .lte("inicio", dataFim)
-        .gte("fim", dataInicio);
+      const filtroId = modoProfissional === "especifico" ? profissionalSelecionado?.id ?? null : null;
+      const { data: slotsDb, error: erroSlots } = await (supabase.rpc as any)("buscar_horarios_disponiveis_multiplos_servicos", {
+        p_barbearia_id: barbearia!.id,
+        p_servicos_ids: servicosSelecionadosIds,
+        p_data: dataSelecionada,
+        p_profissional_id: filtroId,
+      });
 
-      const { data: agsDb } = await supabase
-        .from("agendamentos")
-        .select("profissional_id, inicio_previsto, fim_previsto")
-        .eq("barbearia_id", barbearia!.id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .gte("inicio_previsto", dataInicio)
-        .lte("inicio_previsto", dataFim);
-
-      const agendamentosExistentes = (agsDb || []).map((ag: any) => ({
-        profissional_id: ag.profissional_id,
-        inicio: ag.inicio_previsto,
-        fim: ag.fim_previsto,
-      }));
+      if (erroSlots) throw erroSlots;
 
       // Se o cliente estiver logado, buscar também agendamentos dele no dia para evitar conflitos
       const {
@@ -335,8 +331,8 @@ function ConteudoWizardReservaCliente() {
           .select("inicio_previsto, fim_previsto")
           .eq("cliente_id", session.user.id)
           .not("status", "in", '("cancelado","nao_compareceu")')
-          .gte("inicio_previsto", dataInicio)
-          .lte("inicio_previsto", dataFim);
+          .lt("inicio_previsto", dataFim)
+          .gt("fim_previsto", dataInicio);
 
         agendamentosCliente = (agsCliDb || []).map((ag: any) => ({
           inicio: ag.inicio_previsto,
@@ -344,33 +340,7 @@ function ConteudoWizardReservaCliente() {
         }));
       }
 
-      const profsAptos = profissionais.map((p) => {
-        const habilitado = vinculosServicos.some(
-          (v) => v.profissional_id === p.id && v.servico_id === servicoSelecionado!.id
-        );
-        const jornada = jornadasProfissionais.find(
-          (j) => j.profissional_id === p.id && j.dia_semana === diaSemana
-        );
-        return {
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          habilitado,
-          jornada: jornada || null,
-        };
-      });
-
-      const filtroId = modoProfissional === "especifico" ? profissionalSelecionado?.id : null;
-
-      const slots = calcularHorariosDisponiveis({
-        servico: servicoSelecionado!,
-        horarioBarbearia: horarioBarb,
-        profissionais: profsAptos,
-        bloqueios: (bloqDb || []) as BloqueioAgenda[],
-        agendamentosExistentes,
-        data: dataSelecionada,
-        profissionalIdFiltro: filtroId,
-      });
+      const slots = (slotsDb || []) as SlotDisponivel[];
 
       // Filtrar slots caso o cliente logado já tenha compromisso no mesmo horário
       const slotsValidos = slots.filter((slot) => {
@@ -402,7 +372,7 @@ function ConteudoWizardReservaCliente() {
 
 
   async function aplicarValidarCupom() {
-    if (!barbearia || !servicoSelecionado) return;
+    if (!barbearia || servicosSelecionados.length === 0) return;
     const codigoLimpo = codigoCupom.trim().toUpperCase();
     if (!codigoLimpo) {
       setCupomAplicado(null);
@@ -479,9 +449,12 @@ function ConteudoWizardReservaCliente() {
       // 3. Pré-selecionar a regra aplicável e validar os usos anteriores deste cupom.
       const parametrosCalculo = {
         cupom: cupDb as Cupom,
-        valorTotal: Number(servicoSelecionado.preco),
-        servicosIds: [servicoSelecionado.id],
-        servicos: [{ id: servicoSelecionado.id, preco: Number(servicoSelecionado.preco) }],
+        valorTotal: precoTotalServicos,
+        servicosIds: servicosSelecionadosIds,
+        servicos: servicosSelecionados.map((servico) => ({
+          id: servico.id,
+          preco: Number(servico.preco),
+        })),
         totalAgendamentosConcluidosCliente: totalConcluidos,
         historicoPorEscopo: { barbearia: totalConcluidos, global: totalConcluidosGlobal },
       };
@@ -534,6 +507,11 @@ function ConteudoWizardReservaCliente() {
   }
 
   async function handleProsseguirResumo() {
+    if (servicosSelecionados.length === 0) {
+      setErro("Selecione ao menos um serviço para continuar.");
+      setPassoAtual(1);
+      return;
+    }
     if (!slotSelecionado) {
       setErro("Selecione um horário disponível para prosseguir.");
       return;
@@ -541,20 +519,27 @@ function ConteudoWizardReservaCliente() {
     setErro(null);
     setPassoAtual(4);
 
-    if (barbearia && servicoSelecionado) {
-      const precoOriginal = Number(servicoSelecionado.preco);
+    if (barbearia && servicosSelecionados.length > 0) {
+      const precoOriginal = precoTotalServicos;
       const precoFinal = Math.max(0, precoOriginal - descontoCalculado);
+      const servicoPrincipal = servicosSelecionados[0];
 
       const rascunho: RascunhoReserva = {
         barbearia_id: barbearia.id,
         barbearia_nome: barbearia.nome,
         barbearia_slug: barbearia.slug,
-        servico_id: servicoSelecionado.id,
-        servico_nome: servicoSelecionado.nome,
+        servico_id: servicoPrincipal.id,
+        servico_nome: servicoPrincipal.nome,
         preco: precoOriginal,
         valor_desconto: descontoCalculado > 0 ? descontoCalculado : null,
         preco_final: precoFinal,
-        duracao_minutos: servicoSelecionado.duracao_minutos,
+        duracao_minutos: duracaoTotalMinutos,
+        servicos: servicosSelecionados.map((servico) => ({
+          servico_id: servico.id,
+          nome_servico: servico.nome,
+          preco: Number(servico.preco),
+          duracao_minutos: Number(servico.duracao_minutos),
+        })),
         profissional_id: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.id : null,
         profissional_nome: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.nome : null,
         data: dataSelecionada,
@@ -571,24 +556,31 @@ function ConteudoWizardReservaCliente() {
   }
 
   async function handleFinalizarReserva() {
-    if (!barbearia || !servicoSelecionado || !slotSelecionado) {
+    if (!barbearia || servicosSelecionados.length === 0 || !slotSelecionado) {
       setErro("Dados da reserva incompletos.");
       return;
     }
 
-    const precoOriginal = Number(servicoSelecionado.preco);
+    const precoOriginal = precoTotalServicos;
     const precoFinal = Math.max(0, precoOriginal - descontoCalculado);
+    const servicoPrincipal = servicosSelecionados[0];
 
     const rascunho: RascunhoReserva = {
       barbearia_id: barbearia.id,
       barbearia_nome: barbearia.nome,
       barbearia_slug: barbearia.slug,
-      servico_id: servicoSelecionado.id,
-      servico_nome: servicoSelecionado.nome,
+      servico_id: servicoPrincipal.id,
+      servico_nome: servicoPrincipal.nome,
       preco: precoOriginal,
       valor_desconto: descontoCalculado > 0 ? descontoCalculado : null,
       preco_final: precoFinal,
-      duracao_minutos: servicoSelecionado.duracao_minutos,
+      duracao_minutos: duracaoTotalMinutos,
+      servicos: servicosSelecionados.map((servico) => ({
+        servico_id: servico.id,
+        nome_servico: servico.nome,
+        preco: Number(servico.preco),
+        duracao_minutos: Number(servico.duracao_minutos),
+      })),
       profissional_id: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.id : null,
       profissional_nome: modoProfissional === "especifico" && profissionalSelecionado ? profissionalSelecionado.nome : null,
       data: dataSelecionada,
@@ -616,47 +608,39 @@ function ConteudoWizardReservaCliente() {
       let profDefinitivoId = rascunho.profissional_id;
 
       if (!profDefinitivoId) {
-        // Opção "Qualquer Profissional": selecionar menor carga do dia
-        const profsNoSlot = slotsDisponiveis
-          .filter((s) => s.horario === slotSelecionado)
-          .map((s) => s.profissional_id);
-
-        const [ano, mes, dia] = dataSelecionada.split("-").map(Number);
-        const dataInicio = new Date(ano, mes - 1, dia, 0, 0, 0, 0).toISOString();
-        const dataFim = new Date(ano, mes - 1, dia, 23, 59, 59, 999).toISOString();
-
-        const { data: agsDia } = await supabase
-          .from("agendamentos")
-          .select("profissional_id")
-          .eq("barbearia_id", barbearia.id)
-          .not("status", "in", '("cancelado","nao_compareceu")')
-          .gte("inicio_previsto", dataInicio)
-          .lte("inicio_previsto", dataFim);
-
-        const contagemCarga: Record<string, number> = {};
-        (agsDia || []).forEach((ag: { profissional_id: string }) => {
-          contagemCarga[ag.profissional_id] = (contagemCarga[ag.profissional_id] || 0) + 1;
-        });
-
-        const candidatos = profissionais
-          .filter((p) => profsNoSlot.includes(p.id))
-          .map((p) => ({
-            id: p.id,
-            nome: p.nome,
-            ativo: p.ativo,
-            totalAgendamentosNoDia: contagemCarga[p.id] || 0,
-          }));
-
-        const escolhido = selecionarProfissionalMenorCarga(candidatos);
+        // A RPC retorna primeiro o profissional com menor carga diária no banco.
+        const escolhido = slotsDisponiveis.find((slot) => slot.horario === slotSelecionado);
         if (!escolhido) {
           setErro("Nenhum profissional disponível para o horário selecionado.");
           return;
         }
-        profDefinitivoId = escolhido.id;
+        profDefinitivoId = escolhido.profissional_id;
       }
 
+      // Recalcular a duração no banco no momento da confirmação.
+      const { data: slotsRevalidados, error: erroRevalidacao } = await (supabase.rpc as any)(
+        "buscar_horarios_disponiveis_multiplos_servicos",
+        {
+          p_barbearia_id: barbearia.id,
+          p_servicos_ids: servicosSelecionadosIds,
+          p_data: dataSelecionada,
+          p_profissional_id: profDefinitivoId,
+        }
+      );
+      if (erroRevalidacao) throw erroRevalidacao;
+      const slotRevalidado = ((slotsRevalidados || []) as SlotDisponivel[]).find(
+        (slot) => slot.horario === slotSelecionado && slot.profissional_id === profDefinitivoId
+      );
+      if (!slotRevalidado) {
+        setErro("Este horário não comporta mais todos os serviços selecionados. Escolha outro horário.");
+        setPassoAtual(3);
+        await recalcularSlots();
+        return;
+      }
+      const duracaoReservaMinutos = slotRevalidado.duracao_minutos;
+
       const [h, m] = slotSelecionado.split(":").map(Number);
-      const minFim = h * 60 + m + servicoSelecionado.duracao_minutos;
+      const minFim = h * 60 + m + duracaoReservaMinutos;
       const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
       const inicioIso = converterParaIsoUtc(dataSelecionada, slotSelecionado);
       const fimIso = converterParaIsoUtc(dataSelecionada, horaFimStr);
@@ -675,7 +659,7 @@ function ConteudoWizardReservaCliente() {
           origem: "marketplace",
           observacoes: observacoes ? observacoes : null,
           preco_total: precoFinal,
-          duracao_total_minutos: servicoSelecionado.duracao_minutos,
+          duracao_total_minutos: duracaoReservaMinutos,
         })
         .select("id")
         .single();
@@ -695,14 +679,24 @@ function ConteudoWizardReservaCliente() {
         return;
       }
 
-      // 2. Inserir snapshot do serviço
-      await (supabase.from("agendamentos_servicos") as any).insert({
-        agendamento_id: novoAgendamento.id,
-        servico_id: servicoSelecionado.id,
-        nome_servico: servicoSelecionado.nome,
-        preco: precoOriginal,
-        duracao_minutos: servicoSelecionado.duracao_minutos,
-      });
+      // 2. Inserir o snapshot de cada serviço selecionado
+      const { error: erroServicos } = await (supabase.from("agendamentos_servicos") as any).insert(
+        servicosSelecionados.map((servico) => ({
+          agendamento_id: novoAgendamento.id,
+          servico_id: servico.id,
+          nome_servico: servico.nome,
+          preco: Number(servico.preco),
+          duracao_minutos: Number(servico.duracao_minutos),
+        }))
+      );
+      if (erroServicos) {
+        await (supabase.rpc as any)("atualizar_status_agendamento", {
+          p_agendamento_id: novoAgendamento.id,
+          p_novo_status: "cancelado",
+        });
+        setErro(traduzirErro(erroServicos, "Não foi possível salvar os serviços desta reserva."));
+        return;
+      }
 
       // A confirmação do cupom, do snapshot e dos limites ocorre atomicamente no banco.
       if (codigoCupom.trim()) {
@@ -803,28 +797,29 @@ function ConteudoWizardReservaCliente() {
         ))}
       </div>
 
-      {/* ETAPA 1: SELEÇÃO DE SERVIÇO */}
+      {/* ETAPA 1: SELEÇÃO DE SERVIÇOS */}
       {passoAtual === 1 && (
         <Card camada="primaria">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
-              <Scissors className="h-5 w-5 text-[#B45A2B] shrink-0" /> 1. Escolha o Serviço
+              <Scissors className="h-5 w-5 text-[#B45A2B] shrink-0" /> 1. Escolha os Serviços
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Selecione o corte, barba ou combo desejado para este atendimento.
+              Selecione de um a três serviços. O tempo e o valor serão somados.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-3">
+            {servicos.length === 0 && (
+              <p className="rounded-xl border border-dashed p-4 text-center text-sm opacity-75">
+                Esta barbearia ainda não possui serviços disponíveis para reserva.
+              </p>
+            )}
             {servicos.map((s) => {
-              const selecionado = servicoSelecionado?.id === s.id;
+              const selecionado = servicosSelecionados.some((servico) => servico.id === s.id);
               return (
                 <div
                   key={s.id}
-                  onClick={() => {
-                    setServicoSelecionado(s);
-                    setPassoAtual(2);
-                  }}
-                  className={`p-3 sm:p-4 rounded-xl border cursor-pointer select-none transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
+                  className={`p-3 sm:p-4 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${
                     selecionado
                       ? "border-[#B45A2B] bg-[#B45A2B]/5 shadow-sm ring-1 ring-[#B45A2B]"
                       : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
@@ -835,7 +830,7 @@ function ConteudoWizardReservaCliente() {
                     {s.descricao && (
                       <p className="text-xs opacity-70 line-clamp-2 mt-0.5">{s.descricao}</p>
                     )}
-                    <span className="text-xs opacity-60 mt-1 flex items-center gap-1">
+                    <span className="text-sm opacity-75 mt-1 flex items-center gap-1">
                       <Clock className="h-3 w-3 text-[#B45A2B] shrink-0" /> {s.duracao_minutos} minutos
                     </span>
                   </div>
@@ -844,13 +839,59 @@ function ConteudoWizardReservaCliente() {
                     <span className="font-extrabold text-base sm:text-lg text-[#B45A2B]">
                       {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(s.preco))}
                     </span>
-                    <Button variante="principal" tamanho="sm">
-                      Escolher
+                    <Button
+                      type="button"
+                      variante={selecionado ? "secundario" : "principal"}
+                      tamanho="sm"
+                      className="min-h-[44px]"
+                      disabled={!selecionado && servicosSelecionados.length >= 3}
+                      aria-pressed={selecionado}
+                      leftIcon={selecionado ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                      onClick={() => {
+                        setServicosSelecionados((atuais) => {
+                          if (selecionado) return atuais.filter((servico) => servico.id !== s.id);
+                          if (atuais.length >= 3) return atuais;
+                          return [...atuais, s];
+                        });
+                        setModoProfissional("qualquer");
+                        setProfissionalSelecionado(null);
+                        setSlotSelecionado(null);
+                        setCupomAplicado(null);
+                        setDescontoCalculado(0);
+                        setMsgCupom(null);
+                        setErro(null);
+                      }}
+                    >
+                      {selecionado ? "Remover" : "Adicionar"}
                     </Button>
                   </div>
                 </div>
               );
             })}
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-neutral-200 dark:border-neutral-800">
+              <p className="text-sm font-semibold" aria-live="polite">
+                {servicosSelecionados.length === 0
+                  ? "Selecione ao menos um serviço."
+                  : `${servicosSelecionados.length} ${servicosSelecionados.length === 1 ? "serviço" : "serviços"} · ${duracaoTotalMinutos} min · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(precoTotalServicos)}`}
+              </p>
+              <Button
+                type="button"
+                variante="principal"
+                disabled={servicosSelecionados.length === 0}
+                leftIcon={<ArrowRight className="h-4 w-4" />}
+                onClick={() => {
+                  setErro(null);
+                  setPassoAtual(2);
+                }}
+                className="w-full sm:w-auto"
+              >
+                Continuar
+              </Button>
+            </div>
+            {servicosSelecionados.length >= 3 && (
+              <p className="text-sm" role="status">O limite de três serviços por agendamento foi atingido.</p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -863,7 +904,8 @@ function ConteudoWizardReservaCliente() {
               <User className="h-5 w-5 text-[#B45A2B] shrink-0" /> 2. Escolha o Profissional
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Serviço selecionado: <strong>{servicoSelecionado?.nome}</strong>
+              Serviços: <strong>{servicosSelecionados.map((servico) => servico.nome).join(", ")}</strong>
+              <span className="block mt-1">Duração total: {duracaoTotalMinutos} minutos</span>
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0 flex flex-col gap-4">
@@ -898,8 +940,13 @@ function ConteudoWizardReservaCliente() {
             </div>
 
             {/* Lista Nominal de Barbeiros */}
+            {profissionaisAptos.length === 0 && (
+              <p className="text-sm" role="status">
+                Nenhum profissional está vinculado a todos os serviços selecionados. Tente a opção “Qualquer Profissional Disponível”.
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {profissionais.map((p) => {
+              {profissionaisAptos.map((p) => {
                 const selecionado = modoProfissional === "especifico" && profissionalSelecionado?.id === p.id;
                 return (
                   <div
@@ -944,7 +991,7 @@ function ConteudoWizardReservaCliente() {
               <Calendar className="h-5 w-5 text-[#B45A2B] shrink-0" /> 3. Data e Horário
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              {servicoSelecionado?.nome} com{" "}
+              {servicosSelecionados.map((servico) => servico.nome).join(", ")} · {duracaoTotalMinutos} minutos com{" "}
               {modoProfissional === "qualquer"
                 ? "Qualquer Profissional Disponível"
                 : profissionalSelecionado?.nome}
@@ -981,21 +1028,21 @@ function ConteudoWizardReservaCliente() {
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {Array.from(new Set(slotsDisponiveis.map((s) => s.horario))).map((h) => {
+                    {Array.from(new Set(slotsDisponiveis.map((s) => s.horario))).map((h) => {
                     const selecionado = slotSelecionado === h;
                     return (
-                      <button
+                      <Button
                         key={h}
                         type="button"
+                        tamanho="sm"
+                        variante={selecionado ? "principal" : "fantasma"}
+                        leftIcon={<Clock className="h-3 w-3" />}
+                        aria-pressed={selecionado}
                         onClick={() => setSlotSelecionado(h)}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
-                          selecionado
-                            ? "bg-[#B45A2B] text-white border-[#B45A2B] shadow-sm ring-2 ring-[#B45A2B]"
-                            : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B]"
-                        }`}
+                        className={`w-full px-2 text-xs font-bold border ${selecionado ? "shadow-sm ring-2 ring-[#B45A2B]" : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B]"}`}
                       >
                         {h}
-                      </button>
+                      </Button>
                     );
                   })}
                 </div>
@@ -1010,9 +1057,10 @@ function ConteudoWizardReservaCliente() {
                 variante="principal"
                 disabled={!slotSelecionado}
                 onClick={handleProsseguirResumo}
+                leftIcon={<ArrowRight className="h-4 w-4" />}
                 className="w-full sm:w-auto"
               >
-                Continuar para Resumo <ArrowRight className="h-4 w-4 ml-1" />
+                Continuar para Resumo
               </Button>
             </div>
           </CardContent>
@@ -1043,9 +1091,22 @@ function ConteudoWizardReservaCliente() {
                   {[barbearia.bairro, barbearia.cidade].filter(Boolean).join(", ") || barbearia.endereco || "Localização informada"}
                 </span>
               </div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Serviço</span>
-                <span className="font-bold text-sm sm:text-right break-words">{servicoSelecionado?.nome}</span>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs uppercase font-bold tracking-wider opacity-60">Serviços selecionados</span>
+                <ul className="flex flex-col gap-2">
+                  {servicosSelecionados.map((servico) => (
+                    <li key={servico.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-sm">
+                      <span className="font-bold break-words">{servico.nome}</span>
+                      <span className="opacity-75 sm:text-right">
+                        {servico.duracao_minutos} min · {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servico.preco))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="opacity-60">Duração total</span>
+                <span className="font-bold">{duracaoTotalMinutos} minutos</span>
               </div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                 <span className="text-xs uppercase font-bold tracking-wider opacity-60 shrink-0">Profissional</span>
@@ -1063,9 +1124,9 @@ function ConteudoWizardReservaCliente() {
               </div>
               <div className="flex flex-col gap-1.5 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                 <div className="flex items-center justify-between text-xs opacity-75">
-                  <span>Valor do Serviço:</span>
+                  <span>Subtotal dos serviços:</span>
                   <span>
-                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(servicoSelecionado?.preco || 0))}
+                    {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(precoTotalServicos)}
                   </span>
                 </div>
 
@@ -1082,7 +1143,7 @@ function ConteudoWizardReservaCliente() {
                   <span>Valor Final:</span>
                   <span className="text-[#B45A2B]">
                     {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-                      Math.max(0, Number(servicoSelecionado?.preco || 0) - descontoCalculado)
+                      Math.max(0, precoTotalServicos - descontoCalculado)
                     )}
                   </span>
                 </div>
@@ -1113,6 +1174,7 @@ function ConteudoWizardReservaCliente() {
                     type="button"
                     variante="secundario"
                     tamanho="sm"
+                    leftIcon={<Tag className="h-4 w-4" />}
                     disabled={validandoCupom || cupomAutoAplicacaoPendente || !codigoCupom.trim()}
                     carregando={validandoCupom}
                     onClick={aplicarValidarCupom}
@@ -1181,6 +1243,7 @@ function ConteudoWizardReservaCliente() {
                 tamanho="lg"
                 disabled={salvando}
                 onClick={handleFinalizarReserva}
+                leftIcon={<ArrowRight className="h-4 w-4" />}
                 className="w-full sm:w-auto font-bold text-base shadow-md"
               >
                 {salvando
@@ -1188,7 +1251,6 @@ function ConteudoWizardReservaCliente() {
                   : usuarioAutenticado
                   ? "Confirmar Reserva Definitiva"
                   : "Continuar para Identificação"}
-                <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
           </CardContent>

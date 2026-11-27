@@ -1,6 +1,6 @@
 import { ehAppNativo } from "@barzzo/utilitarios";
 
-const URL_CLIENTE_PRODUCAO = "https://barzzo-cliente.vercel.app";
+const URL_CLIENTE_PRODUCAO = "https://cliente.barzzo.io";
 const URL_CLIENTE_DESENVOLVIMENTO = "https://barzzo-cliente-dev.vercel.app";
 
 export function obterUrlBaseAppCliente(): string {

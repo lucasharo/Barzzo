@@ -38,3 +38,20 @@
 ## 4. Conclusão do QA
 
 Todos os critérios de aceite estabelecidos no `TASK.md` foram integralmente atendidos. A task está liberada para o aceite final do Product Owner.
+
+## Evolução — seleção de múltiplos serviços (25/11/2026)
+
+| Critério | Resultado | Evidência |
+|---|---|---|
+| Selecionar de um a três serviços | Conforme localmente | Interface, validação do rascunho e RPC limitam o conjunto a três |
+| Somar duração e preço antes de escolher horário | Conforme localmente | Soma no domínio/UI; cobertura unitária soma 30 + 20 + 10 minutos |
+| Exibir profissionais habilitados para todos os serviços | Conforme localmente | Vínculos `profissionais_servicos` filtram as opções específicas |
+| Distribuir “Qualquer profissional” pela menor carga diária | Conforme no contrato local | A RPC ordena os candidatos pela contagem de reservas ativas no banco |
+| Revalidar duração e disponibilidade após login | Conforme localmente | RPC recalcula duração a partir do banco antes de confirmar |
+| Preservar seleção pré-login e salvar snapshot por serviço | Conforme localmente | Rascunho mantém compatibilidade antiga e grava vários itens em `agendamentos_servicos` |
+| Testes automatizados | Aprovado | 329 testes passaram |
+| Typecheck e build | Aprovado | Typecheck global e build global passaram; Cliente também passou após o ajuste final |
+| Lint global | Reprovado por bloqueio preexistente | `packages/nativo/src/push-web.ts:13` contém ponto e vírgula extra; lint do Cliente passou |
+| Migration no banco e fluxo real | Pendente | Não aplicada nem publicada em DEV; Docker/psql local ausente e a conexão Supabase atual negou acesso ao projeto Barzzo |
+
+**Parecer:** implementação local validada. A liberação do fluxo integrado depende da migration e da publicação do app no ambiente.

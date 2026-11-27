@@ -14,9 +14,10 @@ import {
   AlertDescription,
 } from "@barzzo/ui";
 import { esquemaCadastro } from "@barzzo/validacoes";
-import { formatarTelefone, limparTelefone, traduzirErro } from "@barzzo/utilitarios";
+import { formatarTelefone, limparTelefone, traduzirErro, urlRedirectAutenticacao } from "@barzzo/utilitarios";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import { Store, Award, UserPlus } from "lucide-react";
+import { URL_WEB_PARCEIRO } from "../../lib/api";
 
 export default function PaginaCadastroParceiro() {
   const navigate = useNavigate();
@@ -58,7 +59,7 @@ export default function PaginaCadastroParceiro() {
       setCarregando(true);
       const supabase = criarClienteSupabaseBrowser();
       const destino = retornoUrl || "/onboarding";
-      const emailRedirectTo = `${window.location.origin}${destino}`;
+      const emailRedirectTo = urlRedirectAutenticacao(destino, URL_WEB_PARCEIRO);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -88,11 +89,8 @@ export default function PaginaCadastroParceiro() {
           navigate(destino);
         }, 800);
       } else if (data.user) {
-        setSucesso(
-          ehInfluenciador
-            ? "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso de influenciador e concluir a criação do seu cupom."
-            : "Conta criada com sucesso! Enviamos um e-mail com o link de confirmação. Por favor, confirme seu e-mail para ativar seu acesso e iniciar o onboarding."
-        );
+        const parametrosLogin = new URLSearchParams({ confirmacao: "pendente", retorno: destino });
+        navigate(`/entrar?${parametrosLogin.toString()}`, { state: { email, ehInfluenciador } });
       }
     } catch {
       setErro("Ocorreu um erro ao criar a conta. Tente novamente.");

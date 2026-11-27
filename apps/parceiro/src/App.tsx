@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { RuntimeNativo } from "@barzzo/nativo";
+import { OuvintePushWeb, RuntimeNativo } from "@barzzo/nativo";
 import { NavegacaoParceiro } from "./components/navegacao-parceiro";
 import PaginaBloqueios from "./pages/agenda/Bloqueios";
 import PaginaAgenda from "./pages/agenda/Agenda";
@@ -11,6 +11,7 @@ import PaginaCampanhas from "./pages/campanhas/Campanhas";
 import PaginaDetalhesCliente from "./pages/clientes/Detalhes";
 import PaginaClientes from "./pages/clientes/Clientes";
 import PaginaConfiguracoesPerfil from "./pages/configuracoes/Perfil";
+import PaginaConfiguracoes from "./pages/configuracoes/Configuracoes";
 import PaginaAceitarConvite from "./pages/convite/AceitarConvite";
 import PaginaConvites from "./pages/convites/Convites";
 import PaginaJornadaEquipe from "./pages/equipe/Jornada";
@@ -36,8 +37,19 @@ import PaginaCadastroParceiro from "./pages/auth/Cadastro";
 import PaginaRecuperarSenhaParceiro from "./pages/auth/RecuperarSenha";
 
 export default function App() {
+  const env = (import.meta as any).env ?? {};
+
   return (
     <>
+      <OuvintePushWeb
+        config={{
+          apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        }}
+      />
       <RuntimeNativo esquemaHost="parceiro" rotasRaiz={["/", "/painel", "/entrar"]} />
       <NavegacaoParceiro />
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 pb-28 md:pb-10">
@@ -53,6 +65,8 @@ export default function App() {
           <Route path="/clientes/:id" element={<PaginaDetalhesCliente />} />
           <Route path="/clientes" element={<PaginaClientes />} />
           <Route path="/configuracoes/perfil" element={<PaginaConfiguracoesPerfil />} />
+          <Route path="/configuracoes" element={<PaginaConfiguracoes />} />
+          <Route path="/configuracoes/notificacoes" element={<PaginaNotificacoes />} />
           <Route path="/convite/:token" element={<PaginaAceitarConvite />} />
           <Route path="/convites" element={<PaginaConvites />} />
           <Route path="/equipe/:id/jornada" element={<PaginaJornadaEquipe />} />

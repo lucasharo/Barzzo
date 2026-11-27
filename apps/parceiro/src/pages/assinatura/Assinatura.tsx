@@ -233,7 +233,10 @@ export default function PaginaAssinaturaParceiro() {
           return;
         }
 
-        const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
+        const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY;
+        if (!publicKey) {
+          throw new Error("Pagamento indisponível no momento. Tente novamente mais tarde.");
+        }
 
         const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
           method: "POST",
@@ -312,7 +315,10 @@ export default function PaginaAssinaturaParceiro() {
         return;
       }
 
-      const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY || "APP_USR-4d05f3e1-8622-43d8-9b71-e459059ef49f";
+      const publicKey = (import.meta as any).env?.VITE_MERCADO_PAGO_PUBLIC_KEY;
+      if (!publicKey) {
+        throw new Error("Pagamento indisponível no momento. Tente novamente mais tarde.");
+      }
 
       const respToken = await fetch(`https://api.mercadopago.com/v1/card_tokens?public_key=${publicKey}`, {
         method: "POST",

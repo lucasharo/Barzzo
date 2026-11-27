@@ -118,7 +118,7 @@ export default function PaginaPerfilBarbearia() {
           Acesse o app para ver horarios disponiveis e confirmar seu agendamento.
         </p>
         <a
-          href={`https://app.barzzo.com/barbearias/${barbearia.slug}`}
+          href={`https://cliente.barzzo.io/barbearias/${barbearia.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-white text-[#B45A2B] font-bold text-lg hover:bg-neutral-100 transition-colors shadow-lg"

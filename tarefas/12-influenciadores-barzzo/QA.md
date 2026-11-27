@@ -36,3 +36,14 @@
    - Navegação de influenciador sem barbearia verificada: zero acesso a itens operacionais de barbearia (agenda, clientes, serviços, faturamento da barbearia).
    - Redirecionamento defensivo de rota: `/painel` redireciona automaticamente para `/influenciador/painel` (ou `/influenciador/cadastro`).
    - Gates de automação (Vitest, Typecheck monorepo, ESLint, Next/Vite Build) revalidados com 100% de sucesso.
+
+## 6. Revalidação para o aceite final (2026-11-10)
+
+| Verificação | Resultado |
+|---|---:|
+| `npm test` | 28/28 arquivos, 318/318 testes aprovados |
+| `npm run lint` | passou, 0 erros; avisos existentes |
+| `npm run typecheck` | passou em todos os workspaces |
+| `npm run build` | passou em todos os workspaces; Cliente e Parceiro reportam aviso de chunks grandes |
+
+O PO confirmou a implantação no ambiente e concedeu o aceite final da Task 12.

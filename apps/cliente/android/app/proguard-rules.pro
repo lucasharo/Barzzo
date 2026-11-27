@@ -1,6 +1,12 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
+# Capacitor reads plugin and permission annotations at runtime.
+-keepattributes *Annotation*
+-keep @interface com.getcapacitor.annotation.CapacitorPlugin
+-keep @interface com.getcapacitor.annotation.Permission
+-keep @interface com.getcapacitor.annotation.PermissionCallback
+-keep @interface com.getcapacitor.annotation.ActivityCallback
 #
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html

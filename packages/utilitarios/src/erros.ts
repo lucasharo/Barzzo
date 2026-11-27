@@ -123,7 +123,7 @@ export function traduzirErro(erro: unknown, fallback?: string): string {
 
   // Se já for uma mensagem em português e não contiver fragmentos em inglês
   const contemPalavrasPt =
-    /([áéíóúãõçêâô]|não|senha|email|usuário|barbearia|agendamento|serviço|campo|obrigatório)/i.test(
+    /([áéíóúãõçêâô]|não|senha|email|usuário|barbearia|agendamento|serviço|campo|obrigatório|notifica|conexão|demorou|navegador|permissão|configuração|registro|internet|verifique)/i.test(
       mensagem
     );
   const contemGramaticaInglesa =

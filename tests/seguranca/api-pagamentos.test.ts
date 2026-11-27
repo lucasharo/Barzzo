@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
+import { createHmac } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 // @ts-expect-error utilitário JS das rotas de /api
-import { aplicarCors, exigirGestorDaBarbearia, exigirSegredoDeCron } from "../../apps/parceiro/api/_seguranca.js";
+import {
+  aplicarCors,
+  exigirGestorDaBarbearia,
+  exigirSegredoDeCron,
+  obterUrlWebhookMercadoPago,
+  validarAssinaturaWebhookMercadoPago,
+} from "../../apps/parceiro/api/_seguranca.js";
 
 const rota = (arquivo: string) =>
   readFileSync(new URL(`../../apps/parceiro/api/${arquivo}`, import.meta.url), "utf8");
@@ -97,9 +104,79 @@ describe("API de pagamentos do Parceiro", () => {
     expect(permitida.headers["Access-Control-Allow-Origin"]).toBe("https://localhost");
     expect(permitida.statusCode).toBe(204);
 
+    const producao = resposta();
+    aplicarCors({ method: "OPTIONS", headers: { origin: "https://cliente.barzzo.io" } }, producao);
+    expect(producao.headers["Access-Control-Allow-Origin"]).toBe("https://cliente.barzzo.io");
+
     const estranha = resposta();
     expect(aplicarCors({ method: "POST", headers: { origin: "https://malicioso.example" } }, estranha)).toBe(false);
     expect(estranha.headers["Access-Control-Allow-Origin"]).toBeUndefined();
+  });
+
+  it("webhook de pagamento usa a URL de produção e aceita configuração explícita", () => {
+    const webhookAnterior = process.env.MERCADO_PAGO_WEBHOOK_URL;
+    const ambienteAnterior = process.env.VERCEL_ENV;
+
+    try {
+      delete process.env.MERCADO_PAGO_WEBHOOK_URL;
+      process.env.VERCEL_ENV = "production";
+      expect(obterUrlWebhookMercadoPago()).toBe(
+        "https://parceiro.barzzo.io/api/webhooks/mercadopago"
+      );
+
+      process.env.MERCADO_PAGO_WEBHOOK_URL = "https://custom.example/webhook";
+      expect(obterUrlWebhookMercadoPago()).toBe("https://custom.example/webhook");
+    } finally {
+      if (webhookAnterior === undefined) delete process.env.MERCADO_PAGO_WEBHOOK_URL;
+      else process.env.MERCADO_PAGO_WEBHOOK_URL = webhookAnterior;
+      if (ambienteAnterior === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = ambienteAnterior;
+    }
+  });
+
+  it("webhook valida a assinatura HMAC enviada pelo Mercado Pago", () => {
+    const segredoAnterior = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    const ambienteAnterior = process.env.VERCEL_ENV;
+    const segredo = "segredo-de-teste";
+    const dataId = "123456";
+    const requestId = "req-abc";
+    const ts = "1704908010";
+    const manifesto = `id:${dataId};request-id:${requestId};ts:${ts};`;
+    const v1 = createHmac("sha256", segredo).update(manifesto).digest("hex");
+    const req = {
+      headers: { "x-signature": `ts=${ts},v1=${v1}`, "x-request-id": requestId },
+      query: { "data.id": dataId },
+      body: {},
+    };
+
+    try {
+      process.env.MERCADO_PAGO_WEBHOOK_SECRET = segredo;
+      process.env.VERCEL_ENV = "production";
+      expect(validarAssinaturaWebhookMercadoPago(req)).toBe(true);
+      expect(validarAssinaturaWebhookMercadoPago({ ...req, headers: { ...req.headers, "x-request-id": "req-otro" } })).toBe(false);
+
+      delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+      expect(validarAssinaturaWebhookMercadoPago(req)).toBe(false);
+    } finally {
+      if (segredoAnterior === undefined) delete process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+      else process.env.MERCADO_PAGO_WEBHOOK_SECRET = segredoAnterior;
+      if (ambienteAnterior === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = ambienteAnterior;
+    }
+  });
+
+  it("build do Parceiro não inclui variáveis privadas do backend no bundle", () => {
+    const config = readFileSync(new URL("../../apps/parceiro/vite.config.ts", import.meta.url), "utf8");
+    expect(config).toContain('key.startsWith("VITE_") || key.startsWith("NEXT_PUBLIC_")');
+    expect(config).toContain('"process.env": JSON.stringify(publicEnv)');
+    expect(config).not.toContain('"process.env": JSON.stringify(mergedEnv)');
+  });
+
+  it("produção não ativa assinatura sem pagamento aprovado pelo Mercado Pago", () => {
+    const codigo = rota("assinar-com-cartao.js");
+    expect(codigo).toContain("paymentData.status === 'approved'");
+    expect(codigo).toContain("process.env.VERCEL_ENV === 'production'");
+    expect(codigo).toContain("A assinatura não foi ativada.");
   });
 
   it("cron sem CRON_SECRET configurado ou com segredo errado é negado", () => {

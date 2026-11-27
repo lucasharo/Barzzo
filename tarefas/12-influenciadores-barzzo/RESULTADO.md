@@ -31,3 +31,7 @@
    - **Badge Semântico e Destinos**: Badge no topo exibe `INFLUENCIADOR` (em vez de `PARCEIRO`), desktop nav exibe apenas `Painel do Influenciador`, BottomNav móvel exibe `Painel` e `Menu`, e o Drawer exibe apenas ferramentas de influenciador e opção secundária de cadastrar barbearia.
    - **Ponte de Compatibilidade na Landing (`apps/landing`)**: Criado `AuthCallbackBridge` que detecta tokens de autenticação que venham a bater na porta 3000 por configurações legadas e repassa automaticamente ao app do parceiro com tokens preservados.
    - **Suporte de Ícone em Botões**: Propriedade `leftIcon` integrada no componente `Button` de `@barzzo/ui`, garantindo conformidade com as diretrizes do Design System.
+
+## 6. Aceite final do PO (2026-11-10)
+
+Lucas confirmou que a Task 12 foi concluída, está implantada no ambiente e está aprovada. Estado final: `CONCLUIDA`.

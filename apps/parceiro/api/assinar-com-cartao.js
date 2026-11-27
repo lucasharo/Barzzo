@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { aplicarCors, exigirGestorDaBarbearia } from './_seguranca.js';
+import { aplicarCors, exigirGestorDaBarbearia, obterUrlWebhookMercadoPago } from './_seguranca.js';
 
 export default async function handler(req, res) {
   if (aplicarCors(req, res)) return;
@@ -151,7 +151,7 @@ export default async function handler(req, res) {
             valor: valorACobrar,
             credito_aplicado: creditoRestante,
           }),
-          notification_url: "https://gdgeokfwkbusemayqucb.supabase.co/functions/v1/mercadopago-webhook",
+          notification_url: obterUrlWebhookMercadoPago(),
         };
 
         if (customerId) {
@@ -170,8 +170,12 @@ export default async function handler(req, res) {
 
         const paymentData = await respPayment.json();
 
-        if (respPayment.ok && (paymentData.status === 'approved' || paymentData.status === 'in_process')) {
+        if (respPayment.ok && paymentData.status === 'approved') {
           paymentId = String(paymentData.id);
+        } else if (process.env.VERCEL_ENV === 'production') {
+          return res.status(502).json({
+            error: 'O Mercado Pago não confirmou o pagamento. A assinatura não foi ativada.',
+          });
         } else if (paymentData.status_detail === 'cc_rejected_bad_filled_security_code') {
           return res.status(400).json({ error: 'Código de segurança (CVV) inválido.' });
         } else if (paymentData.status_detail === 'cc_rejected_insufficient_amount') {
@@ -185,6 +189,11 @@ export default async function handler(req, res) {
         }
       } catch (err) {
         console.warn('[Mercado Pago Payment Warning]:', err.message);
+        if (process.env.VERCEL_ENV === 'production') {
+          return res.status(502).json({
+            error: 'Não foi possível confirmar o pagamento no Mercado Pago. A assinatura não foi ativada.',
+          });
+        }
         paymentId = 'MP_DEV_' + Date.now();
       }
     }

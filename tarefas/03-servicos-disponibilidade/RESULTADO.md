@@ -59,3 +59,7 @@ Arquivo criado: `supabase/migrations/20260925000002_criar_servicos_e_disponibili
   - 29 testes automatizados executados e 100% aprovados (sem nenhuma falha).
   - Cobertura de utilitários de tempo, validações Zod, regras determinísticas de disponibilidade e integridade das migrations/RLS.
 - **Typecheck TypeScript**: `tsc --noEmit` executado em todos os pacotes (`@barzzo/tipos`, `@barzzo/validacoes`, `@barzzo/dominio`) com 0 erros de compilação.
+
+## Correção posterior — 25/11/2026
+
+O campo de preço do cadastro de serviço usava uma máscara monetária pt-BR, mas o `pattern` HTML ainda aceitava somente dígitos. O navegador rejeitava valores corretos como `30,00` antes de executar o salvamento. O padrão agora aceita o valor formatado pela máscara, preservando a conversão para número antes da validação e gravação.

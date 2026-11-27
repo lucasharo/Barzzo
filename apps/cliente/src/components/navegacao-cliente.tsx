@@ -8,6 +8,7 @@ import {
   Calendar,
   Heart,
   Bell,
+  Settings,
   User,
   LogIn,
   LogOut,
@@ -59,6 +60,7 @@ export function NavegacaoCliente() {
     { href: "/agendamentos", rotulo: "Agendamentos", icone: Calendar },
     { href: "/favoritos", rotulo: "Favoritos", icone: Heart },
     { href: "/notificacoes", rotulo: "Notificações", icone: Bell },
+    { href: "/configuracoes", rotulo: "Configurações", icone: Settings },
     { href: "/perfil", rotulo: "Perfil", icone: User },
   ];
 

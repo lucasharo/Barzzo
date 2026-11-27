@@ -1,8 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import { validarAssinaturaWebhookMercadoPago } from '../_seguranca.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
+  }
+
+  if (process.env.VERCEL_ENV === 'production' && !process.env.MERCADO_PAGO_WEBHOOK_SECRET) {
+    return res.status(503).json({ error: 'Assinatura segura do webhook não configurada.' });
+  }
+  if (!validarAssinaturaWebhookMercadoPago(req)) {
+    return res.status(401).json({ error: 'Assinatura do webhook inválida.' });
   }
 
   try {

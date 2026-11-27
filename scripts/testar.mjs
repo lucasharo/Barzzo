@@ -1246,12 +1246,16 @@ const esquemaDispositivoTest = z.object({
 
 function podeEnviarNotificacaoTest(tipo, preferencias) {
   if (!preferencias) return true;
-  if (tipo === "promocao") return preferencias.notificacoes_promocionais === true;
-  if (tipo === "lembrete") return preferencias.notificacoes_lembretes === true;
-  if (tipo === "confirmacao" || tipo === "cancelamento" || tipo === "reagendamento") {
-    return preferencias.notificacoes_transacionais === true;
-  }
-  return true;
+  const campoPorTipo = {
+    confirmacao: "notificacoes_confirmacao",
+    cancelamento: "notificacoes_cancelamento",
+    reagendamento: "notificacoes_reagendamento",
+    lembrete: "notificacoes_lembretes",
+    promocao: "notificacoes_promocionais",
+    sistema: "notificacoes_sistema",
+  };
+  const campo = campoPorTipo[tipo];
+  return !campo || preferencias[campo] !== false;
 }
 
 function calcularTicketMedioTest(faturamentoTotal, totalAtendimentos) {
@@ -1290,9 +1294,12 @@ test("Task 09: Validação de Dispositivo e Multiplataforma", () => {
 
 test("Task 09: Preferências de Notificação (silenciamento de promoções e lembretes)", () => {
   const prefs = {
-    notificacoes_transacionais: true,
+    notificacoes_confirmacao: true,
+    notificacoes_cancelamento: true,
+    notificacoes_reagendamento: true,
     notificacoes_promocionais: false,
     notificacoes_lembretes: true,
+    notificacoes_sistema: true,
   };
 
   // Promocional bloqueada
@@ -1301,8 +1308,8 @@ test("Task 09: Preferências de Notificação (silenciamento de promoções e le
   expect(podeEnviarNotificacaoTest("confirmacao", prefs)).toBe(true);
   // Lembrete permitido
   expect(podeEnviarNotificacaoTest("lembrete", prefs)).toBe(true);
-  // Sistema sempre entregue
-  expect(podeEnviarNotificacaoTest("sistema", prefs)).toBe(true);
+  // Avisos de sistema seguem sua preferência específica
+  expect(podeEnviarNotificacaoTest("sistema", { ...prefs, notificacoes_sistema: false })).toBe(false);
 });
 
 test("Task 09: Métricas analíticas — Ticket médio, ocupação e eficiência de tempo", () => {

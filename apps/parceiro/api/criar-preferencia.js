@@ -1,4 +1,4 @@
-import { aplicarCors, criarClienteServico, exigirGestorDaBarbearia } from './_seguranca.js';
+import { aplicarCors, criarClienteServico, exigirGestorDaBarbearia, obterUrlWebhookMercadoPago } from './_seguranca.js';
 
 export default async function handler(req, res) {
   if (aplicarCors(req, res)) return;
@@ -27,9 +27,11 @@ export default async function handler(req, res) {
     }
 
     const reqOrigin = req.headers.origin || '';
-    const origin = (reqOrigin.includes('localhost') || reqOrigin.includes('192.168.') || !reqOrigin)
-      ? 'https://barzzo-parceiro-dev.vercel.app'
-      : reqOrigin;
+    const origin = process.env.VERCEL_ENV === 'production'
+      ? 'https://parceiro.barzzo.io'
+      : (reqOrigin.includes('localhost') || reqOrigin.includes('192.168.') || !reqOrigin)
+        ? 'https://barzzo-parceiro-dev.vercel.app'
+        : reqOrigin;
 
     // Checkout Pro Oficial: pagamento sem exigência de conta no Mercado Pago (Convidado / Cartão / Pix)
     const respPref = await fetch('https://api.mercadopago.com/checkout/preferences', {
@@ -63,6 +65,7 @@ export default async function handler(req, res) {
           pending: `${origin}/assinatura`,
         },
         auto_return: 'approved',
+        notification_url: obterUrlWebhookMercadoPago(),
         statement_descriptor: 'BARZZO',
       }),
     });

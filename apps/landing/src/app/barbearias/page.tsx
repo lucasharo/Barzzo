@@ -105,7 +105,7 @@ export default function PaginaBarbearias() {
                   Ver perfil
                 </Link>
                 <a
-                  href={`https://app.barzzo.com/barbearias/${barbearia.slug}`}
+                  href={`https://cliente.barzzo.io/barbearias/${barbearia.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 text-center py-2 rounded-lg bg-[#B45A2B] hover:bg-[#C46632] active:bg-[#984820] text-white text-sm font-semibold transition-colors"

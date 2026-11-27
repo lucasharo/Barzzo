@@ -7,5 +7,9 @@
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/renovar-assinaturas", "schedule": "0 12 * * *" },
+    { "path": "/api/cron/alertas-assinatura", "schedule": "0 12 * * *" }
   ]
 }

@@ -34,6 +34,28 @@ export default defineConfig(({ mode }) => {
     mergedEnv.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA ||
     mergedEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     "";
+  const isVercelProduction =
+    process.env.VERCEL === "1" && process.env.VERCEL_ENV === "production";
+
+  if (
+    isVercelProduction &&
+    (!mergedEnv.NEXT_PUBLIC_SUPABASE_URL ||
+      supabaseUrl === "https://gdgeokfwkbusemayqucb.supabase.co" ||
+      !supabaseKey ||
+      !mergedEnv.VITE_MERCADO_PAGO_PUBLIC_KEY ||
+      mergedEnv.VITE_API_BASE_URL !== "https://parceiro.barzzo.io" ||
+      mergedEnv.VITE_CLIENTE_URL !== "https://cliente.barzzo.io")
+  ) {
+    throw new Error(
+      "Configure as variáveis públicas do Supabase PRD e do Mercado Pago antes de compilar o Parceiro."
+    );
+  }
+
+  const publicEnv = Object.fromEntries(
+    Object.entries(mergedEnv).filter(([key]) =>
+      key.startsWith("VITE_") || key.startsWith("NEXT_PUBLIC_")
+    )
+  );
 
   const localApiPlugin = {
     name: "local-api-middleware",
@@ -163,7 +185,7 @@ export default defineConfig(({ mode }) => {
       "process.env.NEXT_PUBLIC_SUPABASE_URL": JSON.stringify(supabaseUrl),
       "process.env.NEXT_PUBLIC_SUPABASE_CHAVE_PUBLICA": JSON.stringify(supabaseKey),
       "process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY": JSON.stringify(supabaseKey),
-      "process.env": JSON.stringify(mergedEnv),
+      "process.env": JSON.stringify(publicEnv),
     },
     optimizeDeps: {
       exclude: [

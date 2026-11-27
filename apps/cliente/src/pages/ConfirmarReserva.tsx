@@ -16,19 +16,11 @@ import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
   obterRascunhoReserva,
   limparRascunhoReserva,
-  calcularHorariosDisponiveis,
   selecionarProfissionalMenorCarga,
+  listarServicosRascunhoReserva,
 } from "@barzzo/dominio";
 import { formatarData } from "@barzzo/utilitarios";
-import type {
-  RascunhoReserva,
-  SlotDisponivel,
-  Profissional,
-  HorarioBarbearia,
-  JornadaProfissional,
-  BloqueioAgenda,
-  DiaSemana,
-} from "@barzzo/tipos";
+import type { RascunhoReserva, SlotDisponivel } from "@barzzo/tipos";
 import {
   CheckCircle,
   Calendar,
@@ -116,15 +108,33 @@ export default function PaginaConfirmacaoReservaPosLogin() {
   ): Promise<{ livre: boolean; motivo?: "cliente_conflito" | "profissional_ocupado" }> {
     try {
       const supabase = criarClienteSupabaseBrowser();
-      const [h, m] = draft.horario.split(":").map(Number);
-      const minFim = h * 60 + m + draft.duracao_minutos;
-      const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
+      // A RPC recalcula a duração atual dos serviços e verifica a agenda do profissional.
+      const { data: slots, error: erroSlots } = await (supabase.rpc as any)("buscar_horarios_disponiveis_multiplos_servicos", {
+        p_barbearia_id: draft.barbearia_id,
+        p_servicos_ids: listarServicosRascunhoReserva(draft).map((servico) => servico.servico_id),
+        p_data: draft.data,
+        p_profissional_id: draft.profissional_id,
+      });
 
+      if (erroSlots) return { livre: false, motivo: "profissional_ocupado" };
+      const horariosDisponiveis = (slots || []) as SlotDisponivel[];
+      const slotDisponivel = horariosDisponiveis.find(
+        (slot) => slot.horario === draft.horario &&
+          (!draft.profissional_id || slot.profissional_id === draft.profissional_id)
+      );
+
+      if (!slotDisponivel) {
+        return { livre: false, motivo: "profissional_ocupado" };
+      }
+
+      const [h, m] = draft.horario.split(":").map(Number);
+      const minFim = h * 60 + m + slotDisponivel.duracao_minutos;
+      const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
       const dataInicioIso = converterParaIsoUtc(draft.data, draft.horario);
       const dataFimIso = converterParaIsoUtc(draft.data, horaFimStr);
 
-      // 1. Checar se o próprio cliente já tem agendamento ativo sobreposto
-      const { data: agCliente } = await supabase
+      // Também impede que o cliente marque outro compromisso sobreposto em outro profissional.
+      const { data: agCliente, error: erroAgCliente } = await supabase
         .from("agendamentos")
         .select("id")
         .eq("cliente_id", clienteId)
@@ -132,26 +142,9 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         .lt("inicio_previsto", dataFimIso)
         .gt("fim_previsto", dataInicioIso);
 
+      if (erroAgCliente) return { livre: false, motivo: "cliente_conflito" };
       if (agCliente && agCliente.length > 0) {
         return { livre: false, motivo: "cliente_conflito" };
-      }
-
-      // 2. Checar se há agendamento sobreposto para o profissional / barbearia
-      let query = supabase
-        .from("agendamentos")
-        .select("id")
-        .eq("barbearia_id", draft.barbearia_id)
-        .not("status", "in", '("cancelado","nao_compareceu")')
-        .lt("inicio_previsto", dataFimIso)
-        .gt("fim_previsto", dataInicioIso);
-
-      if (draft.profissional_id) {
-        query = query.eq("profissional_id", draft.profissional_id);
-      }
-
-      const { data } = await query;
-      if (data && data.length > 0) {
-        return { livre: false, motivo: "profissional_ocupado" };
       }
 
       return { livre: true };
@@ -163,64 +156,19 @@ export default function PaginaConfirmacaoReservaPosLogin() {
   async function carregarHorariosAlternativos(draft: RascunhoReserva) {
     try {
       const supabase = criarClienteSupabaseBrowser();
-      const dataObj = new Date(draft.data + "T12:00:00");
-      const diaSemana = dataObj.getDay() as DiaSemana;
-
-      const { data: hbDb } = await supabase
-        .from("horarios_barbearia")
-        .select("*")
-        .eq("barbearia_id", draft.barbearia_id)
-        .eq("dia_semana", diaSemana)
-        .single();
-
-      const { data: profsDb } = await supabase
-        .from("profissionais")
-        .select("id, barbearia_id, nome, foto_url, bio, ativo")
-        .eq("barbearia_id", draft.barbearia_id)
-        .eq("ativo", true);
-
-      const { data: sDb } = await supabase
-        .from("servicos")
-        .select("*")
-        .eq("id", draft.servico_id)
-        .single();
-
-      const { data: jpDb } = await supabase
-        .from("jornadas_profissionais")
-        .select("*")
-        .eq("dia_semana", diaSemana);
-
-      const { data: psDb } = await supabase
-        .from("profissionais_servicos")
-        .select("profissional_id, servico_id")
-        .eq("servico_id", draft.servico_id)
-        .eq("ativo", true);
-
-      if (!sDb || !hbDb || !profsDb) return;
-
-      const profsAptos = (profsDb as Profissional[]).map((p) => {
-        const habilitado = (psDb || []).some((v: any) => v.profissional_id === p.id);
-        const jornada = (jpDb || []).find((j: any) => j.profissional_id === p.id);
-        return {
-          id: p.id,
-          nome: p.nome,
-          ativo: p.ativo,
-          habilitado,
-          jornada: jornada || null,
-        };
+      const { data: slots, error: erroSlots } = await (supabase.rpc as any)("buscar_horarios_disponiveis_multiplos_servicos", {
+        p_barbearia_id: draft.barbearia_id,
+        p_servicos_ids: listarServicosRascunhoReserva(draft).map((servico) => servico.servico_id),
+        p_data: draft.data,
+        p_profissional_id: draft.profissional_id,
       });
 
-      const slots = calcularHorariosDisponiveis({
-        servico: sDb,
-        horarioBarbearia: hbDb,
-        profissionais: profsAptos,
-        data: draft.data,
-        profissionalIdFiltro: draft.profissional_id,
-      });
+      if (erroSlots) return;
 
-      setHorariosAlternativos(slots);
-      if (slots.length > 0) {
-        setNovoSlotEscolhido(slots[0].horario);
+      const horarios = (slots || []) as SlotDisponivel[];
+      setHorariosAlternativos(horarios);
+      if (horarios.length > 0) {
+        setNovoSlotEscolhido(horarios[0].horario);
       }
     } catch {
       // Silencioso
@@ -238,29 +186,49 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         .eq("id", authUserId)
         .single();
 
-      const [h, m] = draft.horario.split(":").map(Number);
-      const minFim = h * 60 + m + draft.duracao_minutos;
-      const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
-
-      const inicioIso = converterParaIsoUtc(draft.data, draft.horario);
-      const fimIso = converterParaIsoUtc(draft.data, horaFimStr);
-
       let profId = draft.profissional_id;
       if (!profId) {
-        // Se for qualquer profissional, busca o primeiro profissional ativo da barbearia
-        const { data: pDb } = await (supabase.from("profissionais") as any)
-          .select("id")
-          .eq("barbearia_id", draft.barbearia_id)
-          .eq("ativo", true)
-          .limit(1)
-          .single();
-        profId = pDb?.id;
+        // A RPC já retorna apenas profissionais habilitados para todos os serviços.
+        const { data: slotsValidos } = await (supabase.rpc as any)("buscar_horarios_disponiveis_multiplos_servicos", {
+          p_barbearia_id: draft.barbearia_id,
+          p_servicos_ids: listarServicosRascunhoReserva(draft).map((servico) => servico.servico_id),
+          p_data: draft.data,
+          p_profissional_id: null,
+        });
+        const slotComProfissional = ((slotsValidos || []) as SlotDisponivel[]).find(
+          (slot) => slot.horario === draft.horario
+        );
+        profId = slotComProfissional?.profissional_id || null;
       }
 
       if (!profId) {
         setErro("Nenhum profissional disponível para o atendimento.");
         return;
       }
+
+      const { data: slotsRevalidados, error: erroRevalidacao } = await (supabase.rpc as any)(
+        "buscar_horarios_disponiveis_multiplos_servicos",
+        {
+          p_barbearia_id: draft.barbearia_id,
+          p_servicos_ids: listarServicosRascunhoReserva(draft).map((servico) => servico.servico_id),
+          p_data: draft.data,
+          p_profissional_id: profId,
+        }
+      );
+      const slotRevalidado = ((slotsRevalidados || []) as SlotDisponivel[]).find(
+        (slot) => slot.horario === draft.horario && slot.profissional_id === profId
+      );
+      if (erroRevalidacao || !slotRevalidado) {
+        setMotivoConflito("profissional_ocupado");
+        setHorarioConflitante(true);
+        await carregarHorariosAlternativos(draft);
+        return;
+      }
+      const [h, m] = draft.horario.split(":").map(Number);
+      const minFim = h * 60 + m + slotRevalidado.duracao_minutos;
+      const horaFimStr = `${String(Math.floor(minFim / 60)).padStart(2, "0")}:${String(minFim % 60).padStart(2, "0")}`;
+      const inicioIso = converterParaIsoUtc(draft.data, draft.horario);
+      const fimIso = converterParaIsoUtc(draft.data, horaFimStr);
 
       const precoFinal = draft.preco_final ?? draft.preco;
 
@@ -285,7 +253,7 @@ export default function PaginaConfirmacaoReservaPosLogin() {
           origem: "marketplace",
           observacoes: obsFinal,
           preco_total: precoFinal,
-          duracao_total_minutos: draft.duracao_minutos,
+          duracao_total_minutos: slotRevalidado.duracao_minutos,
         })
         .select("id")
         .single();
@@ -305,14 +273,24 @@ export default function PaginaConfirmacaoReservaPosLogin() {
         return;
       }
 
-      // Inserir snapshot do serviço
-      await (supabase.from("agendamentos_servicos") as any).insert({
-        agendamento_id: novoAgendamento.id,
-        servico_id: draft.servico_id,
-        nome_servico: draft.servico_nome,
-        preco: draft.preco,
-        duracao_minutos: draft.duracao_minutos,
-      });
+      // Inserir o snapshot de cada serviço selecionado.
+      const { error: erroServicos } = await (supabase.from("agendamentos_servicos") as any).insert(
+        listarServicosRascunhoReserva(draft).map((servico) => ({
+          agendamento_id: novoAgendamento.id,
+          servico_id: servico.servico_id,
+          nome_servico: servico.nome_servico,
+          preco: servico.preco,
+          duracao_minutos: servico.duracao_minutos,
+        }))
+      );
+      if (erroServicos) {
+        await (supabase.rpc as any)("atualizar_status_agendamento", {
+          p_agendamento_id: novoAgendamento.id,
+          p_novo_status: "cancelado",
+        });
+        setErro("Não foi possível salvar os serviços desta reserva.");
+        return;
+      }
 
       // Se houver cupom/influenciador utilizado, registrar uso atomicamente via RPC
       if (codigoCupomLimpo) {
@@ -390,9 +368,20 @@ export default function PaginaConfirmacaoReservaPosLogin() {
                 <span className="opacity-60">Barbearia:</span>
                 <span className="font-bold">{rascunho.barbearia_nome}</span>
               </div>
+              <div className="flex flex-col gap-2">
+                <span className="opacity-60">Serviços:</span>
+                <ul className="flex flex-col gap-1">
+                  {listarServicosRascunhoReserva(rascunho).map((servico) => (
+                    <li key={servico.servico_id} className="flex justify-between gap-3">
+                      <span className="font-bold">{servico.nome_servico}</span>
+                      <span className="shrink-0">{servico.duracao_minutos} min</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
               <div className="flex justify-between">
-                <span className="opacity-60">Serviço:</span>
-                <span className="font-bold">{rascunho.servico_nome}</span>
+                <span className="opacity-60">Duração total:</span>
+                <span className="font-bold">{rascunho.duracao_minutos} minutos</span>
               </div>
               <div className="flex justify-between">
                 <span className="opacity-60">Horário:</span>
@@ -461,18 +450,18 @@ export default function PaginaConfirmacaoReservaPosLogin() {
                 {Array.from(new Set(horariosAlternativos.map((s) => s.horario))).map((h) => {
                   const sel = novoSlotEscolhido === h;
                   return (
-                    <button
+                    <Button
                       key={h}
                       type="button"
+                      tamanho="sm"
+                      variante={sel ? "principal" : "fantasma"}
+                      leftIcon={<Clock className="h-3 w-3" />}
+                      aria-pressed={sel}
                       onClick={() => setNovoSlotEscolhido(h)}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold border transition-all ${
-                        sel
-                          ? "bg-[#B45A2B] text-white border-[#B45A2B] ring-2 ring-[#B45A2B]"
-                          : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B]"
-                      }`}
+                      className={`w-full px-2 text-xs font-bold border ${sel ? "ring-2 ring-[#B45A2B]" : "border-neutral-200 dark:border-neutral-800 hover:border-[#B45A2B]"}`}
                     >
                       {h}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>

@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { RuntimeNativo } from "@barzzo/nativo";
+import { OuvintePushWeb, RuntimeNativo } from "@barzzo/nativo";
 import { CapturaCupomIndicado } from "./components/captura-cupom-indicado";
 import { NavegacaoCliente } from "./components/navegacao-cliente";
 import PaginaInicialCliente from "./pages/Inicio";
@@ -10,6 +10,7 @@ import PaginaDetalhesAgendamentoCliente from "./pages/AgendamentoDetalhes";
 import PaginaAvaliacaoAtendimento from "./pages/Avaliacoes";
 import PaginaFavoritosCliente from "./pages/Favoritos";
 import PaginaNotificacoesCliente from "./pages/Notificacoes";
+import PaginaConfiguracoesCliente from "./pages/Configuracoes";
 import PaginaPerfil from "./pages/Perfil";
 import PaginaEntrar from "./pages/Entrar";
 import PaginaCadastro from "./pages/Cadastro";
@@ -18,8 +19,19 @@ import PaginaWizardReservaCliente from "./pages/Reservar";
 import PaginaConfirmacaoReservaPosLogin from "./pages/ConfirmarReserva";
 
 export default function App() {
+  const env = (import.meta as any).env ?? {};
+
   return (
     <>
+      <OuvintePushWeb
+        config={{
+          apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        }}
+      />
       <RuntimeNativo esquemaHost="cliente" rotasRaiz={["/"]} />
       <CapturaCupomIndicado />
       <NavegacaoCliente />
@@ -33,6 +45,8 @@ export default function App() {
           <Route path="/avaliacoes/:agendamento_id" element={<PaginaAvaliacaoAtendimento />} />
           <Route path="/favoritos" element={<PaginaFavoritosCliente />} />
           <Route path="/notificacoes" element={<PaginaNotificacoesCliente />} />
+          <Route path="/configuracoes" element={<PaginaConfiguracoesCliente />} />
+          <Route path="/configuracoes/notificacoes" element={<PaginaNotificacoesCliente />} />
           <Route path="/perfil" element={<PaginaPerfil />} />
           <Route path="/entrar" element={<PaginaEntrar />} />
           <Route path="/cadastro" element={<PaginaCadastro />} />

@@ -407,7 +407,7 @@ export default function PaginaOnboarding() {
                   Identificador / URL Amigável
                 </Label>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 text-sm">
-                  <span className="opacity-60 font-medium">barzzo.com/</span>
+                  <span className="opacity-60 font-medium">barzzo.io/</span>
                   <Input
                     id="slug"
                     type="text"

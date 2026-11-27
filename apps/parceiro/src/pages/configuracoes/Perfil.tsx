@@ -174,7 +174,7 @@ export default function PaginaConfiguracoesBarbearia() {
         <CardHeader>
           <CardTitle className="text-lg">Dados Institucionais</CardTitle>
           <CardDescription>
-            Identificador público: <strong>barzzo.com/{barbearia.slug}</strong>
+            Identificador público: <strong>barzzo.io/{barbearia.slug}</strong>
           </CardDescription>
         </CardHeader>
 

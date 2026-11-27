@@ -10,10 +10,22 @@ if (keystorePropertiesFile.exists()) {
 // Versão do app: -PbarzzoVersionCode=12 -PbarzzoVersionName=1.2.0 (padrão: 1 / 0.1.0).
 def barzzoVersionCode = Integer.parseInt(project.findProperty('barzzoVersionCode')?.toString() ?: '1')
 def barzzoVersionName = project.findProperty('barzzoVersionName')?.toString() ?: '0.1.0'
+def barzzoMinify = project.findProperty('barzzoMinify') == null ? true : project.findProperty('barzzoMinify').toString().toBoolean()
 
 android {
     namespace "com.barzzo.cliente"
     compileSdk rootProject.ext.compileSdkVersion
+    flavorDimensions "ambiente"
+    productFlavors {
+        dev {
+            dimension "ambiente"
+            applicationIdSuffix ".dev"
+            versionNameSuffix "-dev"
+        }
+        prod {
+            dimension "ambiente"
+        }
+    }
     defaultConfig {
         applicationId "com.barzzo.cliente"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -38,14 +50,13 @@ android {
         }
     }
     buildTypes {
-        // Debug convive com a versão da loja no mesmo aparelho (id com sufixo .dev e nome próprio).
+        // O sufixo .dev é aplicado pela variante de ambiente, tanto em debug quanto em release.
         debug {
-            applicationIdSuffix ".dev"
-            versionNameSuffix "-dev"
+            // Mantém o applicationId da variante selecionada.
         }
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled barzzoMinify
+            shrinkResources barzzoMinify
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release

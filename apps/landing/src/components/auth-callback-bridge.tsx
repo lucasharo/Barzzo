@@ -33,7 +33,7 @@ export function AuthCallbackBridge() {
       ? "http://localhost:3002"
       : window.location.hostname.includes("vercel.app")
       ? "https://barzzo-parceiro-dev.vercel.app"
-      : "https://parceiro.barzzo.com.br";
+      : "https://parceiro.barzzo.io";
 
     const destino = `${partnerHost}/influenciador/cadastro${search}${hash}`;
     window.location.replace(destino);

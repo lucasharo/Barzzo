@@ -1,10 +1,10 @@
 # Status
 
 - Branch: feature/init
-- Task ativa: 12 — Influenciadores globais do Barzzo
-- Estado: AGUARDANDO_ACEITE_PO
-- Próximo agente: PO final
-- Bloqueios: nenhum
+- Task ativa: 13 — Lançamento web em Produção
+- Estado: BLOQUEADA_POR_DECISAO
+- Próximo agente: PO
+- Bloqueios: confirmar organização Supabase para cotar o custo do PRD; depois configurar Vercel e DNS
 
 | Task | Issue | Nome | Estado |
 |---|---:|---|---|
@@ -20,6 +20,7 @@
 | 10 | #10 | Assinaturas, Admin e produção | CONCLUIDA |
 | HOTFIX-01 | #11 | Mercado Pago nas assinaturas | CONCLUIDA |
 | 11 | #12 | Revisão de cupons, atribuição e comissões | CONCLUIDA |
-| 12 | #13 | Influenciadores globais do Barzzo | AGUARDANDO_ACEITE_PO |
+| 12 | #13 | Influenciadores globais do Barzzo | CONCLUIDA |
+| 13 | — | Lançamento web em Produção | BLOQUEADA_POR_DECISAO |
 
 Atualizar em toda troca de gate. Nunca iniciar task posterior antes da anterior estar CONCLUIDA.

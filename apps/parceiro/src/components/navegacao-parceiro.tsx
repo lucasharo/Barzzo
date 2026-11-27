@@ -17,6 +17,8 @@ import {
   UserCheck,
   Mail,
   Settings,
+  Settings2,
+  Bell,
   LogOut,
   SlidersHorizontal,
   LogIn,
@@ -164,8 +166,10 @@ export function NavegacaoParceiro() {
       ],
     },
     {
-      titulo: "Configurações da Barbearia",
+      titulo: "Configurações",
       itens: [
+        { href: "/configuracoes", rotulo: "Preferências da Conta", icone: Settings2 },
+        { href: "/configuracoes/notificacoes", rotulo: "Notificações", icone: Bell },
         ...(mostrarUnidades ? [{ href: "/unidades", rotulo: "Unidades da Rede", icone: Building2 }] : []),
         { href: "/assinatura", rotulo: "Assinatura & Plano", icone: CreditCard },
         { href: "/horarios", rotulo: "Horários de Funcionamento", icone: Clock },

@@ -9,8 +9,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "android:sync": "npm run build && cap sync android",
-    "android:debug": "npm run android:sync && cd android && gradlew assembleDebug",
-    "android:release": "npm run android:sync && cd android && gradlew bundleRelease assembleRelease",
+    "android:debug": "npm run android:sync && cd android && gradlew assembleDevDebug",
+    "android:release": "npm run android:sync && cd android && gradlew --no-daemon --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process bundleProdRelease assembleProdRelease",
+  "android:dev:release": "npm run android:sync && cd android && gradlew --no-daemon --max-workers=1 -Pkotlin.compiler.execution.strategy=in-process -PbarzzoMinify=false bundleDevRelease assembleDevRelease",
     "android:icones": "cd ../.. && node scripts/gerar-icones-android.mjs"
   },
   "dependencies": {

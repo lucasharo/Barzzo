@@ -36,4 +36,22 @@ describe("horários de 15 em 15 minutos respeitando concorrência", () => {
     const as10 = slots.filter((s) => s.horario === "10:00").map((s) => s.profissional_id);
     expect(as10).toEqual(["b"]);
   });
+
+  it("oculta 14:30 quando o profissional já tem um atendimento das 14:00 às 14:45", () => {
+    const horarioDia = { ...horarioBarbearia, hora_fechamento: "20:00:00" };
+    const jornadaDia = { ...jornada, hora_fim: "20:00:00" };
+    const profissional = { ...prof("a"), jornada: { ...jornadaDia, profissional_id: "a" } };
+    const servicoMeiaHora = { ...servico, duracao_minutos: 30 };
+    const slots = calcularHorariosDisponiveis({
+      servico: servicoMeiaHora,
+      horarioBarbearia: horarioDia,
+      profissionais: [profissional],
+      data: "2026-10-05",
+      agora: new Date(2026, 9, 4, 12, 0),
+      agendamentosExistentes: [{ profissional_id: "a", inicio: local("14:00"), fim: local("14:45") }],
+    }).map((slot) => slot.horario);
+
+    expect(slots).not.toContain("14:30");
+    expect(slots).toContain("14:45");
+  });
 });

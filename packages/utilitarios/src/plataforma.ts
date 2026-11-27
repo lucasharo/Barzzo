@@ -30,3 +30,13 @@ export function origemWeb(urlPublica: string): string {
   if (!ehAppNativo() && typeof window !== "undefined") return window.location.origin;
   return urlPublica.replace(/\/+$/, "");
 }
+
+/** Monta o destino dos links de autenticação usando a origem deste ambiente. */
+export function urlRedirectAutenticacao(destino: string, urlPublica: string): string {
+  const origem = new URL(origemWeb(urlPublica));
+  const url = new URL(destino, origem);
+
+  // `destino` pode vir de parâmetros de navegação; nunca permita redirecionar para outro host.
+  if (url.origin !== origem.origin) return origem.toString();
+  return url.toString();
+}

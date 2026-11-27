@@ -21,7 +21,9 @@
     "android:cliente": "npm run android:debug --workspace=apps/cliente",
     "android:parceiro": "npm run android:debug --workspace=apps/parceiro",
     "android:cliente:release": "npm run android:release --workspace=apps/cliente",
-    "android:parceiro:release": "npm run android:release --workspace=apps/parceiro"
+    "android:parceiro:release": "npm run android:release --workspace=apps/parceiro",
+    "android:cliente:dev:release": "npm run android:dev:release --workspace=apps/cliente",
+    "android:parceiro:dev:release": "npm run android:dev:release --workspace=apps/parceiro"
   },
   "devDependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -35,5 +37,6 @@
   },
   "dependencies": {
     "pg": "^8.23.0"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

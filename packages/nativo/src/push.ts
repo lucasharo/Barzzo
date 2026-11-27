@@ -1,5 +1,36 @@
 import { ehAppNativo, plataformaAtual } from "@barzzo/utilitarios";
 
+const CHAVE_PUSH_NATIVO_ATIVO = "barzzo:push-nativo-ativo";
+const CHAVE_TOKEN_PUSH_NATIVO = "barzzo:push-nativo-token";
+const EVENTO_PUSH_NATIVO_ALTERADO = "barzzo:push-nativo-alterado";
+
+export function pushNativoAtivo(): boolean {
+  if (typeof localStorage === "undefined") return true;
+  return localStorage.getItem(CHAVE_PUSH_NATIVO_ATIVO) !== "false";
+}
+
+export function definirPushNativoAtivo(ativo: boolean): void {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(CHAVE_PUSH_NATIVO_ATIVO, String(ativo));
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent(EVENTO_PUSH_NATIVO_ALTERADO, { detail: { ativo } }));
+  }
+}
+
+export function tokenPushNativoAtual(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  return localStorage.getItem(CHAVE_TOKEN_PUSH_NATIVO);
+}
+
+export function salvarTokenPushNativo(token: string): void {
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem(CHAVE_TOKEN_PUSH_NATIVO, token);
+  }
+}
+
+export const eventoPushNativoAlterado = EVENTO_PUSH_NATIVO_ALTERADO;
+
 export interface OpcoesPush {
   /** Grava o token FCM do aparelho para o usuário logado. */
   salvarToken: (token: string, plataforma: "android" | "ios") => Promise<void>;
@@ -29,9 +60,15 @@ export async function registrarPush(opcoes: OpcoesPush): Promise<() => void> {
 
   const ouvintes = await Promise.all([
     PushNotifications.addListener("registration", (token) => {
-      opcoes.salvarToken(token.value, plataforma).catch(() => undefined);
+      opcoes.salvarToken(token.value, plataforma).catch((erro: unknown) => {
+        const codigo = erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "sem código";
+        console.error("Falha ao salvar o token push no Supabase", codigo);
+      });
     }),
-    PushNotifications.addListener("registrationError", () => undefined),
+    PushNotifications.addListener("registrationError", (erro) => {
+      const codigo = erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "sem código";
+      console.error("Falha ao registrar o aparelho no FCM", codigo);
+    }),
     PushNotifications.addListener("pushNotificationReceived", (notificacao) => {
       opcoes.aoReceber?.(notificacao.title ?? null, notificacao.body ?? null);
     }),
@@ -43,8 +80,9 @@ export async function registrarPush(opcoes: OpcoesPush): Promise<() => void> {
 
   try {
     await PushNotifications.register();
-  } catch {
-    // Sem google-services.json (Firebase) o registro não é possível: o app segue sem push.
+  } catch (erro) {
+    const codigo = erro && typeof erro === "object" && "code" in erro ? String(erro.code) : "sem código";
+    console.error("Falha ao iniciar o registro push", codigo);
   }
 
   return () => {

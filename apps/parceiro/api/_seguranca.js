@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 // Arquivos com "_" no início não viram rota na Vercel: este é só um utilitário das rotas de /api.
@@ -7,9 +8,47 @@ const ORIGENS_PADRAO = [
   'capacitor://localhost',
   'https://localhost',
   'http://localhost',
+  'https://barzzo.io',
+  'https://cliente.barzzo.io',
+  'https://parceiro.barzzo.io',
+  'https://admin.barzzo.io',
   'https://barzzo-parceiro.vercel.app',
   'https://barzzo-parceiro-dev.vercel.app',
 ];
+
+export function obterUrlWebhookMercadoPago() {
+  const configurada = process.env.MERCADO_PAGO_WEBHOOK_URL?.trim();
+  if (configurada) return configurada;
+
+  const base = process.env.VERCEL_ENV === 'production'
+    ? 'https://parceiro.barzzo.io'
+    : 'https://barzzo-parceiro-dev.vercel.app';
+  return `${base}/api/webhooks/mercadopago`;
+}
+
+export function validarAssinaturaWebhookMercadoPago(req) {
+  const segredo = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!segredo) return process.env.VERCEL_ENV !== 'production';
+
+  const assinatura = String(req.headers['x-signature'] || '');
+  const requestId = String(req.headers['x-request-id'] || '');
+  const dataId = String(req.query?.['data.id'] || req.body?.data?.id || '').toLowerCase();
+  const partes = Object.fromEntries(
+    assinatura.split(',').map((parte) => {
+      const separador = parte.indexOf('=');
+      return separador < 0
+        ? ['', '']
+        : [parte.slice(0, separador).trim(), parte.slice(separador + 1).trim()];
+    })
+  );
+
+  if (!partes.ts || !partes.v1 || !requestId || !dataId) return false;
+
+  const manifesto = `id:${dataId};request-id:${requestId};ts:${partes.ts};`;
+  const esperada = createHmac('sha256', segredo).update(manifesto).digest();
+  const recebida = Buffer.from(partes.v1, 'hex');
+  return recebida.length === esperada.length && timingSafeEqual(recebida, esperada);
+}
 
 /** Aplica CORS e responde ao preflight. Retorna true quando a requisição já foi respondida. */
 export function aplicarCors(req, res) {

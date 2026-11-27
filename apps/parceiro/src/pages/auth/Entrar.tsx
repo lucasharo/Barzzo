@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Button,
   Card,
@@ -20,11 +20,14 @@ import { Store, Award, LogIn } from "lucide-react";
 
 export default function PaginaEntrarParceiro() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const retornoUrl = searchParams.get("retorno");
-  const ehInfluenciador = Boolean(retornoUrl?.includes("influenciador"));
+  const confirmacaoPendente = searchParams.get("confirmacao") === "pendente";
+  const estadoCadastro = location.state as { email?: string; ehInfluenciador?: boolean } | null;
+  const ehInfluenciador = estadoCadastro?.ehInfluenciador ?? Boolean(retornoUrl?.includes("influenciador"));
 
-  const [email, setEmail] = React.useState("");
+  const [email, setEmail] = React.useState(estadoCadastro?.email ?? "");
   const [senha, setSenha] = React.useState("");
   const [carregando, setCarregando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
@@ -115,6 +118,15 @@ export default function PaginaEntrarParceiro() {
         </CardHeader>
 
         <CardContent>
+          {confirmacaoPendente && (
+            <Alert variante="sucesso" className="mb-4">
+              <AlertDescription>
+                Sua conta foi criada. Enviamos um e-mail de confirmação para {email || "o endereço cadastrado"}.
+                Clique no link recebido para ativar a conta e, em seguida, entre aqui com seu e-mail e senha.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <form onSubmit={lidarComLogin} className="flex flex-col gap-4">
             {erro && (
               <Alert variante="erro">
