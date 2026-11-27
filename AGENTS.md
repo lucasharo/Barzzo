@@ -108,6 +108,12 @@ Regras:
 - Toda alteração em funcionalidade presente nas duas plataformas deve avaliar e atualizar Web e Mobile na mesma tarefa. Antes de concluir, confira a paridade nas duas versões; não presuma que publicar ou empacotar uma delas atualize a outra.
 - Só crie ou mantenha comportamento diferente entre Web e Mobile quando o usuário pedir explicitamente essa diferença.
 
+### Identidade do ícone Android
+
+- O ícone de lançamento do app Cliente deve usar o monograma Barzzo totalmente branco, sem detalhes em bronze, sobre fundo escuro.
+- Mantenha essa regra em `apps/cliente/assets/icon-foreground.png`, `apps/cliente/assets/icon-only.png` e em todos os recursos Android gerados por `scripts/gerar-icones-android.mjs`.
+- Antes de concluir uma alteração no ícone, confira o PNG do APK compilado; não considere apenas o arquivo de origem nem reutilize a variante colorida do Parceiro.
+
 ## 5. Papéis dos agentes
 
 Os papéis oficiais estão em `AGENTES.md`:
