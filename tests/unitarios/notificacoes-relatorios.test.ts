@@ -59,14 +59,23 @@ describe("Task 09 — Notificações, Dashboard e Relatórios", () => {
     const prefPadrao: PreferenciasNotificacao = {
       usuario_id: "usr-1",
       notificacoes_transacionais: true,
+      notificacoes_confirmacao: true,
+      notificacoes_cancelamento: true,
+      notificacoes_reagendamento: true,
       notificacoes_promocionais: true,
       notificacoes_lembretes: true,
+      notificacoes_sistema: true,
       atualizado_em: new Date().toISOString(),
     };
 
     it("deve permitir notificação transacional se preferência estiver ativa", () => {
+      const prefSemCancelamento = {
+        ...prefPadrao,
+        notificacoes_cancelamento: false,
+      };
+
       expect(podeEnviarNotificacao("confirmacao", prefPadrao)).toBe(true);
-      expect(podeEnviarNotificacao("cancelamento", prefPadrao)).toBe(true);
+      expect(podeEnviarNotificacao("cancelamento", prefSemCancelamento)).toBe(false);
     });
 
     it("deve bloquear notificação promocional se cliente desativou promoções", () => {
@@ -91,15 +100,19 @@ describe("Task 09 — Notificações, Dashboard e Relatórios", () => {
       expect(podeEnviarNotificacao("confirmacao", prefSemLembrete)).toBe(true);
     });
 
-    it("notificações de sistema devem ser sempre entregues", () => {
+    it("deve respeitar separadamente a preferência de notificações do sistema", () => {
       const prefTudoDesativado: PreferenciasNotificacao = {
         ...prefPadrao,
         notificacoes_transacionais: false,
+        notificacoes_confirmacao: false,
+        notificacoes_cancelamento: false,
+        notificacoes_reagendamento: false,
         notificacoes_promocionais: false,
         notificacoes_lembretes: false,
+        notificacoes_sistema: false,
       };
 
-      expect(podeEnviarNotificacao("sistema", prefTudoDesativado)).toBe(true);
+      expect(podeEnviarNotificacao("sistema", prefTudoDesativado)).toBe(false);
     });
 
     it("deve permitir envio caso o usuário não tenha registro prévio de preferências", () => {

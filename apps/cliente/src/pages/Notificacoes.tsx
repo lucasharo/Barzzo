@@ -11,6 +11,8 @@ import {
   AlertDescription,
   LoadingSpinner,
   Switch,
+  PreferenciasNotificacaoPorTipo,
+  type ChavePreferenciaNotificacao,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
@@ -46,9 +48,12 @@ export default function PaginaNotificacoesCliente() {
   const [notificacoes, setNotificacoes] = React.useState<Notificacao[]>([]);
   const [preferencias, setPreferencias] = React.useState<PreferenciasNotificacao>({
     usuario_id: "",
-    notificacoes_transacionais: true,
+    notificacoes_confirmacao: true,
+    notificacoes_cancelamento: true,
+    notificacoes_reagendamento: true,
     notificacoes_promocionais: true,
     notificacoes_lembretes: true,
+    notificacoes_sistema: true,
     atualizado_em: "",
   });
   const [salvandoPref, setSalvandoPref] = React.useState(false);
@@ -263,7 +268,7 @@ export default function PaginaNotificacoesCliente() {
   }
 
   async function handleSalvarPreferencia(
-    chave: "notificacoes_transacionais" | "notificacoes_promocionais" | "notificacoes_lembretes",
+    chave: ChavePreferenciaNotificacao,
     valor: boolean
   ) {
     const preferenciasAnteriores = preferencias;
@@ -282,9 +287,12 @@ export default function PaginaNotificacoesCliente() {
 
       const { error: erroSalvar } = await (supabase.from("preferencias_notificacao") as any).upsert({
         usuario_id: novaPref.usuario_id,
-        notificacoes_transacionais: novaPref.notificacoes_transacionais,
+        notificacoes_confirmacao: novaPref.notificacoes_confirmacao,
+        notificacoes_cancelamento: novaPref.notificacoes_cancelamento,
+        notificacoes_reagendamento: novaPref.notificacoes_reagendamento,
         notificacoes_promocionais: novaPref.notificacoes_promocionais,
         notificacoes_lembretes: novaPref.notificacoes_lembretes,
+        notificacoes_sistema: novaPref.notificacoes_sistema,
         atualizado_em: novaPref.atualizado_em,
       });
       if (erroSalvar) throw erroSalvar;
@@ -402,33 +410,6 @@ export default function PaginaNotificacoesCliente() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span id="notificacoes-transacionais-label-cliente" className="font-bold text-sm">
-            Notificações Transacionais
-          </span>
-          <span id="notificacoes-transacionais-descricao-cliente" className="text-xs opacity-60">
-            Confirmações de agendamento e avisos de cancelamento/reagendamento da barbearia.
-          </span>
-        </div>
-        <Switch
-          id="notificacoes-transacionais-switch-cliente"
-          aria-labelledby="notificacoes-transacionais-label-cliente"
-          aria-describedby="notificacoes-transacionais-descricao-cliente"
-          marcado={preferencias.notificacoes_transacionais}
-          aoMudar={(valor) =>
-            void handleSalvarPreferencia("notificacoes_transacionais", valor)
-          }
-          disabled={salvandoPref || !preferencias.usuario_id}
-          className="min-h-[44px] min-w-[44px]"
-        />
-      </div>
-      {sucessoPref && (
-        <span role="status" aria-live="polite" className="text-xs font-semibold text-[#16A34A]">
-          Preferências salvas com sucesso!
-        </span>
-      )}
-
       {/* ABA 1: LISTA DE NOTIFICAÇÕES */}
       {aba === "notificacoes" && (
         <div className="flex flex-col gap-4">
@@ -515,7 +496,7 @@ export default function PaginaNotificacoesCliente() {
               <Settings2 className="h-5 w-5 text-[#B45A2B]" /> Preferências de Mensagens
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-6">
+          <CardContent className="flex flex-col gap-4">
             <div className="flex flex-row items-center justify-between gap-4 rounded-xl border border-neutral-200 p-4 dark:border-neutral-800">
               <div className="flex min-w-0 flex-1 items-start gap-3">
                 <BellRing className="mt-0.5 h-5 w-5 shrink-0 text-[#B45A2B]" aria-hidden="true" />
@@ -545,47 +526,17 @@ export default function PaginaNotificacoesCliente() {
                 className="min-h-[44px] min-w-[44px] shrink-0"
               />
             </div>
-            {/* Lembretes de Horário */}
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col gap-0.5">
-                <span id="notificacoes-lembretes-label-cliente" className="font-bold text-sm">
-                  Lembretes de Horário
-                </span>
-                <span id="notificacoes-lembretes-descricao-cliente" className="text-xs opacity-60">
-                  Aviso antes do início do seu corte para evitar esquecimentos e atrasos.
-                </span>
-              </div>
-              <Switch
-                id="notificacoes-lembretes-switch-cliente"
-                aria-labelledby="notificacoes-lembretes-label-cliente"
-                aria-describedby="notificacoes-lembretes-descricao-cliente"
-                marcado={preferencias.notificacoes_lembretes}
-                aoMudar={(valor) => void handleSalvarPreferencia("notificacoes_lembretes", valor)}
-                disabled={salvandoPref || !preferencias.usuario_id}
-                className="min-h-[44px] min-w-[44px]"
-              />
-            </div>
-
-            {/* Notificações Promocionais */}
-            <div className="flex items-center justify-between gap-4 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800">
-              <div className="flex flex-col gap-0.5">
-                <span id="notificacoes-promocoes-label-cliente" className="font-bold text-sm">
-                  Promoções e Cupons Exclusivos
-                </span>
-                <span id="notificacoes-promocoes-descricao-cliente" className="text-xs opacity-60">
-                  Ofertas especiais, novidades e cupons de desconto das suas barbearias favoritas.
-                </span>
-              </div>
-              <Switch
-                id="notificacoes-promocoes-switch-cliente"
-                aria-labelledby="notificacoes-promocoes-label-cliente"
-                aria-describedby="notificacoes-promocoes-descricao-cliente"
-                marcado={preferencias.notificacoes_promocionais}
-                aoMudar={(valor) => void handleSalvarPreferencia("notificacoes_promocionais", valor)}
-                disabled={salvandoPref || !preferencias.usuario_id}
-                className="min-h-[44px] min-w-[44px]"
-              />
-            </div>
+            <PreferenciasNotificacaoPorTipo
+              preferencias={preferencias}
+              prefixoId="cliente"
+              desabilitado={salvandoPref || !preferencias.usuario_id || !pushAtivo}
+              aoMudar={(chave, valor) => void handleSalvarPreferencia(chave, valor)}
+            />
+            {sucessoPref && (
+              <span role="status" aria-live="polite" className="text-xs font-semibold text-[#16A34A]">
+                Preferências salvas com sucesso!
+              </span>
+            )}
           </CardContent>
         </Card>
       )}

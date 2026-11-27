@@ -12,9 +12,13 @@ export const esquemaDispositivo = z.object({
 });
 
 export const esquemaPreferenciasNotificacao = z.object({
-  notificacoes_transacionais: z.boolean().default(true),
+  notificacoes_confirmacao: z.boolean().default(true),
+  notificacoes_cancelamento: z.boolean().default(true),
+  notificacoes_reagendamento: z.boolean().default(true),
   notificacoes_promocionais: z.boolean().default(true),
   notificacoes_lembretes: z.boolean().default(true),
+  notificacoes_sistema: z.boolean().default(true),
+  notificacoes_transacionais: z.boolean().optional(),
 });
 
 export const esquemaNotificacao = z.object({

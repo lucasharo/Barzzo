@@ -13,5 +13,6 @@ export * from "./seletor-data";
 export * from "./alerta-temporizado";
 export * from "./modal";
 export * from "./switch";
+export * from "./preferencias-notificacao-por-tipo";
 export { Seletor, type OpcaoSeletor, type SeletorProps } from "./seletor";
 export * from "./card-agendamento";

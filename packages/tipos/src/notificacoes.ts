@@ -24,9 +24,14 @@ export interface Dispositivo {
 
 export interface PreferenciasNotificacao {
   usuario_id: string;
-  notificacoes_transacionais: boolean;
+  notificacoes_confirmacao: boolean;
+  notificacoes_cancelamento: boolean;
+  notificacoes_reagendamento: boolean;
   notificacoes_promocionais: boolean;
   notificacoes_lembretes: boolean;
+  notificacoes_sistema: boolean;
+  /** Campo legado mantido para compatibilidade com versões antigas dos apps. */
+  notificacoes_transacionais?: boolean;
   atualizado_em: string;
 }
 

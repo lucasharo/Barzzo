@@ -10,28 +10,18 @@ export function podeEnviarNotificacao(
   tipo: TipoNotificacao,
   preferencias?: PreferenciasNotificacao | null
 ): boolean {
-  if (!preferencias) {
-    return true; // Default permissivo para transacionais e promoções iniciais
-  }
+  if (!preferencias) return true;
 
-  if (tipo === "promocao") {
-    return preferencias.notificacoes_promocionais === true;
-  }
+  const chavePorTipo: Record<TipoNotificacao, keyof PreferenciasNotificacao> = {
+    confirmacao: "notificacoes_confirmacao",
+    cancelamento: "notificacoes_cancelamento",
+    reagendamento: "notificacoes_reagendamento",
+    lembrete: "notificacoes_lembretes",
+    promocao: "notificacoes_promocionais",
+    sistema: "notificacoes_sistema",
+  };
 
-  if (tipo === "lembrete") {
-    return preferencias.notificacoes_lembretes === true;
-  }
-
-  if (
-    tipo === "confirmacao" ||
-    tipo === "cancelamento" ||
-    tipo === "reagendamento"
-  ) {
-    return preferencias.notificacoes_transacionais === true;
-  }
-
-  // Notificações de sistema são sempre entregues
-  return true;
+  return preferencias[chavePorTipo[tipo]] !== false;
 }
 
 /**

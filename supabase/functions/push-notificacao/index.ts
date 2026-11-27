@@ -55,9 +55,16 @@ async function obterAccessToken(projectId: string, clientEmail: string, privateK
 }
 
 function preferenciaPermitida(tipo: string, preferencias: Record<string, boolean> | null) {
-  if (tipo === "promocao") return preferencias?.notificacoes_promocionais !== false;
-  if (tipo === "lembrete") return preferencias?.notificacoes_lembretes !== false;
-  return preferencias?.notificacoes_transacionais !== false;
+  const campoPorTipo: Record<string, string> = {
+    confirmacao: "notificacoes_confirmacao",
+    cancelamento: "notificacoes_cancelamento",
+    reagendamento: "notificacoes_reagendamento",
+    lembrete: "notificacoes_lembretes",
+    promocao: "notificacoes_promocionais",
+    sistema: "notificacoes_sistema",
+  };
+  const campo = campoPorTipo[tipo];
+  return !campo || preferencias?.[campo] !== false;
 }
 
 Deno.serve(async (req: Request) => {
@@ -106,7 +113,7 @@ Deno.serve(async (req: Request) => {
 
     const [{ data: preferencias }, { data: dispositivos, error: erroDispositivos }] = await Promise.all([
       supabase.from("preferencias_notificacao")
-        .select("notificacoes_transacionais, notificacoes_promocionais, notificacoes_lembretes")
+        .select("notificacoes_confirmacao, notificacoes_cancelamento, notificacoes_reagendamento, notificacoes_lembretes, notificacoes_promocionais, notificacoes_sistema")
         .eq("usuario_id", notificacao.usuario_id)
         .maybeSingle(),
       supabase.from("dispositivos")

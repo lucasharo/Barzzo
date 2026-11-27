@@ -64,6 +64,17 @@ A Task 09 implementou a infraestrutura de comunicação em tempo real e de intel
 - **`layout.tsx`**:
   - Adicionado link "Notificações" na barra de navegação superior.
 
+## Adendo de implementação — 23/11/2026
+
+O fluxo de eventos que faltava foi complementado pelas migrations `20261123151912_notificacoes_ciclo_agendamentos_e_campanhas.sql`, `20261123152828_notificacoes_campanhas_sem_disparo_retroativo.sql` e `20261123153240_corrigir_texto_notificacao_cancelamento.sql`:
+
+- Cancelamentos e reagendamentos agora criam avisos para o cliente e a equipe vinculada à barbearia.
+- Lembretes são processados a cada 15 minutos pelo Supabase Cron, uma única vez por horário, até 24 horas antes e respeitando `notificacoes_lembretes`.
+- Campanhas ativas geram um aviso promocional por cliente da barbearia, apenas quando `notificacoes_promocionais` está ativa. A chave da campanha garante idempotência.
+- Campanhas que já existiam antes desta implementação não geram avisos retroativos; a divulgação começa em campanhas criadas ou reativadas depois da migration.
+- As notificações usam o gatilho FCM existente. Uma mudança de horário reabilita o lembrete do novo horário.
+- Migration aplicada e validada no Supabase DEV. Produção não foi alterada.
+
 ---
 
 ## 2. Testes e Validação
@@ -73,3 +84,18 @@ A Task 09 implementou a infraestrutura de comunicação em tempo real e de intel
 - **Design System & Acessibilidade**:
   - Touch targets >= 44x44px em todos os controles, alternadores e botões.
   - Indicadores semânticos de cores e fontes de alta legibilidade conforme `docs/design/design_system.md`.
+
+## Adendo de implementação — 27/11/2026
+
+- O switch principal de notificações do app/navegador desabilita os switches individuais enquanto estiver desligado.
+- As preferências individuais mantêm seus valores salvos e voltam a ficar editáveis quando o switch principal é ativado.
+- A regra usa o componente compartilhado nas telas do Cliente e do Parceiro.
+- Builds web dos quatro apps passaram; os dois APKs `devRelease` foram compilados e instalados no aparelho conectado na versão `0.1.9-dev`, código 10.
+
+## Adendo de correção — 27/11/2026
+
+- A causa do erro ao salvar era a ausência no Supabase DEV das quatro colunas de preferências separadas que os apps Cliente e Parceiro já enviavam no `upsert`.
+- Aplicada a migration `20261127153048_preferencias_notificacao_por_tipo.sql` ao DEV. Os novos campos são `NOT NULL DEFAULT true`; a migration mantém as escolhas anteriores, separando os tipos transacionais com base na preferência antiga.
+- Confirmados no banco remoto os quatro campos e seus padrões `true`, além do registro da migration no histórico. O cache de schema do PostgREST foi solicitado a recarregar.
+- Novas preferências iniciam habilitadas nos dois apps. Preferências já existentes permanecem conforme a escolha da pessoa.
+- Nenhuma alteração no código das telas foi necessária nesta correção; o erro ocorria porque o schema remoto estava atrasado em relação ao código já presente nos apps.

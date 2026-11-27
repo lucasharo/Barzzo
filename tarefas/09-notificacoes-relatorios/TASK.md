@@ -8,6 +8,8 @@ dispositivos e notificacoes. Um usuário pode ter vários dispositivos.
 
 ## Push
 Firebase Cloud Messaging. Eventos: confirmação, cancelamento, lembrete, reagendamento, promoção e sistema. Sem e-mail.
+- O switch principal do app/navegador controla a edição das preferências por tipo: desligado, os demais switches ficam desabilitados, preservando seus valores salvos.
+- Preferências de novas contas começam habilitadas por padrão em todos os tipos; escolhas já salvas são preservadas.
 
 ## Dashboard
 Agenda do dia, próximos, concluídos, cancelamentos/no-show, faturamento estimado e clientes novos.

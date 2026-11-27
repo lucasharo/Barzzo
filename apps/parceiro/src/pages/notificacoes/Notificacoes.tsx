@@ -11,6 +11,8 @@ import {
   AlertDescription,
   LoadingSpinner,
   Switch,
+  PreferenciasNotificacaoPorTipo,
+  type ChavePreferenciaNotificacao,
 } from "@barzzo/ui";
 import { criarClienteSupabaseBrowser } from "@barzzo/supabase";
 import {
@@ -46,9 +48,12 @@ export default function PaginaNotificacoesParceiro() {
   const [usuarioId, setUsuarioId] = React.useState<string | null>(null);
   const [preferencias, setPreferencias] = React.useState<PreferenciasNotificacao>({
     usuario_id: "",
-    notificacoes_transacionais: true,
+    notificacoes_confirmacao: true,
+    notificacoes_cancelamento: true,
+    notificacoes_reagendamento: true,
     notificacoes_promocionais: true,
     notificacoes_lembretes: true,
+    notificacoes_sistema: true,
     atualizado_em: "",
   });
   const [salvandoPref, setSalvandoPref] = React.useState(false);
@@ -128,13 +133,13 @@ export default function PaginaNotificacoesParceiro() {
     }
   }, [appNativo, filtroLida, plataformaPush]);
 
-  async function handleSalvarPreferenciaTransacional(valor: boolean) {
+  async function handleSalvarPreferencia(chave: ChavePreferenciaNotificacao, valor: boolean) {
     if (!usuarioId || !preferencias.usuario_id) return;
 
     const preferenciasAnteriores = preferencias;
     const novasPreferencias = {
       ...preferencias,
-      notificacoes_transacionais: valor,
+      [chave]: valor,
       atualizado_em: new Date().toISOString(),
     };
 
@@ -147,9 +152,12 @@ export default function PaginaNotificacoesParceiro() {
       const supabase = criarClienteSupabaseBrowser();
       const { error: erroSalvar } = await (supabase.from("preferencias_notificacao") as any).upsert({
         usuario_id: novasPreferencias.usuario_id,
-        notificacoes_transacionais: novasPreferencias.notificacoes_transacionais,
+        notificacoes_confirmacao: novasPreferencias.notificacoes_confirmacao,
+        notificacoes_cancelamento: novasPreferencias.notificacoes_cancelamento,
+        notificacoes_reagendamento: novasPreferencias.notificacoes_reagendamento,
         notificacoes_promocionais: novasPreferencias.notificacoes_promocionais,
         notificacoes_lembretes: novasPreferencias.notificacoes_lembretes,
+        notificacoes_sistema: novasPreferencias.notificacoes_sistema,
         atualizado_em: novasPreferencias.atualizado_em,
       });
       if (erroSalvar) throw erroSalvar;
@@ -384,27 +392,12 @@ export default function PaginaNotificacoesParceiro() {
         </CardContent>
       </Card>
 
-      <Card className="border border-neutral-200/80 shadow-sm dark:border-neutral-800">
-        <CardContent className="flex items-center justify-between gap-4 p-4">
-          <div className="flex min-w-0 flex-col gap-1">
-            <span id="notificacoes-transacionais-label-parceiro" className="font-bold text-sm">
-              Notificações Transacionais
-            </span>
-            <span id="notificacoes-transacionais-descricao-parceiro" className="text-xs opacity-70">
-              Confirmações de agendamento e avisos de cancelamento/reagendamento da barbearia.
-            </span>
-          </div>
-          <Switch
-            id="notificacoes-transacionais-switch-parceiro"
-            aria-labelledby="notificacoes-transacionais-label-parceiro"
-            aria-describedby="notificacoes-transacionais-descricao-parceiro"
-            marcado={preferencias.notificacoes_transacionais}
-            aoMudar={(valor) => void handleSalvarPreferenciaTransacional(valor)}
-            disabled={salvandoPref || carregando || !preferencias.usuario_id}
-            className="min-h-[44px] min-w-[44px]"
-          />
-        </CardContent>
-      </Card>
+      <PreferenciasNotificacaoPorTipo
+        preferencias={preferencias}
+        prefixoId="parceiro"
+        desabilitado={salvandoPref || carregando || !preferencias.usuario_id || !pushAtivo}
+        aoMudar={(chave, valor) => void handleSalvarPreferencia(chave, valor)}
+      />
       {sucessoPref && (
         <span role="status" aria-live="polite" className="text-xs font-semibold text-[#16A34A]">
           Preferências salvas com sucesso!
