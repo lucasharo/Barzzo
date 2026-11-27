@@ -76,9 +76,23 @@ export function NavegacaoCliente() {
           {/* Logo */}
           <Link
             to="/"
-            className="text-2xl font-bold tracking-wider text-[#B45A2B] hover:opacity-90 transition-opacity flex items-center gap-2"
+            className="flex shrink-0 items-center gap-2 px-2 py-1 transition-opacity hover:opacity-90"
           >
-            BARZZO
+            <img
+              src="/marca/barzzo-logo-claro.webp"
+              alt="Barzzo"
+              width="116"
+              height="35"
+              className="h-8 w-auto object-contain dark:hidden"
+            />
+            <img
+              src="/marca/barzzo-logo-escuro.webp"
+              alt=""
+              aria-hidden="true"
+              width="116"
+              height="35"
+              className="hidden h-8 w-auto object-contain dark:block"
+            />
           </Link>
 
           {/* Área Direita: Navegação Desktop + Alternador de Tema + Menu Mobile */}

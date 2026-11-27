@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Button,
@@ -82,9 +83,21 @@ function FormularioEntrarAdmin() {
             <ShieldCheck className="h-12 w-12 text-[#B45A2B]" />
           </div>
           <div className="flex items-center justify-center gap-2 mb-1">
-            <span className="text-2xl font-black tracking-wider text-[#B45A2B]">
-              BARZZO
-            </span>
+            <Image
+              src="/marca/barzzo-logo-claro.webp"
+              alt="Barzzo"
+              width="116"
+              height="35"
+              className="h-8 w-auto object-contain dark:hidden"
+            />
+            <Image
+              src="/marca/barzzo-logo-escuro.webp"
+              alt=""
+              aria-hidden="true"
+              width="116"
+              height="35"
+              className="hidden h-8 w-auto object-contain dark:block"
+            />
             <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B] text-white font-bold px-2 py-0.5 rounded shadow-sm">
               Admin
             </span>

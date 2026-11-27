@@ -196,11 +196,23 @@ export function NavegacaoParceiro() {
           <div className="flex items-center gap-4 lg:gap-6">
             <Link
               to={ehSomenteInfluenciador ? "/influenciador/painel" : (usuario ? "/painel" : "/")}
-              className="flex items-center gap-2"
+              className="flex shrink-0 items-center gap-2 px-2 py-1"
             >
-              <span className="text-xl font-bold tracking-wider text-[#B45A2B]">
-                BARZZO
-              </span>
+              <img
+                src="/marca/barzzo-logo-claro.webp"
+                alt="Barzzo"
+                width="116"
+                height="35"
+                className="h-8 w-auto object-contain dark:hidden"
+              />
+              <img
+                src="/marca/barzzo-logo-escuro.webp"
+                alt=""
+                aria-hidden="true"
+                width="116"
+                height="35"
+                className="hidden h-8 w-auto object-contain dark:block"
+              />
               <span className="text-[11px] uppercase tracking-wider bg-[#B45A2B]/15 text-[#B45A2B] font-semibold px-2 py-0.5 rounded">
                 {ehSomenteInfluenciador ? "Influenciador" : "Parceiro"}
               </span>
